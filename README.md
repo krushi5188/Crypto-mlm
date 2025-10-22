@@ -1,4 +1,4 @@
-# Educational MLM Simulator
+# Educational MLM Simulator - Atlas Network
 
 An educational platform that teaches university students about multi-level marketing (MLM) structures, pyramid schemes, and crypto-based network marketing through hands-on simulation.
 
@@ -64,10 +64,10 @@ Edit `.env` with your MySQL credentials and configuration.
 mysql -u root -p
 
 # Create database
-CREATE DATABASE nexus_mlm_simulator;
+CREATE DATABASE atlas_network_simulator;
 
 # Import schema
-mysql -u root -p nexus_mlm_simulator < src/database/schema.sql
+mysql -u root -p atlas_network_simulator < src/database/schema.sql
 ```
 
 4. **Start Backend:**
@@ -110,13 +110,15 @@ npm run dev
 4. **Commissions:** Earn 5-level commissions when downline recruits
 
 **Commission Structure:**
-- Level 1 (Direct): 10 NC per recruit
-- Level 2: 7 NC per recruit
-- Level 3: 5 NC per recruit
-- Level 4: 3 NC per recruit
-- Level 5: 2 NC per recruit
+- Level 1 (Direct): 10 AC per recruit (Atlas Coins)
+- Level 2: 7 AC per recruit
+- Level 3: 5 AC per recruit
+- Level 4: 3 AC per recruit
+- Level 5: 2 AC per recruit
 
-Total: 27 NC distributed per 100 NC "recruitment fee"
+Total: 27 AC distributed per 100 AC "recruitment fee"
+
+**Referral Codes:** Format ATN-XXXXXX (e.g., ATN-ABC123)
 
 ### Instructor Experience
 
