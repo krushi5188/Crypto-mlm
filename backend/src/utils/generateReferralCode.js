@@ -13,7 +13,7 @@ const generateReferralCode = async () => {
       code += characters.charAt(Math.floor(Math.random() * characters.length));
     }
 
-    const referralCode = `NXG-${code}`;
+    const referralCode = `ATN-${code}`;
 
     // Check if code already exists
     const [existing] = await pool.query(
