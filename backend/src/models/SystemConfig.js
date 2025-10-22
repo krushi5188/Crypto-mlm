@@ -3,14 +3,14 @@ const { pool } = require('../config/database');
 class SystemConfig {
   // Get config value by key
   static async get(key) {
-    const [rows] = await pool.query(
-      'SELECT config_value, data_type FROM system_config WHERE config_key = ?',
+    const result = await pool.query(
+      'SELECT config_value, data_type FROM system_config WHERE config_key = $1',
       [key]
     );
 
-    if (rows.length === 0) return null;
+    if (result.rows.length === 0) return null;
 
-    const { config_value, data_type } = rows[0];
+    const { config_value, data_type } = result.rows[0];
 
     // Cast to appropriate type
     switch (data_type) {
@@ -29,25 +29,25 @@ class SystemConfig {
 
   // Set config value
   static async set(key, value, updatedBy = 'system') {
-    const [result] = await pool.query(
+    const result = await pool.query(
       `UPDATE system_config
-       SET config_value = ?, updated_by = ?, updated_at = NOW()
-       WHERE config_key = ?`,
+       SET config_value = $1, updated_by = $2, updated_at = NOW()
+       WHERE config_key = $3`,
       [String(value), updatedBy, key]
     );
 
-    return result.affectedRows > 0;
+    return result.rowCount > 0;
   }
 
   // Get multiple config values
   static async getMultiple(keys) {
-    const [rows] = await pool.query(
-      'SELECT config_key, config_value, data_type FROM system_config WHERE config_key IN (?)',
+    const result = await pool.query(
+      'SELECT config_key, config_value, data_type FROM system_config WHERE config_key = ANY($1::text[])',
       [keys]
     );
 
     const config = {};
-    rows.forEach(row => {
+    result.rows.forEach(row => {
       const { config_key, config_value, data_type } = row;
 
       switch (data_type) {
@@ -73,10 +73,10 @@ class SystemConfig {
 
   // Get all config
   static async getAll() {
-    const [rows] = await pool.query('SELECT config_key, config_value, data_type FROM system_config');
+    const result = await pool.query('SELECT config_key, config_value, data_type FROM system_config');
 
     const config = {};
-    rows.forEach(row => {
+    result.rows.forEach(row => {
       const { config_key, config_value, data_type } = row;
 
       switch (data_type) {
@@ -104,7 +104,7 @@ class SystemConfig {
   static async incrementCoinsDistributed(amount) {
     await pool.query(
       `UPDATE system_config
-       SET config_value = CAST(config_value AS DECIMAL(10,2)) + ?
+       SET config_value = (CAST(config_value AS DECIMAL(10,2)) + $1)::text
        WHERE config_key = 'total_coins_distributed'`,
       [amount]
     );
@@ -114,7 +114,7 @@ class SystemConfig {
   static async incrementRecruitmentFees(amount) {
     await pool.query(
       `UPDATE system_config
-       SET config_value = CAST(config_value AS DECIMAL(10,2)) + ?
+       SET config_value = (CAST(config_value AS DECIMAL(10,2)) + $1)::text
        WHERE config_key = 'total_recruitment_fees'`,
       [amount]
     );
