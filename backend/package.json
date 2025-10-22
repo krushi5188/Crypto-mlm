@@ -1,7 +1,7 @@
 {
-  "name": "nexus-mlm-simulator-backend",
+  "name": "atlas-network-simulator-backend",
   "version": "1.0.0",
-  "description": "Educational MLM Simulator Backend API",
+  "description": "Atlas Network Educational MLM Simulator Backend API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
