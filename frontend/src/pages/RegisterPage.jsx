@@ -100,7 +100,7 @@ const RegisterPage = () => {
     <div style={containerStyles}>
       <Card style={{ maxWidth: '500px', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Join NexusGlobal</h1>
+          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Join Atlas Network</h1>
           <p style={{ color: '#a0aec0' }}>Start your journey to financial freedom</p>
           {systemStatus && (
             <p style={{ color: '#fbbf24', fontSize: '0.875rem', marginTop: '0.5rem' }}>
