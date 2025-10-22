@@ -170,7 +170,7 @@ const RegisterPage = () => {
             label="Referral Code (Optional)"
             value={formData.referralCode}
             onChange={handleChange}
-            placeholder="NXG-ABC123"
+            placeholder="ATN-ABC123"
           />
 
           <Button
