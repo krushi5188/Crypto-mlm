@@ -10,10 +10,10 @@ class CommissionService {
    * This is the core MLM logic - must be atomic (transaction)
    */
   static async distributeCommissions(newUserId, newUsername, referredById) {
-    const connection = await pool.getConnection();
+    const client = await pool.connect();
 
     try {
-      await connection.beginTransaction();
+      await client.query('BEGIN');
 
       // Get commission percentages and recruitment fee from config
       const config = await SystemConfig.getMultiple([
@@ -39,14 +39,14 @@ class CommissionService {
         const commissionAmount = recruitmentFee * (commissionPercentage / 100);
 
         // Update upline balance
-        await User.updateBalance(upline.id, commissionAmount, connection);
+        await User.updateBalance(upline.id, commissionAmount, client);
 
         // Get updated balance for transaction record
-        const [balanceResult] = await connection.query(
-          'SELECT balance FROM users WHERE id = ?',
+        const balanceResult = await client.query(
+          'SELECT balance FROM users WHERE id = $1',
           [upline.id]
         );
-        const balanceAfter = balanceResult[0].balance;
+        const balanceAfter = balanceResult.rows[0].balance;
 
         // Create transaction record
         await Transaction.create({
@@ -57,40 +57,40 @@ class CommissionService {
           triggered_by_user_id: newUserId,
           description: `Level ${level} commission from ${newUsername}'s recruitment`,
           balance_after: balanceAfter
-        }, connection);
+        }, client);
 
         totalDistributed += commissionAmount;
 
         // Update network size for this upline
-        await User.incrementNetworkSize(upline.id, connection);
+        await User.incrementNetworkSize(upline.id, client);
       }
 
       // Update direct recruits for Level 1 upline (direct referrer)
       if (uplineChain.length > 0 && uplineChain[0].level === 1) {
-        await User.incrementDirectRecruits(uplineChain[0].id, connection);
+        await User.incrementDirectRecruits(uplineChain[0].id, client);
       }
 
       // Create referral records for all upline relationships
       for (const upline of uplineChain) {
-        await Referral.create(newUserId, upline.id, upline.level, connection);
+        await Referral.create(newUserId, upline.id, upline.level, client);
       }
 
       // Update system totals
-      await connection.query(
+      await client.query(
         `UPDATE system_config
-         SET config_value = CAST(config_value AS DECIMAL(10,2)) + ?
+         SET config_value = (CAST(config_value AS DECIMAL(10,2)) + $1)::text
          WHERE config_key = 'total_coins_distributed'`,
         [totalDistributed]
       );
 
-      await connection.query(
+      await client.query(
         `UPDATE system_config
-         SET config_value = CAST(config_value AS DECIMAL(10,2)) + ?
+         SET config_value = (CAST(config_value AS DECIMAL(10,2)) + $1)::text
          WHERE config_key = 'total_recruitment_fees'`,
         [recruitmentFee]
       );
 
-      await connection.commit();
+      await client.query('COMMIT');
 
       return {
         success: true,
@@ -98,11 +98,11 @@ class CommissionService {
         levelsProcessed: uplineChain.length
       };
     } catch (error) {
-      await connection.rollback();
+      await client.query('ROLLBACK');
       console.error('Commission distribution failed:', error);
       throw error;
     } finally {
-      connection.release();
+      client.release();
     }
   }
 
@@ -117,30 +117,30 @@ class CommissionService {
 
     while (currentUserId && currentLevel <= maxDepth) {
       // Get user's referrer
-      const [rows] = await pool.query(
-        'SELECT referred_by_id, username FROM users WHERE id = ?',
+      const result = await pool.query(
+        'SELECT referred_by_id, username FROM users WHERE id = $1',
         [currentUserId]
       );
 
-      if (rows.length === 0 || !rows[0].referred_by_id) {
+      if (result.rows.length === 0 || !result.rows[0].referred_by_id) {
         break; // No more upline
       }
 
-      const referrerId = rows[0].referred_by_id;
+      const referrerId = result.rows[0].referred_by_id;
 
       // Get referrer info
-      const [referrerRows] = await pool.query(
-        'SELECT id, username FROM users WHERE id = ?',
+      const referrerResult = await pool.query(
+        'SELECT id, username FROM users WHERE id = $1',
         [referrerId]
       );
 
-      if (referrerRows.length === 0) {
+      if (referrerResult.rows.length === 0) {
         break;
       }
 
       upline.push({
         id: referrerId,
-        username: referrerRows[0].username,
+        username: referrerResult.rows[0].username,
         level: currentLevel
       });
 
