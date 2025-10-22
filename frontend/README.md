@@ -1,6 +1,6 @@
-# Educational MLM Simulator - Frontend
+# Atlas Network Educational Simulator - Frontend
 
-React.js frontend for the Educational MLM Simulator.
+React.js frontend for the Atlas Network Educational MLM Simulator.
 
 ## Tech Stack
 
