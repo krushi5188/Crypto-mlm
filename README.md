@@ -2,6 +2,8 @@
 
 An educational platform that teaches university students about multi-level marketing (MLM) structures, pyramid schemes, and crypto-based network marketing through hands-on simulation.
 
+> **🚀 Ready to Deploy?** See [VERCEL_QUICK_START.md](./VERCEL_QUICK_START.md) for 10-minute Vercel deployment or [DEPLOYMENT.md](./DEPLOYMENT.md) for complete production guide.
+
 ## 🎓 Educational Purpose
 
 This simulator allows students to:
