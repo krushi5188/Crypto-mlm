@@ -1,5 +1,5 @@
--- Educational MLM Simulator Database Schema
--- Database: nexus_mlm_simulator
+-- Atlas Network Educational Simulator Database Schema
+-- Database: atlas_network_simulator
 
 -- Drop existing tables (for clean installation)
 DROP TABLE IF EXISTS admin_actions;
