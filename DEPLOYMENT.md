@@ -5,15 +5,14 @@ Complete guide to deploy Atlas Network Educational Simulator to production.
 ## 🏗️ Architecture
 
 - **Frontend:** Vercel (React/Vite)
-- **Backend:** Railway or Render (Node.js/Express)
-- **Database:** Railway MySQL or PlanetScale
+- **Backend:** Vercel (Node.js/Express serverless)
+- **Database:** Supabase (PostgreSQL)
 
 ## 📦 Prerequisites
 
 1. GitHub account (already have: https://github.com/krushi5188/Crypto-mlm)
 2. Vercel account (sign up at https://vercel.com)
-3. Railway account (sign up at https://railway.app) OR Render account
-4. Database: Railway MySQL or PlanetScale
+3. Supabase account (sign up at https://supabase.com)
 
 ---
 
@@ -21,58 +20,94 @@ Complete guide to deploy Atlas Network Educational Simulator to production.
 
 ### **Step 1: Deploy Database**
 
-#### Option A: Railway MySQL (Recommended)
+#### Supabase PostgreSQL (Free & Recommended)
 
-1. Go to https://railway.app
-2. Click "New Project" → "Provision MySQL"
-3. Once created, go to "Variables" tab
-4. Note down these values:
-   - `MYSQL_HOST`
-   - `MYSQL_PORT`
-   - `MYSQL_USER`
-   - `MYSQL_PASSWORD`
-   - `MYSQL_DATABASE`
+1. Go to https://supabase.com
+2. Create account and new project
+3. **Project Settings:**
+   - Name: `atlas-network`
+   - Database Password: Create strong password (SAVE THIS!)
+   - Region: Choose closest to you
+   - Plan: Free (500MB - plenty for 300 students)
 
-5. Connect to MySQL and import schema:
-```bash
-mysql -h MYSQL_HOST -P MYSQL_PORT -u MYSQL_USER -p MYSQL_DATABASE < backend/src/database/schema.sql
-```
+4. Wait 2-3 minutes for project initialization
 
-#### Option B: PlanetScale
+5. **Import Schema:**
+   - Go to SQL Editor in Supabase dashboard
+   - Click "New Query"
+   - Copy entire `/backend/src/database/schema.sql` file
+   - Paste and click "Run"
+   - Should see "Success. No rows returned"
 
-1. Go to https://planetscale.com
-2. Create new database: `atlas-network`
-3. Get connection string
-4. Import schema using their CLI
+6. **Get Connection Details:**
+   - Go to Settings → Database
+   - Select "Connection pooling" tab
+   - Choose "Transaction" mode
+   - Copy connection string:
+     ```
+     postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+     ```
+   
+   - Extract these values:
+     ```
+     DB_HOST=aws-0-[REGION].pooler.supabase.com
+     DB_PORT=6543
+     DB_USER=postgres.[PROJECT-REF]
+     DB_PASSWORD=[YOUR-PASSWORD]
+     DB_NAME=postgres
+     DB_SSL=true
+     ```
+
+**💡 See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed database setup guide**
 
 ---
 
-### **Step 2: Deploy Backend**
+### **Step 2: Deploy Backend to Vercel**
 
-#### Option A: Railway (Recommended)
+#### Option: Vercel Serverless (Recommended)
 
-1. Go to https://railway.app
-2. Click "New Project" → "Deploy from GitHub repo"
-3. Select `krushi5188/Crypto-mlm`
+1. Go to https://vercel.com
+2. Click "Add New" → "Project"
+3. Import `krushi5188/Crypto-mlm` from GitHub
 4. Configure:
+   - **Framework Preset:** Other
    - **Root Directory:** `backend`
    - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
+   - **Output Directory:** (leave empty)
 
-5. Add Environment Variables (in Railway dashboard):
+5. Add Environment Variables (click "Environment Variables"):
+
+**Database Variables:**
+```env
+DB_HOST=aws-0-us-east-1.pooler.supabase.com
+DB_PORT=6543
+DB_USER=postgres.abcdefgh
+DB_PASSWORD=your-supabase-password
+DB_NAME=postgres
+DB_SSL=true
+```
+
+**Server Variables:**
 ```env
 NODE_ENV=production
 PORT=3001
-DB_HOST=<from Railway MySQL>
-DB_PORT=<from Railway MySQL>
-DB_NAME=<from Railway MySQL>
-DB_USER=<from Railway MySQL>
-DB_PASSWORD=<from Railway MySQL>
-JWT_SECRET=<generate strong random string>
+```
+
+**JWT Variables:**
+```env
+JWT_SECRET=generate-strong-random-string-here
 JWT_EXPIRES_IN=7d
+```
+
+**Admin Variables:**
+```env
 ADMIN_EMAIL=instructor@university.edu
 ADMIN_USERNAME=instructor
-ADMIN_PASSWORD=InstructorPassword123!
+ADMIN_PASSWORD=YourStrongPassword123!
+```
+
+**Simulation Settings:**
+```env
 MAX_PARTICIPANTS=300
 SEMESTER_DURATION_DAYS=112
 RECRUITMENT_FEE=100
@@ -81,23 +116,22 @@ COMMISSION_LEVEL_2=7
 COMMISSION_LEVEL_3=5
 COMMISSION_LEVEL_4=3
 COMMISSION_LEVEL_5=2
-FRONTEND_URL=<will add after frontend deployment>
+```
+
+**CORS (will update after frontend deployment):**
+```env
+FRONTEND_URL=https://your-frontend-url.vercel.app
+```
+
+**Rate Limiting:**
+```env
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-6. Deploy and note your backend URL (e.g., `https://atlas-network-backend.railway.app`)
+6. Click "Deploy"
 
-#### Option B: Render
-
-1. Go to https://render.com
-2. Create "New Web Service"
-3. Connect GitHub repo
-4. Configure:
-   - **Root Directory:** `backend`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-5. Add environment variables (same as Railway)
+7. Note your backend URL (e.g., `https://atlas-backend.vercel.app`)
 
 ---
 
@@ -105,7 +139,7 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 1. Go to https://vercel.com
 2. Click "Add New" → "Project"
-3. Import `krushi5188/Crypto-mlm` from GitHub
+3. Import `krushi5188/Crypto-mlm` from GitHub (create new project)
 4. Configure:
    - **Framework Preset:** Vite
    - **Root Directory:** `frontend`
@@ -114,7 +148,7 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 5. Add Environment Variables:
 ```env
-VITE_API_BASE_URL=https://your-railway-backend-url.railway.app/api/v1
+VITE_API_BASE_URL=https://your-backend-url.vercel.app/api/v1
 VITE_APP_NAME=Atlas Network Simulator
 VITE_REFERRAL_BASE_URL=https://your-vercel-app.vercel.app/register
 ```
@@ -127,21 +161,22 @@ VITE_REFERRAL_BASE_URL=https://your-vercel-app.vercel.app/register
 
 ### **Step 4: Update Backend CORS**
 
-1. Go back to Railway backend
-2. Update `FRONTEND_URL` environment variable:
+1. Go back to Vercel backend project
+2. Go to Settings → Environment Variables
+3. Update `FRONTEND_URL` environment variable:
 ```env
-FRONTEND_URL=https://your-vercel-app.vercel.app
+FRONTEND_URL=https://your-frontend-app.vercel.app
 ```
 
-3. Redeploy backend
+4. Redeploy backend (Deployments → latest → three dots → Redeploy)
 
 ---
 
 ### **Step 5: Update Frontend API URL**
 
-1. Go to Vercel project settings
-2. Update `VITE_API_BASE_URL` with your actual Railway backend URL
-3. Update `VITE_REFERRAL_BASE_URL` with your actual Vercel URL
+1. Go to Vercel frontend project settings
+2. Update `VITE_API_BASE_URL` with your actual backend URL
+3. Update `VITE_REFERRAL_BASE_URL` with your actual frontend URL
 4. Redeploy frontend
 
 ---
@@ -151,13 +186,14 @@ FRONTEND_URL=https://your-vercel-app.vercel.app
 After deployment, verify:
 
 - [ ] Frontend loads at Vercel URL
-- [ ] Backend health check: `https://your-backend-url.railway.app/health`
+- [ ] Backend health check: `https://your-backend-url.vercel.app/health`
 - [ ] Login page loads
-- [ ] Instructor can login: `instructor@university.edu` / `InstructorPassword123!`
+- [ ] Instructor can login: `instructor@university.edu` / `YourPassword`
 - [ ] Student can register
 - [ ] Commission system works (register 2 users with referral)
 - [ ] Instructor dashboard shows analytics
 - [ ] Educational watermark is visible
+- [ ] Database in Supabase shows user records
 
 ---
 
@@ -167,8 +203,8 @@ After deployment, verify:
 
 - [ ] Change `JWT_SECRET` to strong random string (32+ chars)
 - [ ] Change `ADMIN_PASSWORD` to secure password
-- [ ] Enable HTTPS (automatic on Vercel/Railway)
-- [ ] Configure database SSL if available
+- [ ] HTTPS enabled (automatic on Vercel)
+- [ ] Database SSL enabled (`DB_SSL=true`)
 - [ ] Set proper CORS origins
 - [ ] Review rate limiting settings
 
@@ -188,8 +224,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 2. Add your custom domain (e.g., `atlas-network.youruniversity.edu`)
 3. Update DNS records as instructed
 
-### Railway Backend
-1. Go to Railway project → "Settings" → "Domains"
+### Vercel Backend
+1. Go to backend project → "Settings" → "Domains"
 2. Add custom domain for API (e.g., `api.atlas-network.youruniversity.edu`)
 3. Update DNS records
 
@@ -198,15 +234,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## 📊 Monitoring
 
 **Backend Logs:**
-- Railway: Project → "Deployments" → Click deployment → "Logs"
-- Render: Dashboard → Service → "Logs"
+- Vercel: Project → "Deployments" → Click deployment → "Logs"
 
 **Frontend Logs:**
 - Vercel: Project → "Deployments" → Click deployment → "Logs"
 
 **Database Monitoring:**
-- Railway: MySQL service → "Metrics"
-- PlanetScale: Dashboard → "Insights"
+- Supabase: Dashboard → Database → "Table Editor" to view data
+- Supabase: Dashboard → Database → "Usage" to see storage/bandwidth
 
 ---
 
@@ -219,17 +254,23 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### CORS Errors
 - Verify `FRONTEND_URL` in backend environment variables matches Vercel URL
+- Ensure no trailing slash in URLs
 - Check backend CORS configuration in `server.js`
 
 ### Database Connection Failed
 - Verify all `DB_*` environment variables are correct
-- Check if database allows connections from backend IP
-- Verify schema was imported correctly
+- Use **Connection pooling** URL (port 6543), not Direct connection (port 5432)
+- Verify `DB_SSL=true` is set
+- Check Supabase project is active (not paused)
 
 ### Instructor Login Fails
 - Check `ADMIN_EMAIL` and `ADMIN_PASSWORD` in backend env vars
-- Verify instructor account was created (check backend logs on first startup)
-- Try password reset if needed
+- Check backend logs for instructor account creation
+- Try resetting via Supabase SQL Editor:
+  ```sql
+  DELETE FROM users WHERE email = 'instructor@university.edu';
+  ```
+  Then redeploy backend to recreate account
 
 ---
 
@@ -238,16 +279,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **For larger classes (300+ students):**
 
 1. **Database:**
-   - Upgrade to Railway Pro plan
-   - Or use dedicated MySQL instance
+   - Free Supabase (500MB) handles 300+ students easily
+   - Upgrade to Supabase Pro ($25/mo) for 8GB if needed
 
 2. **Backend:**
-   - Scale Railway instances
-   - Enable connection pooling
+   - Vercel auto-scales serverless functions
+   - Free tier: 100GB bandwidth (enough for 300 students)
+   - Pro ($20/mo): 1TB bandwidth for heavy usage
 
 3. **Frontend:**
    - Vercel auto-scales
-   - Configure CDN caching
+   - CDN caching automatic
+   - No action needed
 
 ---
 
@@ -262,27 +305,25 @@ git commit -m "Update message"
 git push origin main
 ```
 
-2. Vercel will auto-deploy frontend
-3. Railway will auto-deploy backend
+2. Vercel will auto-deploy both frontend and backend
 
 **Manual redeploy:**
 - Vercel: Project → "Deployments" → Click "..." → "Redeploy"
-- Railway: Project → "Deployments" → Click "Deploy"
 
 ---
 
 ## 💰 Cost Estimate
 
-**Free Tier (Development/Small Classes):**
-- Vercel: Free (Hobby plan)
-- Railway: $5/month (with $5 free credit)
-- Total: ~$5/month
+**Free Tier (Perfect for Educational Use):**
+- Vercel Frontend: Free (Hobby plan)
+- Vercel Backend: Free (100GB bandwidth included)
+- Supabase Database: Free (500MB storage)
+- **Total: $0/month for 300 students**
 
-**Paid Tier (Production/Large Classes):**
-- Vercel Pro: $20/month
-- Railway Pro: $20/month
-- Database: Included in Railway
-- Total: ~$40/month
+**Paid Tier (If Needed):**
+- Vercel Pro: $20/month (1TB bandwidth)
+- Supabase Pro: $25/month (8GB database)
+- Total: ~$45/month (only if exceeding free limits)
 
 ---
 
@@ -292,8 +333,9 @@ If you encounter issues:
 
 1. Check deployment logs first
 2. Review this guide's troubleshooting section
-3. Verify all environment variables
-4. Check GitHub repository for updates
+3. See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for database help
+4. Verify all environment variables
+5. Check GitHub repository for updates
 
 ---
 
@@ -306,3 +348,7 @@ Your Atlas Network Educational Simulator is now live and accessible to students!
 2. Test with a few students first
 3. Monitor analytics during simulation
 4. Prepare educational reveal materials
+
+**Database URL:** Check Supabase dashboard
+**Backend API:** `https://your-backend.vercel.app/api/v1`
+**Frontend:** `https://your-frontend.vercel.app`
