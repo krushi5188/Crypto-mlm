@@ -1,6 +1,6 @@
-# Educational MLM Simulator - Backend
+# Atlas Network Educational Simulator - Backend
 
-Node.js/Express backend API for the Educational MLM Simulator.
+Node.js/Express backend API for the Atlas Network Educational MLM Simulator.
 
 ## Tech Stack
 
@@ -37,10 +37,10 @@ Required environment variables:
 ```bash
 # Create database
 mysql -u root -p
-CREATE DATABASE nexus_mlm_simulator;
+CREATE DATABASE atlas_network_simulator;
 
 # Import schema
-mysql -u root -p nexus_mlm_simulator < src/database/schema.sql
+mysql -u root -p atlas_network_simulator < src/database/schema.sql
 ```
 
 ## Running
