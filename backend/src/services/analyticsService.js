@@ -87,13 +87,13 @@ class AnalyticsService {
    */
   static async calculateWealthConcentration() {
     // Get all student balances sorted
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT balance FROM users
        WHERE role = 'student'
        ORDER BY balance ASC`
     );
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return {
         top10Percent: 0,
         middle20Percent: 0,
@@ -102,7 +102,7 @@ class AnalyticsService {
       };
     }
 
-    const balances = rows.map(r => parseFloat(r.balance));
+    const balances = result.rows.map(r => parseFloat(r.balance));
     const totalWealth = balances.reduce((sum, b) => sum + b, 0);
 
     if (totalWealth === 0) {
