@@ -212,17 +212,17 @@ See `frontend/.env.example`:
 
 1. **Register 5 users in sequence:**
    - User A (no referral)
-   - User B (use A's referral)
-   - User C (use B's referral)
-   - User D (use C's referral)
-   - User E (use D's referral)
+   - User B (use A's referral: ATN-XXXXXX)
+   - User C (use B's referral: ATN-YYYYYY)
+   - User D (use C's referral: ATN-ZZZZZZ)
+   - User E (use D's referral: ATN-WWWWWW)
 
 2. **Verify commissions:**
-   - A should have: 10 (from B) + 7 (from C) + 5 (from D) + 3 (from E) = 25 NC
-   - B should have: 10 (from C) + 7 (from D) + 5 (from E) = 22 NC
-   - C should have: 10 (from D) + 7 (from E) = 17 NC
-   - D should have: 10 (from E) = 10 NC
-   - E should have: 0 NC
+   - A should have: 10 (from B) + 7 (from C) + 5 (from D) + 3 (from E) = 25 AC
+   - B should have: 10 (from C) + 7 (from D) + 5 (from E) = 22 AC
+   - C should have: 10 (from D) + 7 (from E) = 17 AC
+   - D should have: 10 (from E) = 10 AC
+   - E should have: 0 AC
 
 3. **Check instructor analytics:**
    - Shows all participants
