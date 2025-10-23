@@ -118,7 +118,7 @@ const InstructorAnalytics = () => {
           <div style={{ fontSize: '1.5rem', fontWeight: '700', textTransform: 'uppercase' }}>
             {analytics.overview.simulationStatus}
           </div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Simulation Status</div>
+          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Platform Status</div>
         </Card>
 
         <Card style={{ textAlign: 'center', padding: '2rem' }}>
@@ -126,7 +126,7 @@ const InstructorAnalytics = () => {
           <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
             {analytics.overview.daysRemaining} Days
           </div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Semester Remaining</div>
+          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Days Active</div>
         </Card>
 
         <Card style={{ textAlign: 'center', padding: '2rem' }}>
