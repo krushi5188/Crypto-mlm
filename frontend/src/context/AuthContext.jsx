@@ -42,9 +42,20 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user };
     } catch (error) {
+      console.error('Registration error:', error);
+      let errorMessage = 'Registration failed';
+      
+      if (error.response?.data?.error) {
+        errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : 'Registration failed - please try again';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.error || 'Registration failed'
+        error: errorMessage
       };
     }
   };
