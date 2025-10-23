@@ -62,6 +62,7 @@ export const instructorAPI = {
   getParticipant: (id) => api.get(`/instructor/participants/${id}`),
   approveParticipant: (id) => api.post(`/instructor/participants/${id}/approve`),
   rejectParticipant: (id, data) => api.post(`/instructor/participants/${id}/reject`, data),
+  addStudent: (data) => api.post('/instructor/add-student', data),
   getNetworkGraph: () => api.get('/instructor/network-graph'),
   injectCoins: (data) => api.post('/instructor/inject-coins', data),
   pause: () => api.post('/instructor/pause'),
