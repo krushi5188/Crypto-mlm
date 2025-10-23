@@ -103,7 +103,7 @@ const InstructorControls = () => {
         amount: parseFloat(injectAmount),
         note: injectNote
       });
-      alert(`Successfully injected ${injectAmount} NC to user ${injectUserId}`);
+      alert(`Successfully injected ${injectAmount} USDT to user ${injectUserId}`);
       setInjectUserId('');
       setInjectAmount('');
       setInjectNote('');
@@ -223,7 +223,7 @@ const InstructorControls = () => {
               <Input
                 type="number"
                 step="0.01"
-                label="Amount (NC)"
+                label="Amount (USDT)"
                 value={injectAmount}
                 onChange={(e) => setInjectAmount(e.target.value)}
                 placeholder="e.g., 100.00"
