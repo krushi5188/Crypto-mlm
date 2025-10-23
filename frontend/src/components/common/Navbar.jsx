@@ -13,34 +13,36 @@ const Navbar = () => {
   };
 
   const navStyles = {
-    background: 'rgba(0, 0, 0, 0.3)',
+    background: 'var(--glass-bg)',
     backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
     padding: '1rem 2rem',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '1px solid var(--glass-border)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     position: 'sticky',
     top: 0,
-    zIndex: 1000
+    zIndex: 1000,
+    boxShadow: 'var(--shadow-sm)'
   };
 
   const logoStyles = {
     fontSize: '1.5rem',
     fontWeight: '700',
-    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+    background: 'linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-dark) 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     textDecoration: 'none'
   };
 
   const linkStyles = {
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     textDecoration: 'none',
     marginLeft: '1.5rem',
     fontSize: '0.95rem',
     fontWeight: '500',
-    transition: 'color 0.2s'
+    transition: 'color var(--transition-fast)'
   };
 
   return (
@@ -70,7 +72,7 @@ const Navbar = () => {
               </>
             )}
 
-            <span style={{ marginLeft: '1.5rem', fontSize: '0.9rem', color: '#a0aec0' }}>
+            <span style={{ marginLeft: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
               {user?.username}
             </span>
             <div style={{ marginLeft: '1rem' }}>
