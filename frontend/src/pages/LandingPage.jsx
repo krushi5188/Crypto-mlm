@@ -142,21 +142,38 @@ const LandingPage = () => {
       {/* About Section */}
       <section id="about" style={{ ...sectionStyles, background: 'rgba(255, 255, 255, 0.02)' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>About Atlas Network</h2>
-          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Building success together</p>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Empowering Financial Freedom Through Smart Network Marketing</h2>
+          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>The blockchain-powered platform built for serious income builders</p>
         </div>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <Card style={{ padding: '2.5rem' }}>
             <p style={{ fontSize: '1.125rem', lineHeight: '1.8', color: '#cbd5e0', marginBottom: '1.5rem' }}>
-              Atlas Network is a cutting-edge platform designed for network marketers who want to build sustainable income streams through proven referral marketing strategies.
+              Atlas Network is a revolutionary blockchain-based platform that eliminates the complexity from network marketing. We've engineered a transparent, automated system where USDT cryptocurrency flows directly from your network's growth to your wallet—instantly and permanently.
             </p>
             <p style={{ fontSize: '1.125rem', lineHeight: '1.8', color: '#cbd5e0', marginBottom: '1.5rem' }}>
-              Our 5-level commission structure ensures that everyone in your network benefits from growth, creating a win-win environment where success is shared across all participants.
+              Our mathematically optimized 5-level commission structure (10%, 7%, 5%, 3%, 2%) ensures that every member of your network—from direct recruits to 5 levels deep—contributes to your passive income stream. No products to sell, no inventory to manage, no complex qualifications to meet.
             </p>
             <p style={{ fontSize: '1.125rem', lineHeight: '1.8', color: '#cbd5e0' }}>
-              With transparent USDT payments, real-time tracking, and comprehensive support, we provide everything you need to achieve your financial goals through network marketing.
+              Built on enterprise-grade technology with military-level security, Atlas Network provides the infrastructure, automation, and transparency you need to build a legitimate, sustainable income. Your success is measured in real USDT, tracked on the blockchain, and completely within your control.
             </p>
           </Card>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
+            <Card style={{ padding: '1.5rem', textAlign: 'center', background: 'rgba(251, 191, 36, 0.1)' }}>
+              <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>INSTANT PAYOUTS</div>
+              <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>Real-Time USDT</div>
+            </Card>
+            
+            <Card style={{ padding: '1.5rem', textAlign: 'center', background: 'rgba(16, 185, 129, 0.1)' }}>
+              <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>PROVEN STRUCTURE</div>
+              <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>5 Income Levels</div>
+            </Card>
+
+            <Card style={{ padding: '1.5rem', textAlign: 'center', background: 'rgba(59, 130, 246, 0.1)' }}>
+              <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>FULLY TRANSPARENT</div>
+              <div style={{ fontSize: '2rem', fontWeight: '700', color: '#3b82f6' }}>Blockchain Verified</div>
+            </Card>
+          </div>
         </div>
       </section>
 
