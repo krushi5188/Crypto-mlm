@@ -20,7 +20,13 @@ const schemas = {
   instructorAddMember: Joi.object({
     email: Joi.string().email().required(),
     username: Joi.string().alphanum().min(3).max(20).required(),
-    password: Joi.string().min(6).required(), // Simpler: just minimum 6 characters
+    password: Joi.string()
+      .min(8)
+      .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)'))
+      .required()
+      .messages({
+        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      }),
     referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).allow('').optional()
   }),
 
