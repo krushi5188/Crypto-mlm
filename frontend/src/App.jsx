@@ -5,8 +5,13 @@ import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
+import StudentNetwork from './pages/StudentNetwork';
+import StudentEarnings from './pages/StudentEarnings';
+import StudentProfile from './pages/StudentProfile';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
+import InstructorNetwork from './pages/InstructorNetwork';
+import InstructorControls from './pages/InstructorControls';
 import './styles/global.css';
 
 // Protected Route Component
@@ -100,10 +105,7 @@ function App() {
           <Route path="/network" element={
             <ProtectedRoute allowedRole="student">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Network Page</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - visualize your downline network</p>
-                </div>
+                <StudentNetwork />
               </AppLayout>
             </ProtectedRoute>
           } />
@@ -111,10 +113,7 @@ function App() {
           <Route path="/earnings" element={
             <ProtectedRoute allowedRole="student">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Earnings Page</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - detailed earnings history</p>
-                </div>
+                <StudentEarnings />
               </AppLayout>
             </ProtectedRoute>
           } />
@@ -122,10 +121,7 @@ function App() {
           <Route path="/profile" element={
             <ProtectedRoute allowedRole="student">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Profile Page</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - manage your profile</p>
-                </div>
+                <StudentProfile />
               </AppLayout>
             </ProtectedRoute>
           } />
@@ -150,10 +146,7 @@ function App() {
           <Route path="/instructor/network" element={
             <ProtectedRoute allowedRole="instructor">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Network Visualization</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - complete network graph</p>
-                </div>
+                <InstructorNetwork />
               </AppLayout>
             </ProtectedRoute>
           } />
@@ -161,10 +154,7 @@ function App() {
           <Route path="/instructor/controls" element={
             <ProtectedRoute allowedRole="instructor">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Simulation Controls</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - pause, resume, reset simulation</p>
-                </div>
+                <InstructorControls />
               </AppLayout>
             </ProtectedRoute>
           } />
