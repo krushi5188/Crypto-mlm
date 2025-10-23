@@ -299,6 +299,133 @@ router.post('/participants/:id/reject', async (req, res) => {
 });
 
 /**
+ * POST /api/v1/instructor/add-student
+ * Instructor directly adds a new student (auto-approved, no approval needed)
+ */
+router.post('/add-student', validate('register'), async (req, res) => {
+  try {
+    const { email, username, password, referralCode } = req.validatedBody;
+
+    // Check participant limit
+    const participantCount = await User.countStudents();
+    const maxParticipants = await SystemConfig.get('max_participants');
+
+    if (participantCount >= maxParticipants) {
+      return res.status(403).json({
+        error: 'Participant limit reached',
+        code: 'PARTICIPANT_LIMIT_REACHED'
+      });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({
+        error: 'Email already registered',
+        code: 'EMAIL_TAKEN'
+      });
+    }
+
+    // Check if username already exists
+    const usernameCheck = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (usernameCheck.rows.length > 0) {
+      return res.status(400).json({
+        error: 'Username already taken',
+        code: 'USERNAME_TAKEN'
+      });
+    }
+
+    // Validate referral code if provided (optional for instructor)
+    let referrerId = null;
+    if (referralCode) {
+      const referrer = await User.findByReferralCode(referralCode);
+      if (!referrer) {
+        return res.status(400).json({
+          error: 'Invalid referral code',
+          code: 'INVALID_REFERRAL_CODE'
+        });
+      }
+
+      // Ensure referrer is approved
+      if (referrer.role === 'student' && referrer.approval_status !== 'approved') {
+        return res.status(400).json({
+          error: 'This referral link is not active',
+          code: 'REFERRER_NOT_APPROVED'
+        });
+      }
+
+      referrerId = referrer.id;
+    }
+
+    // Hash password
+    const { hashPassword } = require('../utils/passwordHash');
+    const password_hash = await hashPassword(password);
+
+    // Generate unique referral code
+    const { generateReferralCode } = require('../utils/generateReferralCode');
+    const newReferralCode = await generateReferralCode();
+
+    // Create user with APPROVED status (no approval needed for instructor-added users)
+    const userId = await User.create({
+      email,
+      username,
+      password_hash,
+      role: 'student',
+      referral_code: newReferralCode,
+      referred_by_id: referrerId,
+      approval_status: 'approved'  // Auto-approved
+    });
+
+    // Distribute commissions immediately if referrer exists
+    if (referrerId) {
+      const CommissionService = require('../services/commissionService');
+      await CommissionService.distributeCommissions(
+        userId,
+        username,
+        referrerId
+      );
+    }
+
+    // Get created user
+    const user = await User.findById(userId);
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'add_student',
+      target_user_id: userId,
+      details: { username, email, referrer_id: referrerId },
+      ip_address: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Student account created successfully',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          referralCode: user.referral_code,
+          approvalStatus: 'approved',
+          balance: parseFloat(user.balance)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Add student error:', error);
+    res.status(500).json({
+      error: 'Failed to create student account',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
  * GET /api/v1/instructor/network-graph
  * Get complete network visualization data
  */
