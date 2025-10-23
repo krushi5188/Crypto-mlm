@@ -24,7 +24,7 @@ class ReferralService {
       levels[level].count++;
       levels[level].members.push({
         id: member.user_id,
-        username: member.username,
+        displayName: `Member #${member.user_id}`, // Anonymized
         joinedAt: member.created_at,
         recruits: member.direct_recruits,
         isActive: member.is_active
@@ -41,6 +41,7 @@ class ReferralService {
 
   /**
    * Get complete network graph for instructor visualization
+   * Shows usernames only for instructor admin purposes
    */
   static async getCompleteNetworkGraph() {
     const { nodes, edges } = await Referral.getCompleteNetwork();
@@ -56,7 +57,7 @@ class ReferralService {
 
       return {
         id: node.id,
-        username: node.username,
+        username: node.username, // Keep username for instructor only
         balance: parseFloat(node.balance),
         directRecruits: node.direct_recruits,
         status
@@ -86,13 +87,14 @@ class ReferralService {
 
   /**
    * Get upline chain for a specific user
+   * Anonymized for privacy
    */
   static async getUplineChain(userId) {
     const upline = await Referral.getUpline(userId);
 
-    return upline.map(u => ({
+    return upline.map((u, index) => ({
       id: u.upline_id,
-      username: u.username,
+      displayName: `Level ${u.level} Upline`, // Anonymized
       level: u.level,
       balance: parseFloat(u.balance)
     }));
