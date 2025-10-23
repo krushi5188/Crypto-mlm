@@ -22,6 +22,14 @@ router.post('/register',
     try {
       const { email, username, password, referralCode } = req.validatedBody;
 
+      // REQUIRED: Referral code is mandatory
+      if (!referralCode) {
+        return res.status(400).json({
+          error: 'Referral code is required to register',
+          code: 'REFERRAL_CODE_REQUIRED'
+        });
+      }
+
       // Check if participant limit reached
       const participantCount = await User.countStudents();
       const maxParticipants = await SystemConfig.get('max_participants');
@@ -42,29 +50,34 @@ router.post('/register',
         });
       }
 
-      // Check if username already exists
-      const [existingUsername] = await require('../config/database').pool.query(
-        'SELECT id FROM users WHERE username = ?',
+      // Check if username already exists (FIXED: PostgreSQL syntax)
+      const usernameCheck = await require('../config/database').pool.query(
+        'SELECT id FROM users WHERE username = $1',
         [username]
       );
 
-      if (existingUsername.length > 0) {
+      if (usernameCheck.rows.length > 0) {
         return res.status(400).json({
           error: 'Username already taken',
           code: 'USERNAME_TAKEN'
         });
       }
 
-      // Validate referral code if provided
-      let referrer = null;
-      if (referralCode) {
-        referrer = await User.findByReferralCode(referralCode);
-        if (!referrer) {
-          return res.status(400).json({
-            error: 'Invalid referral code',
-            code: 'INVALID_REFERRAL_CODE'
-          });
-        }
+      // Validate referral code (REQUIRED)
+      const referrer = await User.findByReferralCode(referralCode);
+      if (!referrer) {
+        return res.status(400).json({
+          error: 'Invalid referral code',
+          code: 'INVALID_REFERRAL_CODE'
+        });
+      }
+
+      // Ensure referrer is approved (can't refer if not approved)
+      if (referrer.role === 'student' && referrer.approval_status !== 'approved') {
+        return res.status(400).json({
+          error: 'This referral link is not active',
+          code: 'REFERRER_NOT_APPROVED'
+        });
       }
 
       // Hash password
@@ -73,40 +86,35 @@ router.post('/register',
       // Generate unique referral code
       const newReferralCode = await generateReferralCode();
 
-      // Create user
+      // Create user with PENDING status (awaiting instructor approval)
       const userId = await User.create({
         email,
         username,
         password_hash,
         role: 'student',
         referral_code: newReferralCode,
-        referred_by_id: referrer ? referrer.id : null
+        referred_by_id: referrer.id,
+        approval_status: 'pending'  // NEW: Pending approval
       });
 
-      // Distribute commissions if user was referred
-      if (referrer) {
-        await CommissionService.distributeCommissions(userId, username, referrer.id);
-      }
+      // NOTE: Commissions will be distributed AFTER instructor approves
+      // Do NOT distribute commissions here
 
       // Get created user
       const user = await User.findById(userId);
 
-      // Generate JWT token
-      const token = generateToken(user);
-
-      // Return user data and token
+      // Return success - user is pending approval
       res.status(201).json({
         success: true,
+        message: 'Registration submitted. Awaiting instructor approval.',
         data: {
           user: {
             id: user.id,
             email: user.email,
             username: user.username,
             referralCode: user.referral_code,
-            balance: parseFloat(user.balance),
-            role: user.role
-          },
-          token
+            approvalStatus: 'pending'
+          }
         }
       });
     } catch (error) {
