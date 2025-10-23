@@ -238,6 +238,145 @@ const InstructorParticipants = () => {
 
   return (
     <div style={containerStyles}>
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '2rem'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-xl)',
+            maxWidth: '500px',
+            width: '100%',
+            border: '2px solid var(--primary-gold)',
+            boxShadow: 'var(--shadow-2xl)'
+          }}>
+            <h3 style={{
+              fontSize: 'var(--text-2xl)',
+              marginBottom: 'var(--space-md)',
+              color: 'var(--text-primary)'
+            }}>
+              {confirmTitle}
+            </h3>
+            <p style={{
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xl)',
+              lineHeight: '1.6'
+            }}>
+              {confirmMessage}
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => setShowConfirm(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                variant="success"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal with Reason Input */}
+      {showRejectModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '2rem'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-xl)',
+            maxWidth: '500px',
+            width: '100%',
+            border: '2px solid #ef4444',
+            boxShadow: 'var(--shadow-2xl)'
+          }}>
+            <h3 style={{
+              fontSize: 'var(--text-2xl)',
+              marginBottom: 'var(--space-md)',
+              color: '#ef4444'
+            }}>
+              Reject {pendingRejectUsername}
+            </h3>
+            <p style={{
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-md)',
+              lineHeight: '1.6'
+            }}>
+              Please provide a reason for rejecting this member:
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              rows={4}
+              style={{
+                width: '100%',
+                padding: 'var(--space-md)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--text-base)',
+                marginBottom: 'var(--space-lg)',
+                resize: 'vertical'
+              }}
+            />
+            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setPendingRejectId(null);
+                  setPendingRejectUsername('');
+                  setRejectReason('');
+                }}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmReject}
+                disabled={!rejectReason.trim()}
+                variant="danger"
+                style={{
+                  opacity: !rejectReason.trim() ? 0.5 : 1,
+                  cursor: !rejectReason.trim() ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Reject Member
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Participants Management</h1>
