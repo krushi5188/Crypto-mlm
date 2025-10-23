@@ -130,7 +130,7 @@ CREATE INDEX idx_admin_actions_target_user ON admin_actions(target_user_id);
 
 -- Insert default system configuration
 INSERT INTO system_config (config_key, config_value, data_type, description) VALUES
-('simulation_status', 'active', 'string', 'Current status: active or paused'),
+('simulation_status', 'active', 'string', 'Platform status: active or paused'),
 ('max_participants', '300', 'integer', 'Maximum number of members'),
 ('commission_level_1', '10', 'float', 'Level 1 commission percentage'),
 ('commission_level_2', '7', 'float', 'Level 2 commission percentage'),
