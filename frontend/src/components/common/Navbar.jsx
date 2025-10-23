@@ -150,14 +150,6 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            <span style={{ 
-              fontSize: 'var(--text-sm)', 
-              color: 'var(--text-dimmed)',
-              fontWeight: '500',
-              marginLeft: 'var(--space-lg)'
-            }}>
-              Invitation Only
-            </span>
             <Link 
               to="/login" 
               style={linkStyles}
