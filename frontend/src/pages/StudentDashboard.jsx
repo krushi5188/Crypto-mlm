@@ -93,14 +93,14 @@ const StudentDashboard = () => {
 
   return (
     <div style={containerStyles}>
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }} className="fade-in">
         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Dashboard</h1>
         <p style={{ color: '#a0aec0' }}>Welcome back! Here's your overview.</p>
       </div>
 
       {/* Stats Grid */}
       <div style={gridStyles}>
-        <Card style={statCardStyles}>
+        <Card style={statCardStyles} className="fade-in-up delay-100">
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💰</div>
           <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>
             {formatCurrency(data.balance)} USDT
@@ -108,7 +108,7 @@ const StudentDashboard = () => {
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Current Balance</div>
         </Card>
 
-        <Card style={statCardStyles}>
+        <Card style={statCardStyles} className="fade-in-up delay-200">
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📈</div>
           <div style={{ fontSize: '2rem', fontWeight: '700' }}>
             {formatCurrency(data.totalEarned)} USDT
@@ -116,13 +116,13 @@ const StudentDashboard = () => {
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Total Earned</div>
         </Card>
 
-        <Card style={statCardStyles}>
+        <Card style={statCardStyles} className="fade-in-up delay-300">
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👥</div>
           <div style={{ fontSize: '2rem', fontWeight: '700' }}>{data.directRecruits}</div>
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Direct Recruits</div>
         </Card>
 
-        <Card style={statCardStyles}>
+        <Card style={statCardStyles} className="fade-in-up delay-400">
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🌐</div>
           <div style={{ fontSize: '2rem', fontWeight: '700' }}>{data.networkSize}</div>
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Network Size</div>
@@ -130,7 +130,7 @@ const StudentDashboard = () => {
       </div>
 
       {/* Referral Link */}
-      <Card style={{ marginBottom: '2rem' }}>
+      <Card style={{ marginBottom: '2rem' }} className="fade-in-up delay-100">
         <h3 style={{ marginBottom: '1rem' }}>Share Your Referral Link</h3>
         <p style={{ color: '#a0aec0', marginBottom: '1rem', fontSize: '0.95rem' }}>
           Invite others to join your network and earn commissions!
@@ -160,7 +160,7 @@ const StudentDashboard = () => {
       </Card>
 
       {/* Recent Activity */}
-      <Card title="Recent Activity">
+      <Card title="Recent Activity" className="fade-in-up delay-200">
         {data.recentActivity.length === 0 ? (
           <p style={{ color: '#a0aec0', textAlign: 'center', padding: '2rem' }}>
             No activity yet. Start by inviting others to join your network!
