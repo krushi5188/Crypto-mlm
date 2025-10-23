@@ -14,50 +14,54 @@ const Button = ({
   const baseStyles = {
     padding: size === 'sm' ? '0.5rem 1rem' : size === 'lg' ? '1rem 2rem' : '0.75rem 1.5rem',
     fontSize: size === 'sm' ? '0.875rem' : size === 'lg' ? '1.125rem' : '1rem',
-    fontWeight: '500',
+    fontWeight: '600',
     borderRadius: '12px',
     border: 'none',
     cursor: disabled || loading ? 'not-allowed' : 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all var(--transition-base)',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '0.5rem',
     width: fullWidth ? '100%' : 'auto',
-    opacity: disabled || loading ? 0.6 : 1
+    opacity: disabled || loading ? 0.5 : 1,
+    position: 'relative',
+    overflow: 'hidden'
   };
 
   const variantStyles = {
     primary: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: '#ffffff',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      background: 'linear-gradient(135deg, var(--primary-gold) 0%, var(--accent-green) 100%)',
+      color: 'var(--bg-primary)',
+      boxShadow: 'var(--shadow-md)',
+      fontWeight: '700'
     },
     secondary: {
-      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      color: '#ffffff',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      background: 'linear-gradient(135deg, var(--primary-gold-dark) 0%, var(--primary-gold) 100%)',
+      color: 'var(--bg-primary)',
+      boxShadow: 'var(--shadow-md)'
     },
     success: {
-      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      background: 'linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%)',
       color: '#ffffff',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      boxShadow: 'var(--shadow-md)'
     },
     danger: {
       background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
       color: '#ffffff',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      boxShadow: 'var(--shadow-md)'
     },
     outline: {
       background: 'transparent',
-      color: '#ffffff',
-      border: '2px solid #ffffff'
+      color: 'var(--primary-gold)',
+      border: '2px solid var(--primary-gold)',
+      boxShadow: 'none'
     }
   };
 
   const hoverStyles = !disabled && !loading ? {
     transform: 'translateY(-2px)',
-    boxShadow: '0 6px 8px rgba(0, 0, 0, 0.15)'
+    boxShadow: variant === 'outline' ? '0 0 20px rgba(251, 191, 36, 0.3)' : 'var(--shadow-lg)'
   } : {};
 
   return (
