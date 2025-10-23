@@ -6,6 +6,7 @@ import Watermark from './components/common/Watermark';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
 import InstructorAnalytics from './pages/InstructorAnalytics';
+import InstructorParticipants from './pages/InstructorParticipants';
 import './styles/global.css';
 
 // Protected Route Component
@@ -141,10 +142,7 @@ function App() {
           <Route path="/instructor/participants" element={
             <ProtectedRoute allowedRole="instructor">
               <AppLayout>
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Participants Management</h2>
-                  <p style={{ color: '#a0aec0' }}>Feature coming soon - manage all participants</p>
-                </div>
+                <InstructorParticipants />
               </AppLayout>
             </ProtectedRoute>
           } />
