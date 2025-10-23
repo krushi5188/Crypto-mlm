@@ -30,10 +30,14 @@ class SystemConfig {
   // Set config value
   static async set(key, value, updatedBy = 'system') {
     const result = await pool.query(
-      `UPDATE system_config
-       SET config_value = $1, updated_by = $2, updated_at = NOW()
-       WHERE config_key = $3`,
-      [String(value), updatedBy, key]
+      `INSERT INTO system_config (config_key, config_value, data_type, updated_by, updated_at)
+       VALUES ($1, $2, 'string', $3, NOW())
+       ON CONFLICT (config_key) 
+       DO UPDATE SET 
+         config_value = $2, 
+         updated_by = $3, 
+         updated_at = NOW()`,
+      [key, String(value), updatedBy]
     );
 
     return result.rowCount > 0;
