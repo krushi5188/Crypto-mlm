@@ -16,12 +16,12 @@ const generateReferralCode = async () => {
     const referralCode = `ATN-${code}`;
 
     // Check if code already exists
-    const [existing] = await pool.query(
-      'SELECT id FROM users WHERE referral_code = ?',
+    const result = await pool.query(
+      'SELECT id FROM users WHERE referral_code = $1',
       [referralCode]
     );
 
-    if (existing.length === 0) {
+    if (result.rows.length === 0) {
       return referralCode;
     }
   }
