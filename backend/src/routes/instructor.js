@@ -404,7 +404,7 @@ router.post('/add-student', validate('register'), async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Student account created successfully',
+      message: 'Member account created successfully',
       data: {
         user: {
           id: user.id,
@@ -417,9 +417,9 @@ router.post('/add-student', validate('register'), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Add student error:', error);
+    console.error('Add member error:', error);
     res.status(500).json({
-      error: 'Failed to create student account',
+      error: 'Failed to create member account',
       code: 'DATABASE_ERROR'
     });
   }
