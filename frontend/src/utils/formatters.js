@@ -1,4 +1,4 @@
-// Format number as currency (NexusCoins)
+// Format number as currency (USDT)
 export const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
