@@ -30,7 +30,7 @@ const InstructorControls = () => {
   };
 
   const handlePause = async () => {
-    if (!confirm('Pause the simulation? Students will not be able to register or earn commissions.')) {
+    if (!confirm('Pause the system? Members will not be able to register or earn commissions.')) {
       return;
     }
 
@@ -38,16 +38,16 @@ const InstructorControls = () => {
     try {
       await instructorAPI.pause();
       await loadSystemStatus();
-      alert('Simulation paused successfully');
+      alert('System paused successfully');
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to pause simulation');
+      alert(error.response?.data?.error || 'Failed to pause system');
     } finally {
       setProcessing(false);
     }
   };
 
   const handleResume = async () => {
-    if (!confirm('Resume the simulation?')) {
+    if (!confirm('Resume the system?')) {
       return;
     }
 
@@ -55,9 +55,9 @@ const InstructorControls = () => {
     try {
       await instructorAPI.resume();
       await loadSystemStatus();
-      alert('Simulation resumed successfully');
+      alert('System resumed successfully');
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to resume simulation');
+      alert(error.response?.data?.error || 'Failed to resume system');
     } finally {
       setProcessing(false);
     }
@@ -65,14 +65,14 @@ const InstructorControls = () => {
 
   const handleReset = async (type) => {
     const confirmMsg = type === 'full'
-      ? 'FULL RESET: This will delete ALL student data, transactions, and reset balances. This action CANNOT be undone!'
+      ? 'FULL RESET: This will delete ALL member data, transactions, and reset balances. This action CANNOT be undone!'
       : 'SOFT RESET: This will reset all balances to zero but keep user accounts. Continue?';
 
     if (!confirm(confirmMsg)) {
       return;
     }
 
-    if (type === 'full' && !confirm('Are you ABSOLUTELY SURE? All student data will be permanently deleted!')) {
+    if (type === 'full' && !confirm('Are you ABSOLUTELY SURE? All member data will be permanently deleted!')) {
       return;
     }
 
@@ -82,7 +82,7 @@ const InstructorControls = () => {
       await loadSystemStatus();
       alert(`${type === 'full' ? 'Full' : 'Soft'} reset completed successfully`);
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to reset simulation');
+      alert(error.response?.data?.error || 'Failed to reset system');
     } finally {
       setProcessing(false);
     }
@@ -134,8 +134,8 @@ const InstructorControls = () => {
   return (
     <div style={containerStyles}>
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Simulation Controls</h1>
-        <p style={{ color: '#a0aec0' }}>Manage simulation state and inject resources</p>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>System Controls</h1>
+        <p style={{ color: '#a0aec0' }}>Manage platform state and resources</p>
       </div>
 
       {/* Current Status */}
@@ -164,8 +164,8 @@ const InstructorControls = () => {
             <div style={{ flex: 1 }}>
               <div style={{ color: '#a0aec0', marginBottom: '0.5rem' }}>
                 {isActive
-                  ? 'Simulation is running. Students can register and earn commissions.'
-                  : 'Simulation is paused. No new registrations or commission distributions.'}
+                  ? 'System is running. Members can register and earn commissions.'
+                  : 'System is paused. No new registrations or commission distributions.'}
               </div>
             </div>
           </div>
@@ -175,7 +175,7 @@ const InstructorControls = () => {
       {/* Pause/Resume Controls */}
       <Card style={{ marginBottom: '2rem' }}>
         <div style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Simulation State</h3>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Platform State</h3>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <Button
               onClick={handlePause}
@@ -186,7 +186,7 @@ const InstructorControls = () => {
                 opacity: !isActive || processing ? 0.5 : 1
               }}
             >
-              ⏸️ Pause Simulation
+              ⏸️ Pause System
             </Button>
             <Button
               onClick={handleResume}
@@ -197,7 +197,7 @@ const InstructorControls = () => {
                 opacity: isActive || processing ? 0.5 : 1
               }}
             >
-              ▶️ Resume Simulation
+              ▶️ Resume System
             </Button>
           </div>
         </div>
@@ -206,9 +206,9 @@ const InstructorControls = () => {
       {/* Inject Coins */}
       <Card style={{ marginBottom: '2rem' }}>
         <div style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>💰 Inject Atlas Coins</h3>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>💰 Add NexusCoins</h3>
           <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Manually add coins to a participant's balance for testing or adjustments
+            Manually add coins to a member's balance for adjustments
           </p>
           <form onSubmit={handleInjectCoins}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
@@ -239,7 +239,7 @@ const InstructorControls = () => {
               style={{ marginBottom: '1rem' }}
             />
             <Button type="submit" disabled={processing}>
-              💉 Inject Coins
+              💉 Add Coins
             </Button>
           </form>
         </div>
@@ -265,7 +265,7 @@ const InstructorControls = () => {
           <div>
             <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Full Reset</h4>
             <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '1rem' }}>
-              Delete ALL student data, transactions, referrals, and balances. This CANNOT be undone!
+              Delete ALL member data, transactions, referrals, and balances. This CANNOT be undone!
             </p>
             <Button
               onClick={() => handleReset('full')}
