@@ -85,55 +85,55 @@ const LandingPage = () => {
       {/* Features Section */}
       <section id="features" style={sectionStyles}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Platform Features</h2>
-          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Everything you need to succeed</p>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Why Atlas Network Leads the Industry</h2>
+          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Built for serious network marketers who want real results</p>
         </div>
         <div style={featureGrid}>
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💰</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>USDT Payments</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Lightning-Fast Commissions</h3>
             <p style={{ color: '#a0aec0' }}>
-              Earn real cryptocurrency (USDT) through our proven commission structure. Instant, transparent, and secure.
+              Earn USDT instantly when your network grows. No waiting periods, no payment delays—your commissions hit your wallet in real-time, automatically.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>5-Level Commission</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Proven 5-Level System</h3>
             <p style={{ color: '#a0aec0' }}>
-              Earn from 5 levels deep: 10%, 7%, 5%, 3%, and 2%. Build a strong network and watch your income grow.
+              Maximize your earnings with our battle-tested 5-level structure (10%, 7%, 5%, 3%, 2%). Designed to reward both builders and recruiters fairly.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Real-Time Analytics</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>100% Transparent Blockchain</h3>
             <p style={{ color: '#a0aec0' }}>
-              Track your network, earnings, and performance with comprehensive analytics and reporting tools.
+              Every transaction recorded on the blockchain. See exactly where every USDT comes from and goes to—complete transparency, zero manipulation.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔗</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Referral System</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Advanced Analytics Dashboard</h3>
             <p style={{ color: '#a0aec0' }}>
-              Easy-to-share referral links make it simple to grow your network and increase your earnings.
+              Track every member, every commission, every level in real-time. Powerful insights help you identify top performers and optimize your growth strategy.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Secure Platform</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌐</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Zero Geographic Limits</h3>
             <p style={{ color: '#a0aec0' }}>
-              Enterprise-grade security with encrypted transactions and protected user data. Your success is our priority.
+              Build your network globally with USDT cryptocurrency—no bank restrictions, no country limitations. Your team can be anywhere in the world.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📱</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Mobile Friendly</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚀</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Set It & Earn Forever</h3>
             <p style={{ color: '#a0aec0' }}>
-              Access your dashboard anytime, anywhere. Fully responsive design works on all devices.
+              Build your network once, earn passive income continuously. Your downline's success becomes your success—automated, perpetual earnings.
             </p>
           </Card>
         </div>
