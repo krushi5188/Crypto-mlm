@@ -1,6 +1,6 @@
 const { pool } = require('../config/database');
 
-// Check if simulation is active
+// Check if system is active
 const checkSimulationActive = async (req, res, next) => {
   try {
     const [rows] = await pool.query(
@@ -9,14 +9,14 @@ const checkSimulationActive = async (req, res, next) => {
 
     if (rows.length === 0 || rows[0].config_value !== 'active') {
       return res.status(503).json({
-        error: 'Simulation paused by instructor',
-        code: 'SIMULATION_PAUSED'
+        error: 'System temporarily paused',
+        code: 'SYSTEM_PAUSED'
       });
     }
 
     next();
   } catch (error) {
-    console.error('Error checking simulation status:', error);
+    console.error('Error checking system status:', error);
     return res.status(500).json({
       error: 'Internal server error',
       code: 'DATABASE_ERROR'
