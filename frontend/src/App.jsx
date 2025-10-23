@@ -11,6 +11,7 @@ import StudentEarnings from './pages/StudentEarnings';
 import StudentProfile from './pages/StudentProfile';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
+import InstructorReferrals from './pages/InstructorReferrals';
 import InstructorNetwork from './pages/InstructorNetwork';
 import InstructorControls from './pages/InstructorControls';
 import './styles/global.css';
@@ -144,6 +145,14 @@ function App() {
             <ProtectedRoute allowedRole="instructor">
               <AppLayout>
                 <InstructorParticipants />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/instructor/referrals" element={
+            <ProtectedRoute allowedRole="instructor">
+              <AppLayout>
+                <InstructorReferrals />
               </AppLayout>
             </ProtectedRoute>
           } />
