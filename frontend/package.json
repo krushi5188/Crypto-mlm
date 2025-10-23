@@ -1,7 +1,7 @@
 {
-  "name": "atlas-network-simulator-frontend",
+  "name": "nexus-network-frontend",
   "version": "1.0.0",
-  "description": "Atlas Network Educational MLM Simulator Frontend",
+  "description": "Nexus Network MLM Platform Frontend",
   "type": "module",
   "scripts": {
     "dev": "vite",
