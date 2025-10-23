@@ -3,8 +3,10 @@ import { instructorAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const InstructorParticipants = () => {
+  const { user } = useAuth();
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,6 +22,7 @@ const InstructorParticipants = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     loadParticipants();
