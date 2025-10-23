@@ -171,14 +171,14 @@ router.get('/profile', async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
 
-    // Get referrer info if exists
+    // Get referrer info if exists (anonymized for privacy)
     let referredBy = null;
     if (user.referred_by_id) {
       const referrer = await User.findById(user.referred_by_id);
       if (referrer) {
         referredBy = {
           id: referrer.id,
-          username: referrer.username
+          displayName: 'Your Upline' // Anonymized for privacy
         };
       }
     }
