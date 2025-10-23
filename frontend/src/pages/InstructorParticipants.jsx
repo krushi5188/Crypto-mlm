@@ -19,6 +19,8 @@ const InstructorParticipants = () => {
     referralCode: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
 
   useEffect(() => {
     loadParticipants();
@@ -41,7 +43,7 @@ const InstructorParticipants = () => {
     e.preventDefault();
     
     if (!formData.email || !formData.username || !formData.password) {
-      alert('Please fill in all required fields');
+      setFormError('Please fill in all required fields');
       return;
     }
 
@@ -53,10 +55,10 @@ const InstructorParticipants = () => {
       // Reset form
       setFormData({ email: '', username: '', password: '', referralCode: '' });
       setShowAddForm(false);
-      alert(`Member ${formData.username} created successfully!`);
+      setFormSuccess(`Member ${formData.username} created successfully!`);
     } catch (error) {
       console.error('Add member error:', error);
-      alert(error.response?.data?.error || 'Failed to create member account');
+      setFormError(error.response?.data?.error || 'Failed to create member account');
     } finally {
       setSubmitting(false);
     }
