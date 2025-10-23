@@ -180,49 +180,49 @@ const LandingPage = () => {
       {/* Advantages Section */}
       <section style={sectionStyles}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Why Choose Atlas Network?</h2>
-          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>The advantages that set us apart</p>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>The Atlas Network Advantage</h2>
+          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Why top earners choose Atlas Network over traditional MLM platforms</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Passive Income Potential</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Cryptocurrency-Powered Income</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Build once, earn forever. Your network continues to generate commissions even when you're not actively recruiting.
+              Receive earnings in USDT, not points or monopoly money. Real cryptocurrency that you can hold, trade, or convert to any currency worldwide—instant liquidity, zero bureaucracy.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ No Hidden Fees</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Mathematical Fairness Guaranteed</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Transparent pricing with no surprise charges. What you earn is what you keep (minus standard processing fees).
+              Our 5-level structure is mathematically optimized for sustainable growth. Unlike unlimited-level plans that collapse, our system ensures everyone earns fairly without pyramid scheme risks.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Proven System</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Zero Gatekeeping or Quotas</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Our 5-level commission structure has been tested and optimized for maximum earning potential across all levels.
+              No monthly fees, no minimum recruitment targets, no rank qualifications to maintain. Build at your pace—your network never expires, your income never resets.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Community Support</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Immutable Blockchain Records</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Join a thriving community of network marketers who support each other's growth and success.
+              Every transaction permanently recorded on-chain. No company can manipulate your earnings, freeze your account, or "adjust" commissions—your income is cryptographically protected.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Instant Payouts</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Institutional-Grade Infrastructure</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Commissions are credited instantly to your account. No waiting periods or payment delays.
+              Built on enterprise technology with 99.9% uptime, DDoS protection, and bank-level encryption. Your business runs 24/7 without interruption—professional reliability you can stake your income on.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Scalable Growth</h3>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#10b981' }}>✓ Compound Growth Multiplier</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              No limits on how large your network can grow. The sky's the limit for your earning potential.
+              When your Level 1 recruits succeed, you earn from their entire 5-level network. This compounding effect creates exponential income growth as your organization scales globally.
             </p>
           </Card>
         </div>
