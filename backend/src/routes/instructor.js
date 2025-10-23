@@ -501,7 +501,7 @@ router.post('/inject-coins', validate('injectCoins'), async (req, res) => {
     res.json({
       success: true,
       data: {
-        message: `${amount} NexusCoins injected to ${user.username}`,
+        message: `${amount} USDT injected to ${user.username}`,
         transaction: {
           id: transactionId,
           userId,
