@@ -38,8 +38,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
+// API root endpoint
+app.get('/api', (req, res) => {
   res.json({
     message: 'Educational MLM Simulator API',
     version: '1.0.0',
@@ -61,10 +61,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
+// 404 handler for API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
-    error: 'Endpoint not found',
+    error: 'API endpoint not found',
     code: 'NOT_FOUND'
   });
 });
@@ -116,40 +116,67 @@ const initializeDatabase = async () => {
   }
 };
 
-// Start server
-const startServer = async () => {
-  try {
+// Initialize database on startup (works for both local and serverless)
+let dbInitialized = false;
+const ensureDbInitialized = async () => {
+  if (!dbInitialized) {
     await initializeDatabase();
-
-    app.listen(PORT, () => {
-      console.log('');
-      console.log('========================================');
-      console.log('  Educational MLM Simulator API');
-      console.log('========================================');
-      console.log(`  Server running on port ${PORT}`);
-      console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`  API Base: http://localhost:${PORT}/api/v1`);
-      console.log('========================================');
-      console.log('');
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    dbInitialized = true;
   }
 };
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, closing server...');
-  await pool.end();
-  process.exit(0);
+// Run initialization on first request (serverless)
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    res.status(503).json({
+      error: 'Service temporarily unavailable',
+      code: 'DB_INIT_ERROR'
+    });
+  }
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, closing server...');
-  await pool.end();
-  process.exit(0);
-});
+// Start server only if not in serverless environment (Vercel)
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  const startServer = async () => {
+    try {
+      await initializeDatabase();
 
-// Start the server
-startServer();
+      app.listen(PORT, () => {
+        console.log('');
+        console.log('========================================');
+        console.log('  Educational MLM Simulator API');
+        console.log('========================================');
+        console.log(`  Server running on port ${PORT}`);
+        console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`  API Base: http://localhost:${PORT}/api/v1`);
+        console.log('========================================');
+        console.log('');
+      });
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+
+  startServer();
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, closing server...');
+    await pool.end();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, closing server...');
+    await pool.end();
+    process.exit(0);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
