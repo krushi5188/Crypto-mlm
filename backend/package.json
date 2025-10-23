@@ -1,7 +1,7 @@
 {
-  "name": "nexus-network-backend",
+  "name": "atlas-network-backend",
   "version": "1.0.0",
-  "description": "Nexus Network MLM Platform Backend API",
+  "description": "Atlas Network MLM Platform Backend API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
