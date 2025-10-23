@@ -16,6 +16,14 @@ const schemas = {
     referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).optional()
   }),
 
+  // Instructor adding member (simpler validation for temporary passwords)
+  instructorAddMember: Joi.object({
+    email: Joi.string().email().required(),
+    username: Joi.string().alphanum().min(3).max(20).required(),
+    password: Joi.string().min(6).required(), // Simpler: just minimum 6 characters
+    referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).optional()
+  }),
+
   // User login
   login: Joi.object({
     email: Joi.string().email().required(),
