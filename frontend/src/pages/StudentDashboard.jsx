@@ -7,6 +7,7 @@ import { formatCurrency, formatTimeAgo } from '../utils/formatters';
 const StudentDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -17,8 +18,10 @@ const StudentDashboard = () => {
     try {
       const response = await studentAPI.getDashboard();
       setData(response.data.data);
+      setError(null);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      setError(error.response?.data?.error || 'Failed to load dashboard. Please ensure the database is configured.');
     } finally {
       setLoading(false);
     }
@@ -35,6 +38,37 @@ const StudentDashboard = () => {
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
         <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+        <Card>
+          <div style={{ padding: '2rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Unable to Load Dashboard</h2>
+            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
+              {error || 'Unable to load dashboard data.'}
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1.5rem',
+                background: '#fbbf24',
+                color: '#1a1a1a',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </Card>
       </div>
     );
   }
