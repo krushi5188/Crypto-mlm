@@ -74,9 +74,9 @@ const RegisterPage = () => {
     return (
       <div style={containerStyles}>
         <Card style={{ maxWidth: '450px', width: '100%', textAlign: 'center' }}>
-          <h2>Simulation Paused</h2>
+          <h2>Registrations Paused</h2>
           <p style={{ color: '#a0aec0', marginTop: '1rem' }}>
-            Registration is currently disabled. The instructor has paused the simulation.
+            Registration is currently disabled. The platform is temporarily paused.
           </p>
         </Card>
       </div>
@@ -87,7 +87,7 @@ const RegisterPage = () => {
     return (
       <div style={containerStyles}>
         <Card style={{ maxWidth: '450px', width: '100%', textAlign: 'center' }}>
-          <h2>Simulation Full</h2>
+          <h2>Registrations Full</h2>
           <p style={{ color: '#a0aec0', marginTop: '1rem' }}>
             The maximum number of participants ({systemStatus.maxParticipants}) has been reached.
           </p>
