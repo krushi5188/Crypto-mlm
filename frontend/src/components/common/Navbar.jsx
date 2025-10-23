@@ -118,6 +118,14 @@ const Navbar = () => {
                   Participants
                 </Link>
                 <Link 
+                  to="/instructor/referrals" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Referrals
+                </Link>
+                <Link 
                   to="/instructor/network" 
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
