@@ -9,7 +9,7 @@ const SystemConfig = require('../models/SystemConfig');
  */
 router.get('/status', async (req, res) => {
   try {
-    const [isActive, participantCount, maxParticipants] = await Promise.all([
+    const [simulationStatus, participantCount, maxParticipants] = await Promise.all([
       SystemConfig.get('simulation_status'),
       User.countStudents(),
       SystemConfig.get('max_participants')
@@ -18,7 +18,8 @@ router.get('/status', async (req, res) => {
     res.json({
       success: true,
       data: {
-        isActive: isActive === 'active',
+        simulationStatus: simulationStatus || 'active',
+        isActive: simulationStatus === 'active',
         participantCount,
         maxParticipants,
         spotsRemaining: Math.max(0, maxParticipants - participantCount)
