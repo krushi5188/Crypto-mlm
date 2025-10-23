@@ -22,6 +22,16 @@ const InstructorParticipants = () => {
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
+  // Confirmation Modal State
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [pendingRejectId, setPendingRejectId] = useState(null);
+  const [pendingRejectUsername, setPendingRejectUsername] = useState('');
+
   useEffect(() => {
     loadParticipants();
   }, []);
@@ -76,35 +86,61 @@ const InstructorParticipants = () => {
     }
   };
 
-  const handleApprove = async (participantId, username) => {
-    if (!confirm(`Approve ${username}? This will activate their account and distribute commissions to their upline.`)) {
-      return;
-    }
+  const showConfirmDialog = (title, message, action) => {
+    setConfirmTitle(title);
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setShowConfirm(true);
+  };
 
-    setProcessingId(participantId);
-    try {
-      await instructorAPI.approveParticipant(participantId);
-      await loadParticipants();
-      setFormSuccess(`✓ ${username} has been approved successfully!`);
-      setTimeout(() => setFormSuccess(''), 5000);
-    } catch (error) {
-      console.error('Approval error:', error);
-      setFormError(error.response?.data?.error || 'Failed to approve participant');
-      setTimeout(() => setFormError(''), 5000);
-    } finally {
-      setProcessingId(null);
+  const handleConfirm = () => {
+    if (confirmAction) {
+      confirmAction();
     }
+    setShowConfirm(false);
+  };
+
+  const handleApprove = async (participantId, username) => {
+    showConfirmDialog(
+      'Approve Member',
+      `Approve ${username}? This will activate their account and distribute commissions to their upline.`,
+      async () => {
+        setProcessingId(participantId);
+        try {
+          await instructorAPI.approveParticipant(participantId);
+          await loadParticipants();
+          setFormSuccess(`✓ ${username} has been approved successfully!`);
+          setTimeout(() => setFormSuccess(''), 5000);
+        } catch (error) {
+          console.error('Approval error:', error);
+          setFormError(error.response?.data?.error || 'Failed to approve participant');
+          setTimeout(() => setFormError(''), 5000);
+        } finally {
+          setProcessingId(null);
+        }
+      }
+    );
   };
 
   const handleReject = async (participantId, username) => {
-    const reason = prompt(`Reject ${username}? Please provide a reason:`);
-    if (!reason) return;
+    setPendingRejectId(participantId);
+    setPendingRejectUsername(username);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
 
-    setProcessingId(participantId);
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      return; // Don't allow empty reason
+    }
+
+    setShowRejectModal(false);
+    setProcessingId(pendingRejectId);
+    
     try {
-      await instructorAPI.rejectParticipant(participantId, { reason });
+      await instructorAPI.rejectParticipant(pendingRejectId, { reason: rejectReason });
       await loadParticipants();
-      setFormSuccess(`✓ ${username} has been rejected.`);
+      setFormSuccess(`✓ ${pendingRejectUsername} has been rejected.`);
       setTimeout(() => setFormSuccess(''), 5000);
     } catch (error) {
       console.error('Rejection error:', error);
@@ -112,6 +148,9 @@ const InstructorParticipants = () => {
       setTimeout(() => setFormError(''), 5000);
     } finally {
       setProcessingId(null);
+      setPendingRejectId(null);
+      setPendingRejectUsername('');
+      setRejectReason('');
     }
   };
 
