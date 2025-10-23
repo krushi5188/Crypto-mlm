@@ -158,6 +158,22 @@ router.post('/login',
         });
       }
 
+      // Check approval status (students only)
+      if (user.role === 'student') {
+        if (user.approval_status === 'pending') {
+          return res.status(403).json({
+            error: 'Your account is pending instructor approval. Please wait for approval to login.',
+            code: 'PENDING_APPROVAL'
+          });
+        }
+        if (user.approval_status === 'rejected') {
+          return res.status(403).json({
+            error: 'Your account registration was not approved. Please contact your instructor.',
+            code: 'ACCOUNT_REJECTED'
+          });
+        }
+      }
+
       // Update last login
       await User.updateLastLogin(user.id);
 
@@ -174,7 +190,8 @@ router.post('/login',
             username: user.username,
             role: user.role,
             balance: parseFloat(user.balance),
-            referralCode: user.referral_code
+            referralCode: user.referral_code,
+            approvalStatus: user.approval_status || 'approved'
           },
           token
         }
