@@ -43,6 +43,26 @@ app.use(express.urlencoded({ extended: true }));
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
 
+// Health check endpoint (BEFORE initialization - no database needed)
+app.get('/api/v1/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    database: {
+      initialized: isInitialized,
+      host: process.env.DB_HOST ? 'configured' : 'missing',
+      port: process.env.DB_PORT || 'not set',
+      user: process.env.DB_USER ? 'configured' : 'missing',
+      database: process.env.DB_NAME ? 'configured' : 'missing',
+      ssl: process.env.DB_SSL || 'not set'
+    },
+    admin: {
+      email: process.env.ADMIN_EMAIL || 'not set',
+      username: process.env.ADMIN_USERNAME || 'not set'
+    }
+  });
+});
+
 // Initialize database and create instructor account if needed
 let isInitialized = false;
 const initializeDatabase = async () => {
@@ -108,26 +128,6 @@ app.use(async (req, res, next) => {
     }
   }
   next();
-});
-
-// Health check endpoint (before routes, after initialization middleware)
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    database: {
-      initialized: isInitialized,
-      host: process.env.DB_HOST ? 'configured' : 'missing',
-      port: process.env.DB_PORT || 'not set',
-      user: process.env.DB_USER ? 'configured' : 'missing',
-      database: process.env.DB_NAME ? 'configured' : 'missing',
-      ssl: process.env.DB_SSL || 'not set'
-    },
-    admin: {
-      email: process.env.ADMIN_EMAIL || 'not set',
-      username: process.env.ADMIN_USERNAME || 'not set'
-    }
-  });
 });
 
 // Routes
