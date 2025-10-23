@@ -173,6 +173,131 @@ router.get('/participants/:id', async (req, res) => {
 });
 
 /**
+ * POST /api/v1/instructor/participants/:id/approve
+ * Approve a pending student registration
+ */
+router.post('/participants/:id/approve', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+
+    // Get participant
+    const participant = await User.findById(participantId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    if (participant.approval_status === 'approved') {
+      return res.status(400).json({
+        error: 'Participant is already approved',
+        code: 'ALREADY_APPROVED'
+      });
+    }
+
+    // Update approval status
+    await pool.query(
+      'UPDATE users SET approval_status = $1 WHERE id = $2',
+      ['approved', participantId]
+    );
+
+    // NOW distribute commissions to referrer (was skipped during registration)
+    if (participant.referred_by_id) {
+      const CommissionService = require('../services/commissionService');
+      await CommissionService.distributeCommissions(
+        participantId,
+        participant.username,
+        participant.referred_by_id
+      );
+    }
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'view_participant',
+      target_user_id: participantId,
+      details: { action: 'approved', username: participant.username },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${participant.username} has been approved`,
+        participantId,
+        status: 'approved'
+      }
+    });
+  } catch (error) {
+    console.error('Approve participant error:', error);
+    res.status(500).json({
+      error: 'Failed to approve participant',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/participants/:id/reject
+ * Reject a pending student registration
+ */
+router.post('/participants/:id/reject', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    // Get participant
+    const participant = await User.findById(participantId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    if (participant.approval_status === 'approved') {
+      return res.status(400).json({
+        error: 'Cannot reject an already approved participant',
+        code: 'ALREADY_APPROVED'
+      });
+    }
+
+    // Update approval status
+    await pool.query(
+      'UPDATE users SET approval_status = $1 WHERE id = $2',
+      ['rejected', participantId]
+    );
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'view_participant',
+      target_user_id: participantId,
+      details: { action: 'rejected', username: participant.username, reason },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${participant.username} has been rejected`,
+        participantId,
+        status: 'rejected'
+      }
+    });
+  } catch (error) {
+    console.error('Reject participant error:', error);
+    res.status(500).json({
+      error: 'Failed to reject participant',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
  * GET /api/v1/instructor/network-graph
  * Get complete network visualization data
  */
