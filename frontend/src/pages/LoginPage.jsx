@@ -46,7 +46,7 @@ const LoginPage = () => {
 
   return (
     <div style={containerStyles}>
-      <Card style={{ maxWidth: '450px', width: '100%' }}>
+      <Card style={{ maxWidth: '450px', width: '100%' }} className="fade-in">
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Welcome Back</h1>
           <p style={{ color: '#a0aec0' }}>Sign in to access your account</p>
