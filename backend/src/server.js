@@ -76,6 +76,56 @@ app.get('/api/v1/status', (req, res) => {
   });
 });
 
+// Database test endpoint - actually tries to connect
+app.get('/api/v1/db-test', async (req, res) => {
+  try {
+    // Test 1: Connection
+    const connected = await testConnection();
+    if (!connected) {
+      return res.json({
+        success: false,
+        error: 'Database connection failed',
+        step: 'connection'
+      });
+    }
+
+    // Test 2: Query tables
+    const client = await pool.connect();
+    const tablesResult = await client.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+    );
+    const tables = tablesResult.rows.map(r => r.table_name);
+    
+    // Test 3: Check if users table exists
+    const usersTableExists = tables.includes('users');
+    
+    // Test 4: If users table exists, try to query it
+    let userCount = null;
+    if (usersTableExists) {
+      const countResult = await client.query('SELECT COUNT(*) FROM users');
+      userCount = parseInt(countResult.rows[0].count);
+    }
+    
+    client.release();
+    
+    return res.json({
+      success: true,
+      connection: 'OK',
+      tables: tables,
+      usersTableExists: usersTableExists,
+      userCount: userCount,
+      initializationStatus: isInitialized
+    });
+  } catch (error) {
+    return res.json({
+      success: false,
+      error: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+  }
+});
+
 // Health check endpoint (BEFORE initialization - no database needed)
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
