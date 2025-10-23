@@ -1,4 +1,4 @@
--- Nexus Network Platform Database Schema
+-- Atlas Network Platform Database Schema
 -- Database: PostgreSQL (Supabase)
 
 -- Drop existing tables (for clean installation)
@@ -137,13 +137,13 @@ INSERT INTO system_config (config_key, config_value, data_type, description) VAL
 ('commission_level_3', '5', 'float', 'Level 3 commission percentage'),
 ('commission_level_4', '3', 'float', 'Level 4 commission percentage'),
 ('commission_level_5', '2', 'float', 'Level 5 commission percentage'),
-('recruitment_fee', '100', 'float', 'Fee per recruitment in NexusCoins'),
-('total_coins_distributed', '0', 'float', 'Total NexusCoins distributed as commissions'),
+('recruitment_fee', '100', 'float', 'Fee per recruitment in USDT'),
+('total_coins_distributed', '0', 'float', 'Total USDT distributed as commissions'),
 ('total_recruitment_fees', '0', 'float', 'Total recruitment fees collected');
 
 -- Comments
 COMMENT ON TABLE users IS 'All user accounts (members and instructor)';
 COMMENT ON TABLE referrals IS 'Referral tree relationships';
-COMMENT ON TABLE transactions IS 'All NexusCoin movements and commissions';
+COMMENT ON TABLE transactions IS 'All USDT movements and commissions';
 COMMENT ON TABLE system_config IS 'Platform settings and state';
 COMMENT ON TABLE admin_actions IS 'Audit log of instructor actions';
