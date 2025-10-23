@@ -47,16 +47,16 @@ const InstructorParticipants = () => {
 
     setSubmitting(true);
     try {
-      await instructorAPI.addStudent(formData);
+      await instructorAPI.addMember(formData);
       // Reload participants
       await loadParticipants();
       // Reset form
       setFormData({ email: '', username: '', password: '', referralCode: '' });
       setShowAddForm(false);
-      alert(`Student ${formData.username} created successfully!`);
+      alert(`Member ${formData.username} created successfully!`);
     } catch (error) {
-      console.error('Add student error:', error);
-      alert(error.response?.data?.error || 'Failed to create student account');
+      console.error('Add member error:', error);
+      alert(error.response?.data?.error || 'Failed to create member account');
     } finally {
       setSubmitting(false);
     }
@@ -186,7 +186,7 @@ const InstructorParticipants = () => {
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Participants Management</h1>
-          <p style={{ color: '#a0aec0' }}>Manage student registrations and approvals</p>
+          <p style={{ color: '#a0aec0' }}>Manage member registrations and approvals</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -202,16 +202,16 @@ const InstructorParticipants = () => {
             transition: 'all 0.2s'
           }}
         >
-          {showAddForm ? '✗ Cancel' : '+ Add Student'}
+          {showAddForm ? '✗ Cancel' : '+ Add Member'}
         </button>
       </div>
 
       {/* Add Student Form */}
       {showAddForm && (
         <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New Student Account</h3>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New Member Account</h3>
           <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Students added by instructor are automatically approved and can login immediately.
+            Members added by instructor are automatically approved and can login immediately.
           </p>
           <form onSubmit={handleAddStudent}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
@@ -224,7 +224,7 @@ const InstructorParticipants = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  placeholder="student@example.com"
+                  placeholder="member@example.com"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -300,23 +300,9 @@ const InstructorParticipants = () => {
                 />
               </div>
             </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                padding: '0.75rem 2rem',
-                background: '#10b981',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                fontWeight: '600',
-                fontSize: '1rem',
-                opacity: submitting ? 0.5 : 1
-              }}
-            >
-              {submitting ? 'Creating...' : 'Create Student Account'}
-            </button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create Member Account'}
+            </Button>
           </form>
         </Card>
       )}
@@ -337,7 +323,7 @@ const InstructorParticipants = () => {
         </Card>
         <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{participants.length}</div>
-          <div style={{ color: '#a0aec0' }}>Total Students</div>
+          <div style={{ color: '#a0aec0' }}>Total Members</div>
         </Card>
       </div>
 
