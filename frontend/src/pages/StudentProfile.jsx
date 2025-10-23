@@ -87,13 +87,13 @@ const StudentProfile = () => {
             <div>
               <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Current Balance</div>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fbbf24' }}>
-                {formatCurrency(profile?.balance || 0)} NC
+                {formatCurrency(profile?.balance || 0)} USDT
               </div>
             </div>
             <div>
               <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Total Earned</div>
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
-                {formatCurrency(profile?.totalEarned || 0)} NC
+                {formatCurrency(profile?.totalEarned || 0)} USDT
               </div>
             </div>
           </div>

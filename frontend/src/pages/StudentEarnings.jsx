@@ -85,7 +85,7 @@ const StudentEarnings = () => {
             Total Earned
           </div>
           <div style={{ fontSize: '3rem', fontWeight: '700', color: '#10b981' }}>
-            {formatCurrency(stats.totalEarned)} NC
+            {formatCurrency(stats.totalEarned)} USDT
           </div>
         </div>
       </Card>
@@ -103,7 +103,7 @@ const StudentEarnings = () => {
               Level {level}
             </div>
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: getLevelColor(level) }}>
-              {formatCurrency(stats.byLevel[level] || 0)} NC
+              {formatCurrency(stats.byLevel[level] || 0)} USDT
             </div>
           </Card>
         ))}
@@ -212,7 +212,7 @@ const StudentEarnings = () => {
                       {earning.triggeredBy || earning.fromUser || '-'}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}>
-                      +{formatCurrency(earning.amount)} NC
+                      +{formatCurrency(earning.amount)} USDT
                     </td>
                   </tr>
                 ))

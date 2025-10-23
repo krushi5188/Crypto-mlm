@@ -150,7 +150,7 @@ const StudentNetwork = () => {
                       </span>
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
-                      {formatCurrency(member.balance)} NC
+                      {formatCurrency(member.balance)} USDT
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', color: '#a0aec0' }}>
                       {member.networkSize}

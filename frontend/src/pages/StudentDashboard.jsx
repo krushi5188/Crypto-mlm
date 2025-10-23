@@ -103,7 +103,7 @@ const StudentDashboard = () => {
         <Card style={statCardStyles}>
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💰</div>
           <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>
-            {formatCurrency(data.balance)} NC
+            {formatCurrency(data.balance)} USDT
           </div>
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Current Balance</div>
         </Card>
@@ -111,7 +111,7 @@ const StudentDashboard = () => {
         <Card style={statCardStyles}>
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📈</div>
           <div style={{ fontSize: '2rem', fontWeight: '700' }}>
-            {formatCurrency(data.totalEarned)} NC
+            {formatCurrency(data.totalEarned)} USDT
           </div>
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Total Earned</div>
         </Card>
@@ -190,7 +190,7 @@ const StudentDashboard = () => {
                   fontWeight: '700',
                   color: '#10b981'
                 }}>
-                  +{formatCurrency(activity.amount)} NC
+                  +{formatCurrency(activity.amount)} USDT
                 </div>
               </div>
             ))}

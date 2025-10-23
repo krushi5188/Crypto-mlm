@@ -82,7 +82,7 @@ const InstructorNetwork = () => {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fbbf24' }}>
-                {formatCurrency(node.balance)} NC
+                {formatCurrency(node.balance)} USDT
               </div>
               <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
                 {node.directRecruits} direct • {node.networkSize} total
@@ -159,7 +159,7 @@ const InstructorNetwork = () => {
         </Card>
         <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fbbf24' }}>
-            {formatCurrency(networkData?.totalBalance || 0)} NC
+            {formatCurrency(networkData?.totalBalance || 0)} USDT
           </div>
           <div style={{ color: '#a0aec0' }}>Total Balance</div>
         </Card>
@@ -205,7 +205,7 @@ const InstructorNetwork = () => {
               </div>
               <div>
                 <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Balance</div>
-                <div style={{ color: '#fbbf24', fontWeight: '700' }}>{formatCurrency(selectedNode.balance)} NC</div>
+                <div style={{ color: '#fbbf24', fontWeight: '700' }}>{formatCurrency(selectedNode.balance)} USDT</div>
               </div>
               <div>
                 <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Direct Recruits</div>
@@ -217,7 +217,7 @@ const InstructorNetwork = () => {
               </div>
               <div>
                 <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Earned</div>
-                <div style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(selectedNode.totalEarned || 0)} NC</div>
+                <div style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(selectedNode.totalEarned || 0)} USDT</div>
               </div>
               <div>
                 <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Referral Code</div>

@@ -408,7 +408,7 @@ const InstructorParticipants = () => {
                       {getStatusBadge(participant.approvalStatus)}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
-                      {formatCurrency(participant.balance)} NC
+                      {formatCurrency(participant.balance)} USDT
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       {participant.directRecruits} / {participant.networkSize}

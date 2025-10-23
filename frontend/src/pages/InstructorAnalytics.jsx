@@ -132,7 +132,7 @@ const InstructorAnalytics = () => {
         <Card style={{ textAlign: 'center', padding: '2rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💰</div>
           <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
-            {formatCurrency(analytics.systemTotals.totalCoinsDistributed)} NC
+            {formatCurrency(analytics.systemTotals.totalCoinsDistributed)} USDT
           </div>
           <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Coins Distributed</div>
         </Card>
@@ -228,7 +228,7 @@ const InstructorAnalytics = () => {
                   <td style={{ padding: '1rem' }}>#{index + 1}</td>
                   <td style={{ padding: '1rem', fontWeight: '600' }}>{earner.username}</td>
                   <td style={{ padding: '1rem', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
-                    {formatCurrency(earner.balance)} NC
+                    {formatCurrency(earner.balance)} USDT
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>{earner.directRecruits}</td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>{earner.networkSize}</td>
