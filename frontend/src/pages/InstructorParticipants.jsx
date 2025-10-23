@@ -327,8 +327,8 @@ const InstructorParticipants = () => {
                     setFormError('');
                   }}
                   required
-                  placeholder="Min 8 chars"
-                  minLength={8}
+                  placeholder="Min 6 chars"
+                  minLength={6}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -340,7 +340,7 @@ const InstructorParticipants = () => {
                   }}
                 />
                 <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#a0aec0', lineHeight: '1.4' }}>
-                  Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 number
+                  Requirements: 6+ characters
                 </div>
               </div>
               <div>
