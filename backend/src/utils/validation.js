@@ -21,7 +21,7 @@ const schemas = {
     email: Joi.string().email().required(),
     username: Joi.string().alphanum().min(3).max(20).required(),
     password: Joi.string().min(6).required(), // Simpler: just minimum 6 characters
-    referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).optional()
+    referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).allow('').optional()
   }),
 
   // User login
