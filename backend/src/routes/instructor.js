@@ -302,9 +302,9 @@ router.post('/participants/:id/reject', async (req, res) => {
  * POST /api/v1/instructor/add-student
  * Instructor directly adds a new student (auto-approved, no approval needed)
  */
-router.post('/add-student', validate('register'), async (req, res) => {
+router.post('/add-student', validate('instructorAddMember'), async (req, res) => {
   try {
-    const { email, username, password, referralCode } = req.validatedBody;
+    const { email, username, password } = req.validatedBody;
 
     // Check participant limit
     const participantCount = await User.countStudents();
@@ -339,27 +339,8 @@ router.post('/add-student', validate('register'), async (req, res) => {
       });
     }
 
-    // Validate referral code if provided (optional for instructor)
-    let referrerId = null;
-    if (referralCode) {
-      const referrer = await User.findByReferralCode(referralCode);
-      if (!referrer) {
-        return res.status(400).json({
-          error: 'Invalid referral code',
-          code: 'INVALID_REFERRAL_CODE'
-        });
-      }
-
-      // Ensure referrer is approved
-      if (referrer.role === 'student' && referrer.approval_status !== 'approved') {
-        return res.status(400).json({
-          error: 'This referral link is not active',
-          code: 'REFERRER_NOT_APPROVED'
-        });
-      }
-
-      referrerId = referrer.id;
-    }
+    // Use instructor as referrer (all participants created by instructor are under them)
+    const referrerId = req.user.id;
 
     // Hash password
     const { hashPassword } = require('../utils/passwordHash');
@@ -380,15 +361,13 @@ router.post('/add-student', validate('register'), async (req, res) => {
       approval_status: 'approved'  // Auto-approved
     });
 
-    // Distribute commissions immediately if referrer exists
-    if (referrerId) {
-      const CommissionService = require('../services/commissionService');
-      await CommissionService.distributeCommissions(
-        userId,
-        username,
-        referrerId
-      );
-    }
+    // Distribute commissions immediately to instructor
+    const CommissionService = require('../services/commissionService');
+    await CommissionService.distributeCommissions(
+      userId,
+      username,
+      referrerId
+    );
 
     // Get created user
     const user = await User.findById(userId);

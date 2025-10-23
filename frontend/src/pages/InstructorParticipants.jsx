@@ -15,8 +15,7 @@ const InstructorParticipants = () => {
   const [formData, setFormData] = useState({
     email: '',
     username: '',
-    password: '',
-    referralCode: ''
+    password: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -66,7 +65,7 @@ const InstructorParticipants = () => {
       // Reload participants
       await loadParticipants();
       // Reset form
-      setFormData({ email: '', username: '', password: '', referralCode: '' });
+      setFormData({ email: '', username: '', password: '' });
       setShowAddForm(false);
       setFormSuccess(`✓ Member ${formData.username} created successfully!`);
       // Auto-hide success message after 5 seconds
@@ -520,29 +519,6 @@ const InstructorParticipants = () => {
                 <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#a0aec0', lineHeight: '1.4' }}>
                   Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 number
                 </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                  Referral Code (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.referralCode}
-                  onChange={(e) => {
-                    setFormData({ ...formData, referralCode: e.target.value });
-                    setFormError('');
-                  }}
-                  placeholder="ATN-ABC123"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
               </div>
             </div>
             <Button type="submit" disabled={submitting}>
