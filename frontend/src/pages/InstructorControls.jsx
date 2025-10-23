@@ -206,9 +206,9 @@ const InstructorControls = () => {
       {/* Inject Coins */}
       <Card style={{ marginBottom: '2rem' }}>
         <div style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>💰 Add NexusCoins</h3>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>💰 Add USDT</h3>
           <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Manually add coins to a member's balance for adjustments
+            Manually add USDT to a member's balance for adjustments
           </p>
           <form onSubmit={handleInjectCoins}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
