@@ -103,7 +103,7 @@ const LoginPage = () => {
         </div>
 
         <div style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
-          Students can only join via referral link from existing members
+          Members can only join via referral link from existing members
         </div>
       </Card>
     </div>
