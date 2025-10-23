@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentNetwork from './pages/StudentNetwork';
@@ -76,7 +77,11 @@ const HomePage = () => {
     return <Navigate to={user?.role === 'instructor' ? '/instructor/analytics' : '/dashboard'} replace />;
   }
 
-  return <Navigate to="/login" replace />;
+  return (
+    <AppLayout>
+      <LandingPage />
+    </AppLayout>
+  );
 };
 
 function App() {
