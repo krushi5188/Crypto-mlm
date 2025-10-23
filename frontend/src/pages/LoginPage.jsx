@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import Card from '../components/common/Card';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -36,76 +35,118 @@ const LoginPage = () => {
     }
   };
 
-  const containerStyles = {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem'
-  };
-
   return (
-    <div style={containerStyles}>
-      <Card style={{ maxWidth: '450px', width: '100%' }} className="fade-in">
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Welcome Back</h1>
-          <p style={{ color: '#a0aec0' }}>Sign in to access your account</p>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-md)'
+    }}>
+      <div className="fade-in" style={{ maxWidth: '500px', width: '100%' }}>
+        {/* Header */}
+        <div style={{ 
+          textAlign: 'center', 
+          marginBottom: 'var(--space-3xl)'
+        }}>
+          <h1 style={{ 
+            fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '700',
+            letterSpacing: '-0.02em'
+          }}>
+            Welcome Back
+          </h1>
+          <p style={{ 
+            color: 'var(--text-muted)',
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.6'
+          }}>
+            Sign in to access your account
+          </p>
         </div>
 
+        {/* Error Message */}
         {error && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '1px solid #ef4444',
-            borderRadius: '8px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-lg)',
+            marginBottom: 'var(--space-xl)',
             color: '#ef4444',
-            textAlign: 'center'
+            textAlign: 'center',
+            fontSize: 'var(--text-base)'
           }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <Input
-            type="email"
-            name="email"
-            label="Email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="your@email.com"
-            required
-          />
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ marginBottom: 'var(--space-xl)' }}>
+          <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <Input
+              type="email"
+              name="email"
+              label="Email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="your@email.com"
+              required
+            />
+          </div>
 
-          <Input
-            type="password"
-            name="password"
-            label="Password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required
-          />
+          <div style={{ marginBottom: 'var(--space-xl)' }}>
+            <Input
+              type="password"
+              name="password"
+              label="Password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
           <Button
             type="submit"
             loading={loading}
             disabled={loading}
             fullWidth
-            style={{ marginTop: '1rem' }}
+            size="lg"
+            style={{
+              padding: 'var(--space-md) var(--space-lg)',
+              fontSize: 'var(--text-lg)',
+              borderRadius: 'var(--radius-lg)'
+            }}
           >
-            Sign In
+            {loading ? 'Signing In...' : 'Sign In'}
           </Button>
         </form>
 
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
-          Instructor? Use your admin credentials to login
+        {/* Footer Notes */}
+        <div style={{ 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-sm)'
+        }}>
+          <p style={{ 
+            fontSize: 'var(--text-sm)', 
+            color: 'var(--text-dimmed)',
+            lineHeight: '1.6'
+          }}>
+            Instructor? Use your admin credentials to login
+          </p>
+          <p style={{ 
+            fontSize: 'var(--text-sm)', 
+            color: 'var(--text-dimmed)',
+            lineHeight: '1.6'
+          }}>
+            Members can only join via referral link from existing members
+          </p>
         </div>
-
-        <div style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
-          Members can only join via referral link from existing members
-        </div>
-      </Card>
+      </div>
     </div>
   );
 };
