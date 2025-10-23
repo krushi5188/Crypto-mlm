@@ -12,19 +12,21 @@ class AnalyticsService {
     const config = await SystemConfig.getMultiple([
       'simulation_status',
       'max_participants',
-      'semester_start_date',
-      'semester_duration_days',
       'total_coins_distributed',
       'total_recruitment_fees'
     ]);
 
-    // Calculate semester dates
-    const semesterStartDate = new Date(config.semester_start_date);
-    const semesterEndDate = new Date(semesterStartDate);
-    semesterEndDate.setDate(semesterEndDate.getDate() + config.semester_duration_days);
-
-    const now = new Date();
-    const daysRemaining = Math.max(0, Math.ceil((semesterEndDate - now) / (1000 * 60 * 60 * 24)));
+    // Calculate days active (from first user registration)
+    const firstUserResult = await pool.query(
+      `SELECT MIN(created_at) as first_date FROM users WHERE role = 'student'`
+    );
+    
+    let daysRemaining = 0;
+    if (firstUserResult.rows[0]?.first_date) {
+      const startDate = new Date(firstUserResult.rows[0].first_date);
+      const now = new Date();
+      daysRemaining = Math.max(0, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
+    }
 
     // Get distribution stats
     const distStats = await User.getDistributionStats();
@@ -66,8 +68,6 @@ class AnalyticsService {
       overview: {
         totalParticipants,
         simulationStatus: config.simulation_status,
-        semesterStartDate: semesterStartDate.toISOString().split('T')[0],
-        semesterEndDate: semesterEndDate.toISOString().split('T')[0],
         daysRemaining
       },
       distribution,
