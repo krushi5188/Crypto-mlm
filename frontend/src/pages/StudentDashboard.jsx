@@ -35,160 +35,298 @@ const StudentDashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading dashboard...</p>
+      <div style={{ 
+        minHeight: '60vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 'var(--space-md)'
+      }}>
+        <div className="spin" style={{ fontSize: '4rem' }}>⏳</div>
+        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading dashboard...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Unable to Load Dashboard</h2>
-            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
-              {error || 'Unable to load dashboard data.'}
-            </p>
-            <button 
-              onClick={() => window.location.reload()} 
-              style={{
-                marginTop: '1rem',
-                padding: '0.75rem 1.5rem',
-                background: '#fbbf24',
-                color: '#1a1a1a',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Retry
-            </button>
-          </div>
-        </Card>
+      <div style={{ 
+        minHeight: '60vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: 'var(--space-md)'
+      }}>
+        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
+          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
+          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
+            Unable to Load Dashboard
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
+            {error || 'Unable to load dashboard data.'}
+          </p>
+          <Button onClick={() => window.location.reload()} size="lg">
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
-
-  const gridStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '1.5rem',
-    marginBottom: '2rem'
-  };
-
-  const statCardStyles = {
-    textAlign: 'center',
-    padding: '2rem'
-  };
-
   return (
-    <div style={containerStyles}>
-      <div style={{ marginBottom: '2rem' }} className="fade-in">
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Dashboard</h1>
-        <p style={{ color: '#a0aec0' }}>Welcome back! Here's your overview.</p>
-      </div>
-
-      {/* Stats Grid */}
-      <div style={gridStyles}>
-        <Card style={statCardStyles} className="fade-in-up delay-100">
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💰</div>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>
-            {formatCurrency(data.balance)} USDT
-          </div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Current Balance</div>
-        </Card>
-
-        <Card style={statCardStyles} className="fade-in-up delay-200">
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📈</div>
-          <div style={{ fontSize: '2rem', fontWeight: '700' }}>
-            {formatCurrency(data.totalEarned)} USDT
-          </div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Total Earned</div>
-        </Card>
-
-        <Card style={statCardStyles} className="fade-in-up delay-300">
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👥</div>
-          <div style={{ fontSize: '2rem', fontWeight: '700' }}>{data.directRecruits}</div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Direct Recruits</div>
-        </Card>
-
-        <Card style={statCardStyles} className="fade-in-up delay-400">
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🌐</div>
-          <div style={{ fontSize: '2rem', fontWeight: '700' }}>{data.networkSize}</div>
-          <div style={{ color: '#a0aec0', marginTop: '0.5rem' }}>Network Size</div>
-        </Card>
-      </div>
-
-      {/* Referral Link */}
-      <Card style={{ marginBottom: '2rem' }} className="fade-in-up delay-100">
-        <h3 style={{ marginBottom: '1rem' }}>Share Your Referral Link</h3>
-        <p style={{ color: '#a0aec0', marginBottom: '1rem', fontSize: '0.95rem' }}>
-          Invite others to join your network and earn commissions!
-        </p>
-
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{
-            flex: 1,
-            minWidth: '300px',
-            background: 'rgba(0, 0, 0, 0.3)',
-            padding: '1rem',
-            borderRadius: '8px',
-            fontFamily: 'monospace',
-            fontSize: '0.9rem',
-            wordBreak: 'break-all'
+    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
+      {/* Hero Section - Large Welcome */}
+      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <div className="fade-in" style={{ maxWidth: '800px' }}>
+          <h1 style={{ 
+            fontSize: 'clamp(2.5rem, 5vw, 4rem)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '700',
+            letterSpacing: '-0.02em'
           }}>
-            {data.referralLink}
-          </div>
-          <Button onClick={copyReferralLink} variant="secondary">
-            {copied ? '✓ Copied!' : 'Copy Link'}
-          </Button>
+            Your Dashboard
+          </h1>
+          <p style={{ 
+            fontSize: 'var(--text-xl)', 
+            color: 'var(--text-muted)',
+            lineHeight: '1.6'
+          }}>
+            Track your earnings, network growth, and manage your referrals
+          </p>
         </div>
+      </div>
 
-        <div style={{ marginTop: '1rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-          Your referral code: <span style={{ color: '#fbbf24', fontWeight: '600' }}>{data.referralCode}</span>
+      {/* Stats - Huge Numbers */}
+      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 'var(--space-xl)'
+        }}>
+          <div className="fade-in-up delay-100" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              background: 'linear-gradient(135deg, var(--primary-gold), var(--accent-green))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              {formatCurrency(data.balance)}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              USDT
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Current Balance
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-200" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {formatCurrency(data.totalEarned)}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              USDT
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Total Earned
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-300" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {data.directRecruits}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              Direct
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Recruits
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-400" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {data.networkSize}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              Total
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Network Size
+            </div>
+          </div>
         </div>
-      </Card>
+      </div>
+
+      {/* Referral Section */}
+      <div className="container-narrow" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <Card className="fade-in-up delay-100">
+          <h2 style={{ 
+            fontSize: 'var(--text-3xl)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '600',
+            letterSpacing: '-0.01em'
+          }}>
+            Share Your Referral Link
+          </h2>
+          <p style={{ 
+            color: 'var(--text-muted)', 
+            marginBottom: 'var(--space-xl)', 
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.7'
+          }}>
+            Invite others to join your network and earn commissions automatically
+          </p>
+
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.03)',
+            padding: 'var(--space-lg)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            marginBottom: 'var(--space-lg)'
+          }}>
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: 'var(--text-base)',
+              wordBreak: 'break-all',
+              color: 'var(--text-secondary)',
+              marginBottom: 'var(--space-md)'
+            }}>
+              {data.referralLink}
+            </div>
+            <Button onClick={copyReferralLink} variant="secondary" fullWidth>
+              {copied ? '✓ Copied to Clipboard' : 'Copy Referral Link'}
+            </Button>
+          </div>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 'var(--space-sm)',
+            fontSize: 'var(--text-base)',
+            color: 'var(--text-muted)'
+          }}>
+            <span>Your referral code:</span>
+            <span style={{ 
+              color: 'var(--primary-gold)', 
+              fontWeight: '600',
+              fontSize: 'var(--text-lg)',
+              letterSpacing: '0.05em'
+            }}>
+              {data.referralCode}
+            </span>
+          </div>
+        </Card>
+      </div>
 
       {/* Recent Activity */}
-      <Card title="Recent Activity" className="fade-in-up delay-200">
+      <div className="container-narrow">
+        <h2 style={{ 
+          fontSize: 'var(--text-3xl)', 
+          marginBottom: 'var(--space-xl)',
+          fontWeight: '600',
+          letterSpacing: '-0.01em'
+        }}>
+          Recent Activity
+        </h2>
+
         {data.recentActivity.length === 0 ? (
-          <p style={{ color: '#a0aec0', textAlign: 'center', padding: '2rem' }}>
-            No activity yet. Start by inviting others to join your network!
-          </p>
+          <div className="fade-in-up" style={{ 
+            textAlign: 'center', 
+            padding: 'var(--space-3xl)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>📊</div>
+            <p style={{ 
+              color: 'var(--text-muted)', 
+              fontSize: 'var(--text-lg)',
+              lineHeight: '1.6'
+            }}>
+              No activity yet. Start by inviting others to join your network!
+            </p>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {data.recentActivity.map((activity) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            {data.recentActivity.map((activity, index) => (
               <div
                 key={activity.id}
+                className={`fade-in-up delay-${Math.min(index * 100, 500)}`}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '1rem',
-                  background: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px'
+                  padding: 'var(--space-lg)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  transition: 'all var(--transition-base)',
+                  cursor: 'default'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '500' }}>{activity.description}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginTop: '0.25rem' }}>
+                  <div style={{ 
+                    fontWeight: '500',
+                    fontSize: 'var(--text-lg)',
+                    marginBottom: 'var(--space-xs)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {activity.description}
+                  </div>
+                  <div style={{ 
+                    fontSize: 'var(--text-sm)', 
+                    color: 'var(--text-dimmed)'
+                  }}>
                     {formatTimeAgo(activity.timestamp)}
                   </div>
                 </div>
                 <div style={{
-                  fontSize: '1.25rem',
+                  fontSize: 'var(--text-2xl)',
                   fontWeight: '700',
-                  color: '#10b981'
+                  color: 'var(--accent-green)'
                 }}>
                   +{formatCurrency(activity.amount)} USDT
                 </div>
@@ -196,7 +334,7 @@ const StudentDashboard = () => {
             ))}
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 };
