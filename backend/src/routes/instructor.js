@@ -526,7 +526,7 @@ router.post('/inject-coins', validate('injectCoins'), async (req, res) => {
 
 /**
  * POST /api/v1/instructor/pause
- * Pause the simulation
+ * Pause the system
  */
 router.post('/pause', async (req, res) => {
   try {
@@ -541,14 +541,14 @@ router.post('/pause', async (req, res) => {
     res.json({
       success: true,
       data: {
-        message: 'Simulation paused',
+        message: 'System paused',
         status: 'paused'
       }
     });
   } catch (error) {
     console.error('Pause error:', error);
     res.status(500).json({
-      error: 'Failed to pause simulation',
+      error: 'Failed to pause system',
       code: 'DATABASE_ERROR'
     });
   }
@@ -556,7 +556,7 @@ router.post('/pause', async (req, res) => {
 
 /**
  * POST /api/v1/instructor/resume
- * Resume the simulation
+ * Resume the system
  */
 router.post('/resume', async (req, res) => {
   try {
@@ -571,14 +571,14 @@ router.post('/resume', async (req, res) => {
     res.json({
       success: true,
       data: {
-        message: 'Simulation resumed',
+        message: 'System resumed',
         status: 'active'
       }
     });
   } catch (error) {
     console.error('Resume error:', error);
     res.status(500).json({
-      error: 'Failed to resume simulation',
+      error: 'Failed to resume system',
       code: 'DATABASE_ERROR'
     });
   }
@@ -586,7 +586,7 @@ router.post('/resume', async (req, res) => {
 
 /**
  * POST /api/v1/instructor/reset
- * Reset simulation (full or soft)
+ * Reset system (full or soft)
  */
 router.post('/reset', validate('reset'), async (req, res) => {
   const connection = await pool.getConnection();
@@ -668,7 +668,7 @@ router.post('/reset', validate('reset'), async (req, res) => {
     await connection.rollback();
     console.error('Reset error:', error);
     res.status(500).json({
-      error: 'Failed to reset simulation',
+      error: 'Failed to reset system',
       code: 'DATABASE_ERROR'
     });
   } finally {
