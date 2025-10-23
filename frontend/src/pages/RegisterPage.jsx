@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { systemAPI } from '../services/api';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import Card from '../components/common/Card';
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
@@ -62,135 +61,222 @@ const RegisterPage = () => {
     }
   };
 
-  const containerStyles = {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem'
-  };
-
   if (systemStatus && !systemStatus.isActive) {
     return (
-      <div style={containerStyles}>
-        <Card style={{ maxWidth: '450px', width: '100%', textAlign: 'center' }}>
-          <h2>Registrations Paused</h2>
-          <p style={{ color: '#a0aec0', marginTop: '1rem' }}>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-md)'
+      }}>
+        <div className="fade-in" style={{ maxWidth: '600px', textAlign: 'center' }}>
+          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⏸️</div>
+          <h2 style={{ 
+            fontSize: 'var(--text-4xl)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '600'
+          }}>
+            Registrations Paused
+          </h2>
+          <p style={{ 
+            color: 'var(--text-muted)', 
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.6'
+          }}>
             Registration is currently disabled. The platform is temporarily paused.
           </p>
-        </Card>
+        </div>
       </div>
     );
   }
 
   if (systemStatus && systemStatus.spotsRemaining === 0) {
     return (
-      <div style={containerStyles}>
-        <Card style={{ maxWidth: '450px', width: '100%', textAlign: 'center' }}>
-          <h2>Registrations Full</h2>
-          <p style={{ color: '#a0aec0', marginTop: '1rem' }}>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-md)'
+      }}>
+        <div className="fade-in" style={{ maxWidth: '600px', textAlign: 'center' }}>
+          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>🚫</div>
+          <h2 style={{ 
+            fontSize: 'var(--text-4xl)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '600'
+          }}>
+            Registrations Full
+          </h2>
+          <p style={{ 
+            color: 'var(--text-muted)', 
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.6'
+          }}>
             The maximum number of participants ({systemStatus.maxParticipants}) has been reached.
           </p>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyles}>
-      <Card style={{ maxWidth: '500px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Join Atlas Network</h1>
-          <p style={{ color: '#a0aec0' }}>Start your journey to financial freedom</p>
-          {systemStatus && (
-            <p style={{ color: '#fbbf24', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-md)'
+    }}>
+      <div className="fade-in" style={{ maxWidth: '600px', width: '100%' }}>
+        {/* Header */}
+        <div style={{ 
+          textAlign: 'center', 
+          marginBottom: 'var(--space-3xl)'
+        }}>
+          <h1 style={{ 
+            fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '700',
+            letterSpacing: '-0.02em'
+          }}>
+            Join Atlas Network
+          </h1>
+          <p style={{ 
+            color: 'var(--text-muted)',
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.6'
+          }}>
+            Start your journey to financial freedom
+          </p>
+          {systemStatus && systemStatus.spotsRemaining && (
+            <p style={{ 
+              color: 'var(--primary-gold)', 
+              fontSize: 'var(--text-base)', 
+              marginTop: 'var(--space-md)',
+              fontWeight: '600'
+            }}>
               {systemStatus.spotsRemaining} spots remaining
             </p>
           )}
         </div>
 
+        {/* Error Message */}
         {error && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '1px solid #ef4444',
-            borderRadius: '8px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-lg)',
+            marginBottom: 'var(--space-xl)',
             color: '#ef4444',
-            textAlign: 'center'
+            textAlign: 'center',
+            fontSize: 'var(--text-base)'
           }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <Input
-            type="email"
-            name="email"
-            label="Email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="your@email.com"
-            required
-          />
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ marginBottom: 'var(--space-xl)' }}>
+          <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <Input
+              type="email"
+              name="email"
+              label="Email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="your@email.com"
+              required
+            />
+          </div>
 
-          <Input
-            type="text"
-            name="username"
-            label="Username"
-            value={formData.username}
-            onChange={handleChange}
-            placeholder="johndoe"
-            required
-          />
+          <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <Input
+              type="text"
+              name="username"
+              label="Username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="johndoe"
+              required
+            />
+          </div>
 
-          <Input
-            type="password"
-            name="password"
-            label="Password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required
-          />
+          <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <Input
+              type="password"
+              name="password"
+              label="Password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
-          <Input
-            type="password"
-            name="confirmPassword"
-            label="Confirm Password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required
-          />
+          <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <Input
+              type="password"
+              name="confirmPassword"
+              label="Confirm Password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
-          <Input
-            type="text"
-            name="referralCode"
-            label="Referral Code (Optional)"
-            value={formData.referralCode}
-            onChange={handleChange}
-            placeholder="ATN-ABC123"
-          />
+          <div style={{ marginBottom: 'var(--space-xl)' }}>
+            <Input
+              type="text"
+              name="referralCode"
+              label="Referral Code (Optional)"
+              value={formData.referralCode}
+              onChange={handleChange}
+              placeholder="ATN-ABC123"
+            />
+          </div>
 
           <Button
             type="submit"
             loading={loading}
             disabled={loading}
             fullWidth
-            style={{ marginTop: '1rem' }}
+            size="lg"
+            style={{
+              padding: 'var(--space-md) var(--space-lg)',
+              fontSize: 'var(--text-lg)',
+              borderRadius: 'var(--radius-lg)'
+            }}
           >
-            Create Account
+            {loading ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', color: '#a0aec0' }}>
+        {/* Footer Link */}
+        <div style={{ 
+          textAlign: 'center',
+          fontSize: 'var(--text-base)',
+          color: 'var(--text-muted)'
+        }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#fbbf24', fontWeight: '600' }}>
+          <Link 
+            to="/login" 
+            style={{ 
+              color: 'var(--primary-gold)', 
+              fontWeight: '600',
+              textDecoration: 'none',
+              transition: 'color var(--transition-fast)'
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'var(--primary-gold-dark)'}
+            onMouseLeave={(e) => e.target.style.color = 'var(--primary-gold)'}
+          >
             Sign In
           </Link>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
