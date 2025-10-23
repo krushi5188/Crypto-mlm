@@ -98,15 +98,12 @@ const LoginPage = () => {
           </Button>
         </form>
 
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', color: '#a0aec0' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: '#fbbf24', fontWeight: '600' }}>
-            Sign Up
-          </Link>
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
+          Instructor? Use your admin credentials to login
         </div>
 
-        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
-          Instructor? Use your admin credentials to login
+        <div style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a0aec0' }}>
+          Students can only join via referral link from existing members
         </div>
       </Card>
     </div>
