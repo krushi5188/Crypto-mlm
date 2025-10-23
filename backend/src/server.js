@@ -46,7 +46,7 @@ app.use('/api', apiLimiter);
 // Diagnostic endpoint (BEFORE any middleware that might fail)
 app.get('/api/v1/status', (req, res) => {
   res.json({ 
-    service: 'Educational MLM Simulator API',
+    service: 'Nexus Network API',
     status: 'running', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
@@ -233,7 +233,7 @@ app.use('/api/v1/system', systemRoutes);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'Educational MLM Simulator API',
+    message: 'Nexus Network API',
     version: '1.0.0',
     endpoints: {
       auth: '/api/v1/auth',
@@ -269,7 +269,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log('');
       console.log('========================================');
-      console.log('  Educational MLM Simulator API');
+      console.log('  Nexus Network API');
       console.log('========================================');
       console.log(`  Server running on port ${PORT}`);
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
