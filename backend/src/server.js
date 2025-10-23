@@ -22,6 +22,73 @@ app.use(express.urlencoded({ extended: true }));
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
 
+// Initialize database and create instructor account if needed
+let isInitialized = false;
+const initializeDatabase = async () => {
+  if (isInitialized) return;
+  
+  try {
+    console.log('Initializing database...');
+
+    // Test database connection
+    const connected = await testConnection();
+    if (!connected) {
+      throw new Error('Database connection failed');
+    }
+
+    // Check if instructor account exists
+    const instructorEmail = process.env.ADMIN_EMAIL || 'instructor@university.edu';
+    const existingInstructor = await User.findByEmail(instructorEmail);
+
+    if (!existingInstructor) {
+      console.log('Creating instructor account...');
+
+      const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
+      const instructorPassword = process.env.ADMIN_PASSWORD || 'InstructorPassword123!';
+
+      const passwordHash = await hashPassword(instructorPassword);
+      const referralCode = await generateReferralCode();
+
+      await User.create({
+        email: instructorEmail,
+        username: instructorUsername,
+        password_hash: passwordHash,
+        role: 'instructor',
+        referral_code: referralCode,
+        referred_by_id: null
+      });
+
+      console.log('✓ Instructor account created');
+      console.log(`  Email: ${instructorEmail}`);
+      console.log(`  Username: ${instructorUsername}`);
+    } else {
+      console.log('✓ Instructor account already exists');
+    }
+
+    console.log('✓ Database initialization complete');
+    isInitialized = true;
+  } catch (error) {
+    console.error('✗ Database initialization failed:', error);
+    throw error;
+  }
+};
+
+// Middleware to ensure database is initialized (for serverless)
+app.use(async (req, res, next) => {
+  if (!isInitialized) {
+    try {
+      await initializeDatabase();
+    } catch (error) {
+      console.error('Initialization error:', error);
+      return res.status(503).json({
+        error: 'Service initializing, please try again',
+        code: 'INITIALIZING'
+      });
+    }
+  }
+  next();
+});
+
 // Routes
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
@@ -68,53 +135,6 @@ app.use((req, res) => {
     code: 'NOT_FOUND'
   });
 });
-
-// Initialize database and create instructor account if needed
-const initializeDatabase = async () => {
-  try {
-    console.log('Initializing database...');
-
-    // Test database connection
-    const connected = await testConnection();
-    if (!connected) {
-      throw new Error('Database connection failed');
-    }
-
-    // Check if instructor account exists
-    const instructorEmail = process.env.ADMIN_EMAIL || 'instructor@university.edu';
-    const existingInstructor = await User.findByEmail(instructorEmail);
-
-    if (!existingInstructor) {
-      console.log('Creating instructor account...');
-
-      const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
-      const instructorPassword = process.env.ADMIN_PASSWORD || 'InstructorPassword123!';
-
-      const passwordHash = await hashPassword(instructorPassword);
-      const referralCode = await generateReferralCode();
-
-      await User.create({
-        email: instructorEmail,
-        username: instructorUsername,
-        password_hash: passwordHash,
-        role: 'instructor',
-        referral_code: referralCode,
-        referred_by_id: null
-      });
-
-      console.log('✓ Instructor account created');
-      console.log(`  Email: ${instructorEmail}`);
-      console.log(`  Username: ${instructorUsername}`);
-    } else {
-      console.log('✓ Instructor account already exists');
-    }
-
-    console.log('✓ Database initialization complete');
-  } catch (error) {
-    console.error('✗ Database initialization failed:', error);
-    throw error;
-  }
-};
 
 // Start server
 const startServer = async () => {
