@@ -6,6 +6,7 @@ import { formatCurrency, formatPercentage } from '../utils/formatters';
 const InstructorAnalytics = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadAnalytics();
@@ -15,8 +16,10 @@ const InstructorAnalytics = () => {
     try {
       const response = await instructorAPI.getAnalytics();
       setAnalytics(response.data.data);
+      setError(null);
     } catch (error) {
       console.error('Failed to load analytics:', error);
+      setError(error.response?.data?.error || 'Failed to load analytics. Please ensure the database is configured.');
     } finally {
       setLoading(false);
     }
@@ -27,6 +30,53 @@ const InstructorAnalytics = () => {
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
         <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading analytics...</p>
+      </div>
+    );
+  }
+
+  if (error || !analytics) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+        <Card>
+          <div style={{ padding: '2rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Database Connection Required</h2>
+            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
+              {error || 'Unable to load analytics data.'}
+            </p>
+            <div style={{ 
+              background: 'rgba(251, 191, 36, 0.1)', 
+              border: '1px solid #fbbf24', 
+              borderRadius: '8px', 
+              padding: '1rem',
+              textAlign: 'left',
+              fontSize: '0.875rem'
+            }}>
+              <div style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#fbbf24' }}>Setup Required:</div>
+              <ol style={{ margin: '0', paddingLeft: '1.5rem', color: '#a0aec0' }}>
+                <li>Create a PostgreSQL database (Supabase, Neon, or Railway)</li>
+                <li>Run the schema.sql file to create tables</li>
+                <li>Add database environment variables to Vercel</li>
+                <li>Redeploy your application</li>
+              </ol>
+            </div>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{
+                marginTop: '1.5rem',
+                padding: '0.75rem 1.5rem',
+                background: '#fbbf24',
+                color: '#1a1a1a',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </Card>
       </div>
     );
   }
