@@ -110,6 +110,26 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Health check endpoint (before routes, after initialization middleware)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    database: {
+      initialized: isInitialized,
+      host: process.env.DB_HOST ? 'configured' : 'missing',
+      port: process.env.DB_PORT || 'not set',
+      user: process.env.DB_USER ? 'configured' : 'missing',
+      database: process.env.DB_NAME ? 'configured' : 'missing',
+      ssl: process.env.DB_SSL || 'not set'
+    },
+    admin: {
+      email: process.env.ADMIN_EMAIL || 'not set',
+      username: process.env.ADMIN_USERNAME || 'not set'
+    }
+  });
+});
+
 // Routes
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
@@ -120,11 +140,6 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Root endpoint
 app.get('/', (req, res) => {
