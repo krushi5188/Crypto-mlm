@@ -11,6 +11,14 @@ const InstructorParticipants = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
   const [processingId, setProcessingId] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    password: '',
+    referralCode: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadParticipants();
@@ -26,6 +34,31 @@ const InstructorParticipants = () => {
       setError('Failed to load participants');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.email || !formData.username || !formData.password) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await instructorAPI.addStudent(formData);
+      // Reload participants
+      await loadParticipants();
+      // Reset form
+      setFormData({ email: '', username: '', password: '', referralCode: '' });
+      setShowAddForm(false);
+      alert(`Student ${formData.username} created successfully!`);
+    } catch (error) {
+      console.error('Add student error:', error);
+      alert(error.response?.data?.error || 'Failed to create student account');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -150,10 +183,143 @@ const InstructorParticipants = () => {
 
   return (
     <div style={containerStyles}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Participants Management</h1>
-        <p style={{ color: '#a0aec0' }}>Manage student registrations and approvals</p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Participants Management</h1>
+          <p style={{ color: '#a0aec0' }}>Manage student registrations and approvals</p>
+        </div>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: showAddForm ? '#ef4444' : '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '1rem',
+            transition: 'all 0.2s'
+          }}
+        >
+          {showAddForm ? '✗ Cancel' : '+ Add Student'}
+        </button>
       </div>
+
+      {/* Add Student Form */}
+      {showAddForm && (
+        <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New Student Account</h3>
+          <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+            Students added by instructor are automatically approved and can login immediately.
+          </p>
+          <form onSubmit={handleAddStudent}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
+                  Email <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  placeholder="student@example.com"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
+                  Username <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  required
+                  placeholder="johndoe"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
+                  Password <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  placeholder="Min. 6 characters"
+                  minLength={6}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
+                  Referral Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.referralCode}
+                  onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+                  placeholder="Leave empty for no referrer"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                padding: '0.75rem 2rem',
+                background: '#10b981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                fontWeight: '600',
+                fontSize: '1rem',
+                opacity: submitting ? 0.5 : 1
+              }}
+            >
+              {submitting ? 'Creating...' : 'Create Student Account'}
+            </button>
+          </form>
+        </Card>
+      )}
 
       {/* Stats */}
       <div style={statsStyles}>
