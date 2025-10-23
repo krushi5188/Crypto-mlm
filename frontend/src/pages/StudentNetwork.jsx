@@ -120,23 +120,22 @@ const StudentNetwork = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Username</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Member</th>
                 <th style={{ padding: '1rem', textAlign: 'center' }}>Level</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Balance</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Network</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>Recruits</th>
               </tr>
             </thead>
             <tbody>
               {network.length === 0 ? (
                 <tr>
-                  <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
+                  <td colSpan="3" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
                     No downline members yet. Share your referral link to start building your network!
                   </td>
                 </tr>
               ) : (
                 network.map((member) => (
                   <tr key={member.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <td style={{ padding: '1rem', fontWeight: '600' }}>{member.username}</td>
+                    <td style={{ padding: '1rem', fontWeight: '600' }}>{member.displayName}</td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                       <span style={{
                         padding: '0.25rem 0.75rem',
@@ -148,9 +147,6 @@ const StudentNetwork = () => {
                       }}>
                         L{member.level}
                       </span>
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
-                      {formatCurrency(member.balance)} USDT
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right', color: '#a0aec0' }}>
                       {member.networkSize}
