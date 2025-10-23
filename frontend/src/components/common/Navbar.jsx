@@ -13,82 +13,154 @@ const Navbar = () => {
   };
 
   const navStyles = {
-    background: 'var(--glass-bg)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    padding: '1rem 2rem',
-    borderBottom: '1px solid var(--glass-border)',
+    background: 'rgba(0, 0, 0, 0.8)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    padding: 'var(--space-md) var(--space-lg)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     position: 'sticky',
     top: 0,
-    zIndex: 1000,
-    boxShadow: 'var(--shadow-sm)'
+    zIndex: 1000
   };
 
   const logoStyles = {
-    fontSize: '1.5rem',
+    fontSize: 'var(--text-xl)',
     fontWeight: '700',
     background: 'linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-dark) 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
-    textDecoration: 'none'
+    textDecoration: 'none',
+    letterSpacing: '-0.01em'
   };
 
   const linkStyles = {
-    color: 'var(--text-primary)',
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
-    marginLeft: '1.5rem',
-    fontSize: '0.95rem',
+    marginLeft: 'var(--space-lg)',
+    fontSize: 'var(--text-base)',
     fontWeight: '500',
-    transition: 'color var(--transition-fast)'
+    transition: 'color var(--transition-fast)',
+    letterSpacing: '-0.01em'
+  };
+
+  const linkHoverStyles = {
+    color: 'var(--text-primary)'
   };
 
   return (
     <nav style={navStyles}>
-      <Link to={isStudent() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} style={logoStyles}>
+      <Link 
+        to={isStudent() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
+        style={logoStyles}
+      >
         Atlas Network
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
         {isAuthenticated() ? (
           <>
             {isStudent() && (
               <>
-                <Link to="/dashboard" style={linkStyles}>Dashboard</Link>
-                <Link to="/network" style={linkStyles}>Network</Link>
-                <Link to="/earnings" style={linkStyles}>Earnings</Link>
-                <Link to="/profile" style={linkStyles}>Profile</Link>
+                <Link 
+                  to="/dashboard" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/network" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Network
+                </Link>
+                <Link 
+                  to="/earnings" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Earnings
+                </Link>
+                <Link 
+                  to="/profile" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Profile
+                </Link>
               </>
             )}
 
             {isInstructor() && (
               <>
-                <Link to="/instructor/analytics" style={linkStyles}>Analytics</Link>
-                <Link to="/instructor/participants" style={linkStyles}>Participants</Link>
-                <Link to="/instructor/network" style={linkStyles}>Network</Link>
-                <Link to="/instructor/controls" style={linkStyles}>Controls</Link>
+                <Link 
+                  to="/instructor/analytics" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Analytics
+                </Link>
+                <Link 
+                  to="/instructor/participants" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Participants
+                </Link>
+                <Link 
+                  to="/instructor/network" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Network
+                </Link>
+                <Link 
+                  to="/instructor/controls" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Controls
+                </Link>
               </>
             )}
 
-            <span style={{ marginLeft: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            <span style={{ 
+              marginLeft: 'var(--space-md)', 
+              fontSize: 'var(--text-sm)', 
+              color: 'var(--text-dimmed)',
+              fontWeight: '500'
+            }}>
               {user?.username}
             </span>
-            <div style={{ marginLeft: '1rem' }}>
-              <Button onClick={handleLogout} size="sm" variant="outline">
-                Logout
-              </Button>
-            </div>
+            <Button onClick={handleLogout} size="sm" variant="outline">
+              Logout
+            </Button>
           </>
         ) : (
           <>
-            <Link to="/login" style={linkStyles}>Login</Link>
-            <div style={{ marginLeft: '1rem' }}>
-              <Button onClick={() => navigate('/register')} size="sm" variant="secondary">
-                Sign Up
-              </Button>
-            </div>
+            <Link 
+              to="/login" 
+              style={linkStyles}
+              onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+              onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+            >
+              Login
+            </Link>
+            <Button onClick={() => navigate('/register')} size="sm" variant="secondary">
+              Sign Up
+            </Button>
           </>
         )}
       </div>
