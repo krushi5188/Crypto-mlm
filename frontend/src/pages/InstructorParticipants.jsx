@@ -208,6 +208,24 @@ const InstructorParticipants = () => {
         </button>
       </div>
 
+      {/* Success Message */}
+      {formSuccess && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1rem',
+          background: 'rgba(16, 185, 129, 0.2)',
+          border: '1px solid #10b981',
+          borderRadius: '8px',
+          color: '#10b981',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{formSuccess}</span>
+          <button onClick={() => setFormSuccess('')} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+        </div>
+      )}
+
       {/* Add Student Form */}
       {showAddForm && (
         <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
@@ -215,6 +233,21 @@ const InstructorParticipants = () => {
           <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
             Members added by instructor are automatically approved and can login immediately.
           </p>
+
+          {/* Form Error Message */}
+          {formError && (
+            <div style={{
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444'
+            }}>
+              {formError}
+            </div>
+          )}
+
           <form onSubmit={handleAddStudent}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
               <div>
@@ -224,7 +257,10 @@ const InstructorParticipants = () => {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setFormError('');
+                  }}
                   required
                   placeholder="member@example.com"
                   style={{
@@ -245,9 +281,15 @@ const InstructorParticipants = () => {
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, username: e.target.value });
+                    setFormError('');
+                  }}
                   required
-                  placeholder="johndoe"
+                  placeholder="johndoe (3-20 alphanumeric)"
+                  minLength={3}
+                  maxLength={20}
+                  pattern="[a-zA-Z0-9]+"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -266,10 +308,13 @@ const InstructorParticipants = () => {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    setFormError('');
+                  }}
                   required
-                  placeholder="Min. 6 characters"
-                  minLength={6}
+                  placeholder="Min 8 chars"
+                  minLength={8}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -280,6 +325,9 @@ const InstructorParticipants = () => {
                     fontSize: '1rem'
                   }}
                 />
+                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#a0aec0', lineHeight: '1.4' }}>
+                  Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 number
+                </div>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
@@ -288,8 +336,11 @@ const InstructorParticipants = () => {
                 <input
                   type="text"
                   value={formData.referralCode}
-                  onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
-                  placeholder="Leave empty for no referrer"
+                  onChange={(e) => {
+                    setFormData({ ...formData, referralCode: e.target.value });
+                    setFormError('');
+                  }}
+                  placeholder="ATN-ABC123"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
