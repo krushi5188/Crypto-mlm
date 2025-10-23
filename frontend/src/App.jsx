@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/StudentDashboard';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import './styles/global.css';
@@ -84,14 +83,6 @@ function App() {
             <PublicRoute>
               <AppLayout>
                 <LoginPage />
-              </AppLayout>
-            </PublicRoute>
-          } />
-
-          <Route path="/register" element={
-            <PublicRoute>
-              <AppLayout>
-                <RegisterPage />
               </AppLayout>
             </PublicRoute>
           } />
