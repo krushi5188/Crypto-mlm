@@ -2,19 +2,21 @@ import React from 'react';
 
 const Card = ({ children, title, className = '', style = {} }) => {
   const cardStyles = {
-    background: 'rgba(255, 255, 255, 0.1)',
+    background: 'var(--glass-bg)',
     backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
     borderRadius: '16px',
     padding: '1.5rem',
-    boxShadow: '0 10px 15px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    boxShadow: 'var(--shadow-md)',
+    border: '1px solid var(--glass-border)',
+    transition: 'all var(--transition-base)',
     ...style
   };
 
   return (
-    <div className={`card ${className}`} style={cardStyles}>
+    <div className={`card glass card-glow ${className}`} style={cardStyles}>
       {title && (
-        <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '700' }}>
+        <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>
           {title}
         </h3>
       )}
