@@ -231,49 +231,63 @@ const LandingPage = () => {
       {/* FAQ Section */}
       <section id="faq" style={{ ...sectionStyles, background: 'rgba(255, 255, 255, 0.02)' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Frequently Asked Questions</h2>
-          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Everything you need to know</p>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Your Questions Answered</h2>
+          <p style={{ color: '#a0aec0', fontSize: '1.125rem' }}>Everything you need to know before joining Atlas Network</p>
         </div>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>How does the commission structure work?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>What exactly is Atlas Network and how does it work?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              When someone joins using your referral link, you earn 10% commission. When they refer someone, you earn 7% from that person. This continues for 5 levels: 10%, 7%, 5%, 3%, and 2%.
+              Atlas Network is a blockchain-powered network marketing platform where you earn real USDT cryptocurrency by building a referral network. When someone joins using your referral link and pays the 100 USDT membership fee, that payment is automatically distributed as commissions to their upline across 5 levels (10%, 7%, 5%, 3%, 2%). No products, no selling—just pure network building with instant USDT rewards.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>How do I get paid?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>How much can I realistically earn?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              All payments are made in USDT (Tether), a stable cryptocurrency. Commissions are credited instantly to your account balance and can be withdrawn at any time.
+              Your earning potential is unlimited and mathematically transparent. Example: If you recruit 5 people (Level 1) who each recruit 5 (Level 2), and this continues to Level 5, your network could have 3,905 members. At 100 USDT per member across 5 commission levels, you'd earn significant passive income. Top performers with larger networks earn thousands monthly in pure USDT.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>Is there a joining fee?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>Is this legal? How is it different from a pyramid scheme?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Yes, there is a one-time recruitment fee of 100 USDT. This fee is distributed as commissions to your upline according to the 5-level structure.
+              Completely legal. Pyramid schemes are illegal because they pay for recruitment alone with no real value exchange. Atlas Network is a legitimate referral marketing system where members pay for platform access and automated income infrastructure—real value for real payment. Our 5-level cap prevents infinite pyramid expansion, and all transactions are blockchain-verified for complete transparency.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>Can I join without a referral?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>What's the initial investment and are there ongoing costs?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              No, a referral code is mandatory to join Atlas Network. This ensures everyone is part of a support network and benefits from the commission structure.
+              One-time membership: 100 USDT (approximately $100 USD). That's it. No monthly fees, no hidden charges, no renewal costs, no mandatory purchases. Your membership is lifetime, and your network is permanent. The 100 USDT is distributed as commissions to your upline, creating the income flow that will benefit you when you build your network.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>How do I track my earnings?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>How secure is my money and personal data?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Your dashboard provides real-time analytics showing your balance, total earnings, network size, and detailed transaction history for complete transparency.
+              Bank-level security. All USDT transactions are on-chain (publicly verifiable but anonymous). Your personal data is encrypted with AES-256 encryption and stored on secure servers with multiple redundancy backups. We never hold your USDT—commissions go directly to your personal wallet. You control your funds 100%, we just provide the infrastructure.
             </p>
           </Card>
 
           <Card style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>What if I need help?</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>Do I need technical skills or crypto knowledge?</h3>
             <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
-              Our support team and community are here to help. Contact your upline or reach out to our instructor for guidance and support.
+              Absolutely not. If you can send an email and click a link, you can succeed here. The platform handles all technical complexity automatically. You'll need a USDT wallet (we'll guide you through setup in 5 minutes), and that's it. No blockchain knowledge required—the system automates everything including commission calculations and payouts.
+            </p>
+          </Card>
+
+          <Card style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>Can I join without a referral? What if I don't know anyone?</h3>
+            <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
+              A referral code is mandatory—this ensures everyone is part of a support network and the commission structure works fairly. If you don't have a referral, contact our support team and we'll connect you with an active network builder who can guide you. Once you join, you'll have your own referral link to share with others.
+            </p>
+          </Card>
+
+          <Card style={{ padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#fbbf24' }}>What happens if I want to withdraw my earnings?</h3>
+            <p style={{ color: '#a0aec0', lineHeight: '1.6' }}>
+              Your USDT earnings are already in your wallet the instant they're earned—no withdrawal process needed. USDT is a cryptocurrency you fully own and control. You can transfer it to any exchange (Binance, Coinbase, etc.) and convert to your local currency anytime, or hold it as a stable digital asset. Atlas Network never holds or locks your funds.
             </p>
           </Card>
         </div>
