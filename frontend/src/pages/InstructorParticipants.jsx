@@ -117,6 +117,14 @@ const InstructorParticipants = () => {
     }
   };
 
+  const copyInviteLink = () => {
+    const inviteUrl = `${window.location.origin}/register?ref=${user?.referralCode}`;
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  };
+
   const filteredParticipants = participants.filter(p => {
     const matchesSearch = p.username.toLowerCase().includes(search.toLowerCase()) ||
                          p.email.toLowerCase().includes(search.toLowerCase());
