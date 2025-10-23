@@ -67,9 +67,29 @@ router.get('/network', async (req, res) => {
 
     const networkData = await ReferralService.getDownlineTree(userId, level);
 
+    // Flatten levels into a single array for frontend
+    const downline = [];
+    Object.keys(networkData.levels).forEach(levelNum => {
+      const levelData = networkData.levels[levelNum];
+      levelData.members.forEach(member => {
+        downline.push({
+          id: member.id,
+          displayName: member.displayName,
+          level: parseInt(levelNum),
+          balance: 0, // Not exposed for privacy
+          networkSize: member.recruits,
+          joinedAt: member.joinedAt,
+          isActive: member.isActive
+        });
+      });
+    });
+
     res.json({
       success: true,
-      data: networkData
+      data: {
+        downline,
+        totalNetwork: networkData.totalNetwork
+      }
     });
   } catch (error) {
     console.error('Network error:', error);
