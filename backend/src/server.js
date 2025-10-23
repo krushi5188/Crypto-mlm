@@ -154,9 +154,15 @@ app.use(async (req, res, next) => {
       await initializeDatabase();
     } catch (error) {
       console.error('Initialization error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       return res.status(503).json({
         error: 'Service initializing, please try again',
-        code: 'INITIALIZING'
+        code: 'INITIALIZING',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
