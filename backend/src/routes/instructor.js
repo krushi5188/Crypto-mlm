@@ -302,7 +302,7 @@ router.post('/participants/:id/reject', async (req, res) => {
  * POST /api/v1/instructor/add-student
  * Instructor directly adds a new student (auto-approved, no approval needed)
  */
-router.post('/add-student', validate('instructorAddMember'), async (req, res) => {
+router.post('/add-student', validate('register'), async (req, res) => {
   try {
     const { email, username, password, referralCode } = req.validatedBody;
 
