@@ -27,7 +27,10 @@ const schemas = {
       .messages({
         'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
       }),
-    referralCode: Joi.string().pattern(/^(|ATN-[A-Z0-9]{6})$/).optional()
+    referralCode: Joi.alternatives().try(
+      Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/),
+      Joi.string().allow('')
+    ).optional()
   }),
 
   // User login
