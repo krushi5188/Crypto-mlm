@@ -46,7 +46,7 @@ const Navbar = () => {
   return (
     <nav style={navStyles}>
       <Link to={isStudent() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} style={logoStyles}>
-        Atlas Network
+        Nexus Network
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center' }}>
