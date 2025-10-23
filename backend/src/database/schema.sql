@@ -1,4 +1,4 @@
--- Atlas Network Educational Simulator Database Schema
+-- Nexus Network Platform Database Schema
 -- Database: PostgreSQL (Supabase)
 
 -- Drop existing tables (for clean installation)
@@ -131,21 +131,19 @@ CREATE INDEX idx_admin_actions_target_user ON admin_actions(target_user_id);
 -- Insert default system configuration
 INSERT INTO system_config (config_key, config_value, data_type, description) VALUES
 ('simulation_status', 'active', 'string', 'Current status: active or paused'),
-('max_participants', '300', 'integer', 'Maximum number of student participants'),
-('semester_duration_days', '112', 'integer', 'Duration of semester in days (16 weeks)'),
-('semester_start_date', CURRENT_DATE::TEXT, 'string', 'Start date of current semester'),
+('max_participants', '300', 'integer', 'Maximum number of members'),
 ('commission_level_1', '10', 'float', 'Level 1 commission percentage'),
 ('commission_level_2', '7', 'float', 'Level 2 commission percentage'),
 ('commission_level_3', '5', 'float', 'Level 3 commission percentage'),
 ('commission_level_4', '3', 'float', 'Level 4 commission percentage'),
 ('commission_level_5', '2', 'float', 'Level 5 commission percentage'),
-('recruitment_fee', '100', 'float', 'Fee per recruitment in Atlas Coins'),
-('total_coins_distributed', '0', 'float', 'Total Atlas Coins distributed as commissions'),
+('recruitment_fee', '100', 'float', 'Fee per recruitment in NexusCoins'),
+('total_coins_distributed', '0', 'float', 'Total NexusCoins distributed as commissions'),
 ('total_recruitment_fees', '0', 'float', 'Total recruitment fees collected');
 
 -- Comments
-COMMENT ON TABLE users IS 'All user accounts (students and instructor)';
+COMMENT ON TABLE users IS 'All user accounts (members and instructor)';
 COMMENT ON TABLE referrals IS 'Referral tree relationships';
-COMMENT ON TABLE transactions IS 'All Atlas Coin movements and commissions';
-COMMENT ON TABLE system_config IS 'Simulation settings and state';
+COMMENT ON TABLE transactions IS 'All NexusCoin movements and commissions';
+COMMENT ON TABLE system_config IS 'Platform settings and state';
 COMMENT ON TABLE admin_actions IS 'Audit log of instructor actions';
