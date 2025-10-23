@@ -43,6 +43,39 @@ app.use(express.urlencoded({ extended: true }));
 // Apply rate limiting to all API routes
 app.use('/api', apiLimiter);
 
+// Diagnostic endpoint (BEFORE any middleware that might fail)
+app.get('/api/v1/status', (req, res) => {
+  res.json({ 
+    service: 'Educational MLM Simulator API',
+    status: 'running', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      initialized: isInitialized,
+      configured: {
+        host: !!process.env.DB_HOST,
+        port: !!process.env.DB_PORT,
+        user: !!process.env.DB_USER,
+        password: !!process.env.DB_PASSWORD,
+        database: !!process.env.DB_NAME,
+        ssl: !!process.env.DB_SSL
+      },
+      values: {
+        host: process.env.DB_HOST ? 'SET' : 'MISSING',
+        port: process.env.DB_PORT || 'DEFAULT',
+        user: process.env.DB_USER ? 'SET' : 'MISSING',
+        database: process.env.DB_NAME ? 'SET' : 'MISSING',
+        ssl: process.env.DB_SSL || 'MISSING'
+      }
+    },
+    admin: {
+      email: process.env.ADMIN_EMAIL ? 'SET' : 'MISSING',
+      username: process.env.ADMIN_USERNAME ? 'SET' : 'MISSING',
+      password: process.env.ADMIN_PASSWORD ? 'SET' : 'MISSING'
+    }
+  });
+});
+
 // Health check endpoint (BEFORE initialization - no database needed)
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
