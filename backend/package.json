@@ -1,14 +1,14 @@
 {
-  "name": "atlas-network-simulator-backend",
+  "name": "nexus-network-backend",
   "version": "1.0.0",
-  "description": "Atlas Network Educational MLM Simulator Backend API",
+  "description": "Nexus Network MLM Platform Backend API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["mlm", "simulator", "education"],
+  "keywords": ["mlm", "network-marketing", "referral"],
   "author": "",
   "license": "MIT",
   "dependencies": {
