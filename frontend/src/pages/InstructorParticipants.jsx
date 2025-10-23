@@ -48,6 +48,9 @@ const InstructorParticipants = () => {
     }
 
     setSubmitting(true);
+    setFormError(''); // Clear any previous errors
+    setFormSuccess(''); // Clear any previous success
+    
     try {
       await instructorAPI.addMember(formData);
       // Reload participants
@@ -55,10 +58,19 @@ const InstructorParticipants = () => {
       // Reset form
       setFormData({ email: '', username: '', password: '', referralCode: '' });
       setShowAddForm(false);
-      setFormSuccess(`Member ${formData.username} created successfully!`);
+      setFormSuccess(`✓ Member ${formData.username} created successfully!`);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setFormSuccess(''), 5000);
     } catch (error) {
       console.error('Add member error:', error);
-      setFormError(error.response?.data?.error || 'Failed to create member account');
+      const errorMsg = error.response?.data?.error || 'Failed to create member account';
+      const details = error.response?.data?.details;
+      if (details && details.length > 0) {
+        // Show validation details
+        setFormError(`${errorMsg}: ${details.map(d => d.message).join(', ')}`);
+      } else {
+        setFormError(errorMsg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -72,12 +84,13 @@ const InstructorParticipants = () => {
     setProcessingId(participantId);
     try {
       await instructorAPI.approveParticipant(participantId);
-      // Reload participants
       await loadParticipants();
-      alert(`${username} has been approved successfully!`);
+      setFormSuccess(`✓ ${username} has been approved successfully!`);
+      setTimeout(() => setFormSuccess(''), 5000);
     } catch (error) {
       console.error('Approval error:', error);
-      alert(error.response?.data?.error || 'Failed to approve participant');
+      setFormError(error.response?.data?.error || 'Failed to approve participant');
+      setTimeout(() => setFormError(''), 5000);
     } finally {
       setProcessingId(null);
     }
@@ -90,12 +103,13 @@ const InstructorParticipants = () => {
     setProcessingId(participantId);
     try {
       await instructorAPI.rejectParticipant(participantId, { reason });
-      // Reload participants
       await loadParticipants();
-      alert(`${username} has been rejected.`);
+      setFormSuccess(`✓ ${username} has been rejected.`);
+      setTimeout(() => setFormSuccess(''), 5000);
     } catch (error) {
       console.error('Rejection error:', error);
-      alert(error.response?.data?.error || 'Failed to reject participant');
+      setFormError(error.response?.data?.error || 'Failed to reject participant');
+      setTimeout(() => setFormError(''), 5000);
     } finally {
       setProcessingId(null);
     }
