@@ -122,6 +122,14 @@ const Navbar = () => {
                 >
                   Rank
                 </Link>
+                <Link 
+                  to="/deposits" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Deposits
+                </Link>
               </>
             )}
 
