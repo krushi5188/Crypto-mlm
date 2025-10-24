@@ -1,4 +1,4 @@
--- Migration 007: Advanced Features
+-- Migration 007: Advanced Features (Safe Version with IF NOT EXISTS)
 -- Adds tables for 2FA, activity logs, achievements, custom referral links, analytics tracking
 
 BEGIN;
@@ -7,7 +7,7 @@ BEGIN;
 -- 1. TWO-FACTOR AUTHENTICATION
 -- ============================================
 
-CREATE TABLE user_2fa (
+CREATE TABLE IF NOT EXISTS user_2fa (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     secret VARCHAR(255) NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE user_2fa (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_user_2fa_user_id ON user_2fa(user_id);
-CREATE INDEX idx_user_2fa_enabled ON user_2fa(is_enabled);
+CREATE INDEX IF NOT EXISTS idx_user_2fa_user_id ON user_2fa(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_2fa_enabled ON user_2fa(is_enabled);
 
 COMMENT ON TABLE user_2fa IS '2FA settings and secrets for users';
 
@@ -28,7 +28,7 @@ COMMENT ON TABLE user_2fa IS '2FA settings and secrets for users';
 -- 2. LOGIN HISTORY & SECURITY
 -- ============================================
 
-CREATE TABLE login_history (
+CREATE TABLE IF NOT EXISTS login_history (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     ip_address VARCHAR(45) NOT NULL,
@@ -41,10 +41,10 @@ CREATE TABLE login_history (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_login_history_user_id ON login_history(user_id);
-CREATE INDEX idx_login_history_created_at ON login_history(created_at);
-CREATE INDEX idx_login_history_ip ON login_history(ip_address);
-CREATE INDEX idx_login_history_success ON login_history(success);
+CREATE INDEX IF NOT EXISTS idx_login_history_user_id ON login_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_history_created_at ON login_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_login_history_ip ON login_history(ip_address);
+CREATE INDEX IF NOT EXISTS idx_login_history_success ON login_history(success);
 
 COMMENT ON TABLE login_history IS 'Complete login history for security auditing';
 
@@ -52,19 +52,27 @@ COMMENT ON TABLE login_history IS 'Complete login history for security auditing'
 -- 3. SECURITY EVENTS & ALERTS
 -- ============================================
 
-CREATE TYPE security_event_type AS ENUM (
-    'suspicious_login',
-    'failed_login_attempts',
-    'password_change',
-    '2fa_enabled',
-    '2fa_disabled',
-    'unusual_activity',
-    'account_locked'
-);
+DO $$ BEGIN
+    CREATE TYPE security_event_type AS ENUM (
+        'suspicious_login',
+        'failed_login_attempts',
+        'password_change',
+        '2fa_enabled',
+        '2fa_disabled',
+        'unusual_activity',
+        'account_locked'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE security_event_severity AS ENUM ('low', 'medium', 'high', 'critical');
+DO $$ BEGIN
+    CREATE TYPE security_event_severity AS ENUM ('low', 'medium', 'high', 'critical');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE security_events (
+CREATE TABLE IF NOT EXISTS security_events (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     event_type security_event_type NOT NULL,
@@ -79,11 +87,11 @@ CREATE TABLE security_events (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_security_events_user_id ON security_events(user_id);
-CREATE INDEX idx_security_events_type ON security_events(event_type);
-CREATE INDEX idx_security_events_severity ON security_events(severity);
-CREATE INDEX idx_security_events_resolved ON security_events(is_resolved);
-CREATE INDEX idx_security_events_created_at ON security_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_security_events_type ON security_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_security_events_severity ON security_events(severity);
+CREATE INDEX IF NOT EXISTS idx_security_events_resolved ON security_events(is_resolved);
+CREATE INDEX IF NOT EXISTS idx_security_events_created_at ON security_events(created_at);
 
 COMMENT ON TABLE security_events IS 'Security events and alerts for monitoring';
 
@@ -91,15 +99,19 @@ COMMENT ON TABLE security_events IS 'Security events and alerts for monitoring';
 -- 4. ACHIEVEMENTS & GAMIFICATION
 -- ============================================
 
-CREATE TYPE achievement_category AS ENUM (
-    'recruiting',
-    'earnings',
-    'network_building',
-    'milestones',
-    'special'
-);
+DO $$ BEGIN
+    CREATE TYPE achievement_category AS ENUM (
+        'recruiting',
+        'earnings',
+        'network_building',
+        'milestones',
+        'special'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE achievements (
+CREATE TABLE IF NOT EXISTS achievements (
     id SERIAL PRIMARY KEY,
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -113,13 +125,13 @@ CREATE TABLE achievements (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_achievements_code ON achievements(code);
-CREATE INDEX idx_achievements_category ON achievements(category);
-CREATE INDEX idx_achievements_active ON achievements(is_active);
+CREATE INDEX IF NOT EXISTS idx_achievements_code ON achievements(code);
+CREATE INDEX IF NOT EXISTS idx_achievements_category ON achievements(category);
+CREATE INDEX IF NOT EXISTS idx_achievements_active ON achievements(is_active);
 
 COMMENT ON TABLE achievements IS 'Available achievements and their criteria';
 
-CREATE TABLE user_achievements (
+CREATE TABLE IF NOT EXISTS user_achievements (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     achievement_id INTEGER NOT NULL REFERENCES achievements(id) ON DELETE CASCADE,
@@ -128,9 +140,9 @@ CREATE TABLE user_achievements (
     UNIQUE(user_id, achievement_id)
 );
 
-CREATE INDEX idx_user_achievements_user_id ON user_achievements(user_id);
-CREATE INDEX idx_user_achievements_achievement_id ON user_achievements(achievement_id);
-CREATE INDEX idx_user_achievements_unlocked_at ON user_achievements(unlocked_at);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_achievement_id ON user_achievements(achievement_id);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_unlocked_at ON user_achievements(unlocked_at);
 
 COMMENT ON TABLE user_achievements IS 'User-earned achievements';
 
@@ -138,7 +150,7 @@ COMMENT ON TABLE user_achievements IS 'User-earned achievements';
 -- 5. USER RANKS & LEVELS
 -- ============================================
 
-CREATE TABLE user_ranks (
+CREATE TABLE IF NOT EXISTS user_ranks (
     id SERIAL PRIMARY KEY,
     rank_name VARCHAR(50) UNIQUE NOT NULL,
     min_direct_recruits INTEGER NOT NULL DEFAULT 0,
@@ -151,13 +163,22 @@ CREATE TABLE user_ranks (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_user_ranks_order ON user_ranks(rank_order);
+CREATE INDEX IF NOT EXISTS idx_user_ranks_order ON user_ranks(rank_order);
 
 COMMENT ON TABLE user_ranks IS 'Rank definitions and requirements';
 
 -- Add current rank to users table
-ALTER TABLE users ADD COLUMN IF NOT EXISTS current_rank_id INTEGER NULL REFERENCES user_ranks(id) ON DELETE SET NULL;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS rank_achieved_at TIMESTAMP NULL;
+DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS current_rank_id INTEGER NULL REFERENCES user_ranks(id) ON DELETE SET NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS rank_achieved_at TIMESTAMP NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_rank ON users(current_rank_id);
 
@@ -165,9 +186,13 @@ CREATE INDEX IF NOT EXISTS idx_users_rank ON users(current_rank_id);
 -- 6. LEADERBOARD SNAPSHOTS
 -- ============================================
 
-CREATE TYPE leaderboard_type AS ENUM ('weekly', 'monthly', 'all_time');
+DO $$ BEGIN
+    CREATE TYPE leaderboard_type AS ENUM ('weekly', 'monthly', 'all_time');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE leaderboard_snapshots (
+CREATE TABLE IF NOT EXISTS leaderboard_snapshots (
     id SERIAL PRIMARY KEY,
     period_type leaderboard_type NOT NULL,
     period_start DATE NOT NULL,
@@ -177,8 +202,8 @@ CREATE TABLE leaderboard_snapshots (
     UNIQUE(period_type, period_start, period_end)
 );
 
-CREATE INDEX idx_leaderboard_snapshots_type ON leaderboard_snapshots(period_type);
-CREATE INDEX idx_leaderboard_snapshots_period ON leaderboard_snapshots(period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_snapshots_type ON leaderboard_snapshots(period_type);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_snapshots_period ON leaderboard_snapshots(period_start, period_end);
 
 COMMENT ON TABLE leaderboard_snapshots IS 'Historical leaderboard data';
 
@@ -186,16 +211,20 @@ COMMENT ON TABLE leaderboard_snapshots IS 'Historical leaderboard data';
 -- 7. NOTIFICATIONS
 -- ============================================
 
-CREATE TYPE notification_type AS ENUM (
-    'achievement_unlocked',
-    'rank_up',
-    'new_recruit',
-    'commission_earned',
-    'security_alert',
-    'system_message'
-);
+DO $$ BEGIN
+    CREATE TYPE notification_type AS ENUM (
+        'achievement_unlocked',
+        'rank_up',
+        'new_recruit',
+        'commission_earned',
+        'security_alert',
+        'system_message'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type notification_type NOT NULL,
@@ -207,9 +236,9 @@ CREATE TABLE notifications (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_read ON notifications(is_read);
-CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 
 COMMENT ON TABLE notifications IS 'In-app notifications for users';
 
@@ -217,6 +246,7 @@ COMMENT ON TABLE notifications IS 'In-app notifications for users';
 -- 8. UPDATE TRIGGERS
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_user_2fa_updated_at ON user_2fa;
 CREATE TRIGGER update_user_2fa_updated_at BEFORE UPDATE ON user_2fa
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
