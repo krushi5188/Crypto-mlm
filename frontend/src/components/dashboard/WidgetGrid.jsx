@@ -227,7 +227,10 @@ const styles = {
   toolbarTitle: {
     fontSize: 'var(--text-base)',
     fontWeight: '700',
-    color: 'var(--text-primary)'
+    color: 'var(--text-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-xs)'
   },
   toolbarHint: {
     fontSize: 'var(--text-xs)',
