@@ -1,6 +1,6 @@
 # Educational MLM Simulator - Atlas Network
 
-An educational platform that teaches university students about multi-level marketing (MLM) structures, pyramid schemes, and crypto-based network marketing through hands-on simulation.
+An educational platform that teaches university members about multi-level marketing (MLM) structures, pyramid schemes, and crypto-based network marketing through hands-on simulation.
 
 > **🚀 Deploy Everything on Vercel + Supabase (Recommended & FREE):** 
 > 
@@ -10,7 +10,7 @@ An educational platform that teaches university students about multi-level marke
 
 ## 🎓 Educational Purpose
 
-This simulator allows students to:
+This simulator allows members to:
 - Experience participant perspective in an MLM system
 - Understand the mathematics behind pyramid schemes
 - Analyze economic realities of MLM structures
@@ -43,7 +43,7 @@ This simulator allows students to:
 - Frontend: Vercel
 - Backend: Vercel (serverless)
 - Database: Supabase (PostgreSQL)
-- **Total Cost: $0 (Free tier handles 300+ students)**
+- **Total Cost: $0 (Free tier handles 300+ members)**
 
 ## 🚀 Quick Start
 
@@ -140,9 +140,9 @@ npm run dev
 
 ## 📊 How It Works
 
-### Student Experience
+### Member Experience
 
-1. **Registration:** Students register with optional referral code
+1. **Registration:** Members register with optional referral code
 2. **Dashboard:** View balance, earnings, network size
 3. **Recruitment:** Share referral link to recruit others
 4. **Commissions:** Earn 5-level commissions when downline recruits
@@ -166,7 +166,7 @@ Total: 27 AC distributed per 100 AC "recruitment fee"
    - Gini coefficient calculation
    - Top earners vs bottom performers
 
-2. **Participant Management:** View and manage all students
+2. **Participant Management:** View and manage all members
 
 3. **Network Visualization:** Complete pyramid structure
 
@@ -178,7 +178,7 @@ Total: 27 AC distributed per 100 AC "recruitment fee"
 
 ## 🎯 Educational Reveal
 
-After students have participated for several weeks:
+After members have participated for several weeks:
 
 1. **Pause simulation** to freeze activity
 2. **Project analytics** showing:
@@ -281,7 +281,7 @@ See `frontend/.env.example`:
 
 **Week 3-8:** Active recruitment phase
 
-**Week 9-12:** Saturation (limited student pool)
+**Week 9-12:** Saturation (limited member pool)
 
 **Week 13-14:** Educational reveal
 - Pause simulation
@@ -302,17 +302,17 @@ See `frontend/.env.example`:
 
 ### Public Endpoints
 
-- `POST /api/v1/auth/register` - Register new student
-- `POST /api/v1/auth/login` - Login (student or instructor)
+- `POST /api/v1/auth/register` - Register new member
+- `POST /api/v1/auth/login` - Login (member or instructor)
 - `GET /api/v1/system/status` - Get simulation status
 
-### Student Endpoints (Auth Required)
+### Member Endpoints (Auth Required)
 
-- `GET /api/v1/student/dashboard` - Dashboard data
-- `GET /api/v1/student/network` - Network tree
-- `GET /api/v1/student/earnings` - Earnings history
-- `GET /api/v1/student/profile` - Profile info
-- `PUT /api/v1/student/profile` - Update profile
+- `GET /api/v1/member/dashboard` - Dashboard data
+- `GET /api/v1/member/network` - Network tree
+- `GET /api/v1/member/earnings` - Earnings history
+- `GET /api/v1/member/profile` - Profile info
+- `PUT /api/v1/member/profile` - Update profile
 
 ### Instructor Endpoints (Auth Required)
 
@@ -336,7 +336,7 @@ MIT License - See LICENSE file
 
 ## 🙏 Acknowledgments
 
-Created for educational purposes to teach students about MLM schemes and financial literacy.
+Created for educational purposes to teach members about MLM schemes and financial literacy.
 
 ---
 

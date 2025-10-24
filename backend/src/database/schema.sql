@@ -15,7 +15,7 @@ DROP TYPE IF EXISTS admin_action_type CASCADE;
 DROP TYPE IF EXISTS config_data_type CASCADE;
 
 -- Create ENUM types
-CREATE TYPE user_role AS ENUM ('student', 'instructor');
+CREATE TYPE user_role AS ENUM ('member', 'instructor');
 CREATE TYPE transaction_type AS ENUM ('commission', 'injection', 'adjustment', 'reset');
 CREATE TYPE admin_action_type AS ENUM ('pause', 'resume', 'reset', 'inject_coins', 'config_change', 'export_data', 'view_participant');
 CREATE TYPE config_data_type AS ENUM ('string', 'integer', 'boolean', 'float', 'json');
@@ -26,7 +26,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role user_role NOT NULL DEFAULT 'student',
+    role user_role NOT NULL DEFAULT 'member',
     referral_code VARCHAR(20) UNIQUE NOT NULL,
     balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total_earned DECIMAL(10,2) NOT NULL DEFAULT 0.00,
