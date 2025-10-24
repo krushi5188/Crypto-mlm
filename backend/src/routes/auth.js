@@ -145,8 +145,12 @@ router.post('/login',
       const user = await User.findByEmail(email);
 
       if (!user) {
-        // Log failed login attempt
-        await SecurityService.logLogin(null, req.ip, req.headers['user-agent'], false, 'invalid_credentials');
+        // Try to log failed login attempt (non-blocking)
+        try {
+          await SecurityService.logLogin(null, req.ip, req.headers['user-agent'], false, 'invalid_credentials');
+        } catch (secError) {
+          console.error('Security logging failed (non-critical):', secError.message);
+        }
         
         return res.status(401).json({
           error: 'Invalid credentials',
@@ -158,8 +162,12 @@ router.post('/login',
       const isValidPassword = await comparePassword(password, user.password_hash);
 
       if (!isValidPassword) {
-        // Log failed login attempt
-        await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, 'invalid_password');
+        // Try to log failed login attempt (non-blocking)
+        try {
+          await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, 'invalid_password');
+        } catch (secError) {
+          console.error('Security logging failed (non-critical):', secError.message);
+        }
         
         return res.status(401).json({
           error: 'Invalid credentials',
@@ -183,8 +191,14 @@ router.post('/login',
         }
       }
 
-      // Check if 2FA is enabled
-      const is2FAEnabled = await TwoFactorService.is2FAEnabled(user.id);
+      // Check if 2FA is enabled (non-blocking)
+      let is2FAEnabled = false;
+      try {
+        is2FAEnabled = await TwoFactorService.is2FAEnabled(user.id);
+      } catch (tfaError) {
+        console.error('2FA check failed (non-critical):', tfaError.message);
+        // Continue without 2FA if tables don't exist
+      }
 
       if (is2FAEnabled) {
         // Require 2FA token
@@ -197,21 +211,37 @@ router.post('/login',
         }
 
         // Verify 2FA token
-        const verification = await TwoFactorService.verifyLogin2FA(user.id, twoFactorToken);
+        try {
+          const verification = await TwoFactorService.verifyLogin2FA(user.id, twoFactorToken);
 
-        if (!verification.success) {
-          // Log failed 2FA attempt
-          await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, '2fa_failed');
-          
-          return res.status(401).json({
-            error: 'Invalid two-factor authentication code',
-            code: 'INVALID_2FA_TOKEN'
+          if (!verification.success) {
+            // Try to log failed 2FA attempt (non-blocking)
+            try {
+              await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, '2fa_failed');
+            } catch (secError) {
+              console.error('Security logging failed (non-critical):', secError.message);
+            }
+            
+            return res.status(401).json({
+              error: 'Invalid two-factor authentication code',
+              code: 'INVALID_2FA_TOKEN'
+            });
+          }
+        } catch (tfaError) {
+          console.error('2FA verification failed:', tfaError.message);
+          return res.status(500).json({
+            error: '2FA verification error',
+            code: '2FA_ERROR'
           });
         }
       }
 
-      // Log successful login
-      await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], true);
+      // Try to log successful login (non-blocking)
+      try {
+        await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], true);
+      } catch (secError) {
+        console.error('Security logging failed (non-critical):', secError.message);
+      }
 
       // Update last login
       await User.updateLastLogin(user.id);
