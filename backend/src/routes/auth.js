@@ -15,7 +15,7 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * POST /api/v1/auth/register
- * Register new student account
+ * Register new member account
  */
 router.post('/register',
   registerLimiter,
@@ -34,7 +34,7 @@ router.post('/register',
       }
 
       // Check if participant limit reached
-      const participantCount = await User.countStudents();
+      const participantCount = await User.countMembers();
       const maxParticipants = await SystemConfig.get('max_participants');
 
       if (participantCount >= maxParticipants) {
@@ -76,7 +76,7 @@ router.post('/register',
       }
 
       // Ensure referrer is approved (can't refer if not approved)
-      if (referrer.role === 'student' && referrer.approval_status !== 'approved') {
+      if (referrer.role === 'member' && referrer.approval_status !== 'approved') {
         return res.status(400).json({
           error: 'This referral link is not active',
           code: 'REFERRER_NOT_APPROVED'
@@ -94,7 +94,7 @@ router.post('/register',
         email,
         username,
         password_hash,
-        role: 'student',
+        role: 'member',
         referral_code: newReferralCode,
         referred_by_id: referrer.id,
         approval_status: 'pending'  // NEW: Pending approval
@@ -132,7 +132,7 @@ router.post('/register',
 
 /**
  * POST /api/v1/auth/login
- * Login for students and instructor
+ * Login for members and instructor
  */
 router.post('/login',
   loginLimiter,
@@ -161,8 +161,8 @@ router.post('/login',
         });
       }
 
-      // Check approval status (students only)
-      if (user.role === 'student') {
+      // Check approval status (members only)
+      if (user.role === 'member') {
         if (user.approval_status === 'pending') {
           return res.status(403).json({
             error: 'Your account is pending instructor approval. Please wait for approval to login.',
