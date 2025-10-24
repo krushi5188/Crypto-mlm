@@ -69,9 +69,16 @@ router.get('/network', async (req, res) => {
 
     // Flatten levels into a single array for frontend
     const downline = [];
-    Object.keys(networkData.levels).forEach(levelNum => {
+    for (const levelNum of Object.keys(networkData.levels)) {
       const levelData = networkData.levels[levelNum];
-      levelData.members.forEach(member => {
+      for (const member of levelData.members) {
+        // Get total earned from this member
+        const earningsResult = await require('../config/database').pool.query(
+          'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = $1 AND triggered_by_user_id = $2',
+          [userId, member.id]
+        );
+        const totalEarned = parseFloat(earningsResult.rows[0].total);
+
         downline.push({
           id: member.id,
           displayName: member.displayName,
@@ -79,10 +86,11 @@ router.get('/network', async (req, res) => {
           balance: 0, // Not exposed for privacy
           networkSize: member.recruits,
           joinedAt: member.joinedAt,
-          isActive: member.isActive
+          isActive: member.isActive,
+          totalEarned: totalEarned
         });
-      });
-    });
+      }
+    }
 
     res.json({
       success: true,
@@ -137,7 +145,9 @@ router.get('/earnings', async (req, res) => {
           level: t.level,
           description: t.description,
           balanceAfter: parseFloat(t.balance_after),
-          createdAt: t.created_at
+          createdAt: t.created_at,
+          triggeredByUserId: t.triggered_by_user_id,
+          triggeredByEmail: t.triggered_by_email
         })),
         summary: {
           todayEarnings: parseFloat(summary.today_earnings),
@@ -157,6 +167,83 @@ router.get('/earnings', async (req, res) => {
     console.error('Earnings error:', error);
     res.status(500).json({
       error: 'Failed to load earnings',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/student/direct-invites
+ * Get list of direct invites with earnings summary
+ */
+router.get('/direct-invites', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const invites = await Transaction.getDirectInvitesEarnings(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        invites: invites.map(inv => ({
+          userId: inv.user_id,
+          email: inv.email,
+          totalEarned: parseFloat(inv.total_earned),
+          transactionCount: parseInt(inv.transaction_count)
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Direct invites error:', error);
+    res.status(500).json({
+      error: 'Failed to load invites',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/student/invite-transactions/:inviteUserId
+ * Get all transactions triggered by a specific invite
+ */
+router.get('/invite-transactions/:inviteUserId', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const inviteUserId = parseInt(req.params.inviteUserId);
+    
+    // Security check: verify the invite belongs to current user
+    const verifyResult = await require('../config/database').pool.query(
+      'SELECT id FROM users WHERE id = $1 AND referred_by_id = $2',
+      [inviteUserId, userId]
+    );
+    
+    if (verifyResult.rows.length === 0) {
+      return res.status(403).json({
+        error: 'Unauthorized access',
+        code: 'FORBIDDEN'
+      });
+    }
+    
+    const transactions = await Transaction.getTransactionsByTriggeredUser(userId, inviteUserId);
+    
+    res.json({
+      success: true,
+      data: {
+        transactions: transactions.map(t => ({
+          id: t.id,
+          amount: parseFloat(t.amount),
+          type: t.type,
+          level: t.level,
+          description: t.description,
+          balanceAfter: parseFloat(t.balance_after),
+          createdAt: t.created_at
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Invite transactions error:', error);
+    res.status(500).json({
+      error: 'Failed to load transactions',
       code: 'DATABASE_ERROR'
     });
   }
