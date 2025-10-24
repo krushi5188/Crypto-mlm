@@ -5,6 +5,7 @@ const Transaction = require('../models/Transaction');
 const SystemConfig = require('../models/SystemConfig');
 const AdminAction = require('../models/AdminAction');
 const FraudAlert = require('../models/FraudAlert');
+const Deposit = require('../models/Deposit');
 const AnalyticsService = require('../services/analyticsService');
 const ReferralService = require('../services/referralService');
 const ExportService = require('../services/exportService');
