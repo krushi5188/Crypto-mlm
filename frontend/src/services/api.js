@@ -43,7 +43,12 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
-  login: (data) => api.post('/auth/login', data)
+  login: (data) => api.post('/auth/login', data),
+  // 2FA
+  setup2FA: () => api.post('/auth/2fa/setup'),
+  enable2FA: (data) => api.post('/auth/2fa/enable', data),
+  disable2FA: (data) => api.post('/auth/2fa/disable', data),
+  get2FAStatus: () => api.get('/auth/2fa/status')
 };
 
 // Student API
@@ -160,6 +165,47 @@ export const instructorAPI = {
 export const systemAPI = {
   getStatus: () => api.get('/system/status'),
   getConfig: () => api.get('/system/config')
+};
+
+// Gamification API
+export const gamificationAPI = {
+  // Security
+  getLoginHistory: (params) => api.get('/gamification/login-history', { params }),
+  getSecurityEvents: (params) => api.get('/gamification/security-events', { params }),
+  getSecuritySummary: () => api.get('/gamification/security-summary'),
+  resolveSecurityEvent: (id) => api.put(`/gamification/security-events/${id}/resolve`),
+  
+  // Achievements
+  getAllAchievements: () => api.get('/gamification/achievements'),
+  getUserAchievements: () => api.get('/gamification/achievements/user'),
+  getAchievementProgress: () => api.get('/gamification/achievements/progress'),
+  getAchievementSummary: () => api.get('/gamification/achievements/summary'),
+  getAchievementsByCategory: (category) => api.get(`/gamification/achievements/category/${category}`),
+  
+  // Ranks
+  getUserRank: () => api.get('/gamification/rank'),
+  getRankProgress: () => api.get('/gamification/rank/progress'),
+  getAllRanks: () => api.get('/gamification/ranks'),
+  getRankPerks: (id) => api.get(`/gamification/ranks/${id}/perks`),
+  
+  // Leaderboards
+  getTopEarners: (params) => api.get('/gamification/leaderboard/earners', { params }),
+  getTopRecruiters: (params) => api.get('/gamification/leaderboard/recruiters', { params }),
+  getFastestGrowing: (params) => api.get('/gamification/leaderboard/fastest-growing', { params }),
+  getCombinedLeaderboard: (params) => api.get('/gamification/leaderboard/combined', { params }),
+  getUserPosition: (params) => api.get('/gamification/leaderboard/position', { params }),
+  getLeaderboardStats: (params) => api.get('/gamification/leaderboard/stats', { params }),
+  
+  // Notifications
+  getNotifications: (params) => api.get('/gamification/notifications', { params }),
+  getUnreadCount: () => api.get('/gamification/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/gamification/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/gamification/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/gamification/notifications/${id}`),
+  deleteAllRead: () => api.delete('/gamification/notifications/read'),
+  getNotificationsByType: (type, params) => api.get(`/gamification/notifications/by-type/${type}`, { params }),
+  getNotificationSummary: () => api.get('/gamification/notifications/summary'),
+  getActivityFeed: (params) => api.get('/gamification/activity-feed', { params })
 };
 
 export default api;
