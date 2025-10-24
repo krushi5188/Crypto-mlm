@@ -150,6 +150,14 @@ const Navbar = () => {
                 >
                   Fraud Detection
                 </Link>
+                <Link 
+                  to="/instructor/bi" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  BI Analytics
+                </Link>
               </>
             )}
 
