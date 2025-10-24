@@ -2,274 +2,341 @@ import React, { useState, useEffect } from 'react';
 import { studentAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { formatCurrency, formatTimeAgo } from '../utils/formatters';
 
-const StudentWithdrawals = () => {
-  const [withdrawals, setWithdrawals] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [wallets, setWallets] = useState([]);
+const StudentDashboard = () => {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showRequestForm, setShowRequestForm] = useState(false);
-
-  // Form state
-  const [amount, setAmount] = useState('');
-  const [selectedWallet, setSelectedWallet] = useState('');
-  const [notes, setNotes] = useState('');
-  const [feeInfo, setFeeInfo] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadDashboard();
   }, []);
 
-  useEffect(() => {
-    if (amount && parseFloat(amount) > 0) {
-      calculateFee(parseFloat(amount));
-    } else {
-      setFeeInfo(null);
-    }
-  }, [amount]);
-
-  const loadData = async () => {
+  const loadDashboard = async () => {
     try {
-      const [withdrawalsRes, statsRes, walletsRes] = await Promise.all([
-        studentAPI.getWithdrawals(),
-        studentAPI.getWithdrawalStats(),
-        studentAPI.getWallets()
-      ]);
-
-      setWithdrawals(withdrawalsRes.data.data.withdrawals || []);
-      setStats(statsRes.data.data);
-      setWallets(walletsRes.data.data.wallets || []);
-
-      const primary = walletsRes.data.data.wallets.find(w => w.is_primary);
-      if (primary) {
-        setSelectedWallet(primary.id);
-      }
+      const response = await studentAPI.getDashboard();
+      setData(response.data.data);
+      setError(null);
     } catch (error) {
-      console.error('Failed to load withdrawal data:', error);
+      console.error('Failed to load dashboard:', error);
+      setError(error.response?.data?.error || 'Failed to load dashboard. Please ensure the database is configured.');
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateFee = (withdrawAmount) => {
-    const percentageFee = withdrawAmount * 0.02;
-    const totalFee = percentageFee + 1;
-    const netAmount = withdrawAmount - totalFee;
-
-    setFeeInfo({
-      fee: totalFee.toFixed(2),
-      netAmount: netAmount.toFixed(2)
-    });
-  };
-
-  const handleSubmitWithdrawal = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-
-    try {
-      const withdrawAmount = parseFloat(amount);
-
-      if (withdrawAmount < 10) {
-        setError('Minimum withdrawal amount is $10 USDT');
-        setSubmitting(false);
-        return;
-      }
-
-      if (!selectedWallet) {
-        setError('Please select a wallet address');
-        setSubmitting(false);
-        return;
-      }
-
-      const wallet = wallets.find(w => w.id === parseInt(selectedWallet));
-
-      await studentAPI.createWithdrawal({
-        amount: withdrawAmount,
-        wallet_id: parseInt(selectedWallet),
-        wallet_address: wallet.address,
-        network: wallet.network,
-        notes: notes || null
-      });
-
-      setAmount('');
-      setNotes('');
-      setShowRequestForm(false);
-      setFeeInfo(null);
-      await loadData();
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to submit withdrawal request');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCancelWithdrawal = async (withdrawalId) => {
-    if (!confirm('Are you sure you want to cancel this withdrawal request?')) {
-      return;
-    }
-
-    try {
-      await studentAPI.cancelWithdrawal(withdrawalId);
-      await loadData();
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to cancel withdrawal');
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return '#10b981';
-      case 'pending': return '#fbbf24';
-      case 'approved': return '#3b82f6';
-      case 'rejected': return '#ef4444';
-      default: return '#6b7280';
-    }
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(data.referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading withdrawals...</p>
+      <div style={{ 
+        minHeight: '60vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: 'var(--space-md)'
+      }}>
+        <div className="spin" style={{ fontSize: '4rem' }}>⏳</div>
+        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ 
+        minHeight: '60vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        padding: 'var(--space-md)'
+      }}>
+        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
+          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
+          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
+            Unable to Load Dashboard
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
+            {error || 'Unable to load dashboard data.'}
+          </p>
+          <Button onClick={() => window.location.reload()} size="lg">
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Withdrawals</h1>
-        <p style={{ color: '#a0aec0' }}>Manage your withdrawal requests</p>
+    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
+      {/* Hero Section - Large Welcome */}
+      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <div className="fade-in" style={{ maxWidth: '800px' }}>
+          <h1 style={{ 
+            fontSize: 'clamp(2.5rem, 5vw, 4rem)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '700',
+            letterSpacing: '-0.02em'
+          }}>
+            Your Dashboard
+          </h1>
+          <p style={{ 
+            fontSize: 'var(--text-xl)', 
+            color: 'var(--text-muted)',
+            lineHeight: '1.6'
+          }}>
+            Track your earnings, network growth, and manage your referrals
+          </p>
+        </div>
       </div>
 
-      {stats && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem'
+      {/* Stats - Huge Numbers */}
+      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 'var(--space-xl)'
         }}>
-          <Card><div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>Total Withdrawn</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>
-              ${formatCurrency(stats.total_withdrawn)} USDT
+          <div className="fade-in-up delay-100" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              background: 'linear-gradient(135deg, var(--primary-gold), var(--accent-green))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              {formatCurrency(data.balance)}
             </div>
-          </div></Card>
-          <Card><div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>Pending</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>
-              ${formatCurrency(stats.pending_amount)} USDT
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              USDT
             </div>
-          </div></Card>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Current Balance
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-200" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {formatCurrency(data.totalEarned)}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              USDT
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Total Earned
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-300" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {data.directRecruits}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              Direct
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Recruits
+            </div>
+          </div>
+
+          <div className="fade-in-up delay-400" style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: 'clamp(3rem, 6vw, 5rem)', 
+              fontWeight: '700',
+              marginBottom: 'var(--space-sm)',
+              color: 'var(--text-primary)'
+            }}>
+              {data.networkSize}
+            </div>
+            <div style={{ 
+              fontSize: 'var(--text-xl)', 
+              color: 'var(--text-muted)',
+              marginBottom: 'var(--space-xs)'
+            }}>
+              Total
+            </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
+              Network Size
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {!showRequestForm && (
-        <Button onClick={() => setShowRequestForm(true)} size="lg" fullWidth style={{ marginBottom: '2rem' }}>
-          💰 Request Withdrawal
-        </Button>
-      )}
+      {/* Referral Section */}
+      <div className="container-narrow" style={{ marginBottom: 'var(--space-3xl)' }}>
+        <Card className="fade-in-up delay-100">
+          <h2 style={{ 
+            fontSize: 'var(--text-3xl)', 
+            marginBottom: 'var(--space-md)',
+            fontWeight: '600',
+            letterSpacing: '-0.01em'
+          }}>
+            Share Your Referral Link
+          </h2>
+          <p style={{ 
+            color: 'var(--text-muted)', 
+            marginBottom: 'var(--space-xl)', 
+            fontSize: 'var(--text-lg)',
+            lineHeight: '1.7'
+          }}>
+            Invite others to join your network and earn commissions automatically
+          </p>
 
-      {showRequestForm && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <div style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Request Withdrawal</h3>
-            {error && (
-              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                {error}
-              </div>
-            )}
-            <form onSubmit={handleSubmitWithdrawal}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Amount (USDT)</label>
-                <input type="number" step="0.01" min="10" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Minimum: $10 USDT" required style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: 'var(--text-primary)' }} />
-              </div>
-              {feeInfo && (
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span>Amount:</span><span style={{ fontWeight: '600' }}>${amount} USDT</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#a0aec0' }}>
-                    <span>Fee (2% + $1):</span><span>-${feeInfo.fee} USDT</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}>
-                    <span>You'll Receive:</span><span>${feeInfo.netAmount} USDT</span>
-                  </div>
-                </div>
-              )}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Wallet</label>
-                <select value={selectedWallet} onChange={(e) => setSelectedWallet(e.target.value)} required style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: 'var(--text-primary)' }}>
-                  <option value="">Select a wallet</option>
-                  {wallets.map(wallet => (
-                    <option key={wallet.id} value={wallet.id}>
-                      {wallet.label} - {wallet.address.substring(0, 10)}...{wallet.address.slice(-6)} ({wallet.network})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <Button type="submit" disabled={submitting || wallets.length === 0} fullWidth>
-                  {submitting ? 'Submitting...' : 'Submit Request'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => { setShowRequestForm(false); setAmount(''); setError(''); setFeeInfo(null); }} fullWidth>
-                  Cancel
-                </Button>
-              </div>
-            </form>
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.03)',
+            padding: 'var(--space-lg)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            marginBottom: 'var(--space-lg)'
+          }}>
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: 'var(--text-base)',
+              wordBreak: 'break-all',
+              color: 'var(--text-secondary)',
+              marginBottom: 'var(--space-md)'
+            }}>
+              {data.referralLink}
+            </div>
+            <Button onClick={copyReferralLink} variant="secondary" fullWidth>
+              {copied ? '✓ Copied to Clipboard' : 'Copy Referral Link'}
+            </Button>
+          </div>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 'var(--space-sm)',
+            fontSize: 'var(--text-base)',
+            color: 'var(--text-muted)'
+          }}>
+            <span>Your referral code:</span>
+            <span style={{ 
+              color: 'var(--primary-gold)', 
+              fontWeight: '600',
+              fontSize: 'var(--text-lg)',
+              letterSpacing: '0.05em'
+            }}>
+              {data.referralCode}
+            </span>
           </div>
         </Card>
-      )}
+      </div>
 
-      <Card>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <h3 style={{ fontSize: '1.25rem' }}>Withdrawal History</h3>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Date</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Amount</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Net</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {withdrawals.length === 0 ? (
-                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>No withdrawal requests yet</td></tr>
-              ) : (
-                withdrawals.map((w) => (
-                  <tr key={w.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <td style={{ padding: '1rem' }}>{formatDateTime(w.created_at)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600' }}>${formatCurrency(w.amount)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '700', color: '#10b981' }}>${formatCurrency(w.net_amount)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.875rem', fontWeight: '600', background: `${getStatusColor(w.status)}20`, color: getStatusColor(w.status) }}>
-                        {w.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      {w.status === 'pending' && (
-                        <button onClick={() => handleCancelWithdrawal(w.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem' }}>
-                          Cancel
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Recent Activity */}
+      <div className="container-narrow">
+        <h2 style={{ 
+          fontSize: 'var(--text-3xl)', 
+          marginBottom: 'var(--space-xl)',
+          fontWeight: '600',
+          letterSpacing: '-0.01em'
+        }}>
+          Recent Activity
+        </h2>
+
+        {data.recentActivity.length === 0 ? (
+          <div className="fade-in-up" style={{ 
+            textAlign: 'center', 
+            padding: 'var(--space-3xl)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>📊</div>
+            <p style={{ 
+              color: 'var(--text-muted)', 
+              fontSize: 'var(--text-lg)',
+              lineHeight: '1.6'
+            }}>
+              No activity yet. Start by inviting others to join your network!
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            {data.recentActivity.map((activity, index) => (
+              <div
+                key={activity.id}
+                className={`fade-in-up delay-${Math.min(index * 100, 500)}`}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--space-lg)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  transition: 'all var(--transition-base)',
+                  cursor: 'default'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontWeight: '500',
+                    fontSize: 'var(--text-lg)',
+                    marginBottom: 'var(--space-xs)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {activity.description}
+                  </div>
+                  <div style={{ 
+                    fontSize: 'var(--text-sm)', 
+                    color: 'var(--text-dimmed)'
+                  }}>
+                    {formatTimeAgo(activity.timestamp)}
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: 'var(--text-2xl)',
+                  fontWeight: '700',
+                  color: 'var(--accent-green)'
+                }}>
+                  +{formatCurrency(activity.amount)} USDT
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default StudentWithdrawals;
+export default StudentDashboard;
