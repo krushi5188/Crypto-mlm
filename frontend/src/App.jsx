@@ -2,26 +2,12 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-<<<<<<< HEAD
-=======
 import './i18n/config'; // Initialize i18n
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import GlobalSearch, { useGlobalSearch } from './components/GlobalSearch';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-<<<<<<< HEAD
-import ErrorPage from './pages/ErrorPage';
-import StudentDashboard from './pages/StudentDashboard';
-import StudentNetwork from './pages/StudentNetwork';
-import StudentEarnings from './pages/StudentEarnings';
-import StudentProfile from './pages/StudentProfile';
-import StudentSecurity from './pages/StudentSecurity';
-import StudentAchievements from './pages/StudentAchievements';
-import StudentRank from './pages/StudentRank';
-import StudentDeposits from './pages/StudentDeposits';
-=======
 import MemberDashboard from './pages/MemberDashboard';
 import MemberNetwork from './pages/MemberNetwork';
 import MemberEarnings from './pages/MemberEarnings';
@@ -32,19 +18,15 @@ import MemberNotifications from './pages/MemberNotifications';
 import MemberSecurity from './pages/MemberSecurity';
 import MemberWithdrawals from './pages/MemberWithdrawals';
 import MemberAnalytics from './pages/MemberAnalytics';
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
 import InstructorNetwork from './pages/InstructorNetwork';
 import InstructorControls from './pages/InstructorControls';
-<<<<<<< HEAD
 import InstructorFraudDetection from './pages/InstructorFraudDetection';
 import InstructorBI from './pages/InstructorBI';
 import InstructorDeposits from './pages/InstructorDeposits';
-=======
 import InstructorConfiguration from './pages/InstructorConfiguration';
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 import './styles/global.css';
 
 // Protected Route Component
@@ -93,7 +75,7 @@ const PublicRoute = ({ children }) => {
 // Main App Layout
 const AppLayout = ({ children }) => {
   const { isOpen, close } = useGlobalSearch();
-  
+
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '3rem' }}>
       <Navbar />
@@ -134,120 +116,64 @@ function App() {
               </PublicRoute>
             } />
 
-<<<<<<< HEAD
-            {/* Error Route - Public, no auth required */}
-            <Route path="/error" element={<ErrorPage />} />
-
-            {/* Student Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentDashboard />
-=======
             {/* Member Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberDashboard />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/network" element={
-<<<<<<< HEAD
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentNetwork />
-=======
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberNetwork />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/earnings" element={
-<<<<<<< HEAD
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentEarnings />
-=======
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberEarnings />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/profile" element={
-<<<<<<< HEAD
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentProfile />
-=======
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberProfile />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-<<<<<<< HEAD
-            <Route path="/security" element={
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentSecurity />
-=======
-            <Route path="/member/achievements" element={
+            <Route path="/achievements" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberAchievements />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-<<<<<<< HEAD
-            <Route path="/achievements" element={
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentAchievements />
-=======
-            <Route path="/member/leaderboard" element={
+            <Route path="/leaderboard" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberLeaderboard />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-<<<<<<< HEAD
-            <Route path="/rank" element={
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentRank />
-=======
-            <Route path="/member/notifications" element={
+            <Route path="/notifications" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberNotifications />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-<<<<<<< HEAD
-            <Route path="/deposits" element={
-              <ProtectedRoute allowedRole="student">
-                <AppLayout>
-                  <StudentDeposits />
-=======
-            <Route path="/member/security" element={
+            <Route path="/security" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberSecurity />
@@ -255,7 +181,7 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/member/withdrawals" element={
+            <Route path="/withdrawals" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberWithdrawals />
@@ -263,11 +189,10 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/member/analytics" element={
+            <Route path="/analytics" element={
               <ProtectedRoute allowedRole="member">
                 <AppLayout>
                   <MemberAnalytics />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
@@ -313,7 +238,6 @@ function App() {
               </ProtectedRoute>
             } />
 
-<<<<<<< HEAD
             <Route path="/instructor/fraud-detection" element={
               <ProtectedRoute allowedRole="instructor">
                 <AppLayout>
@@ -334,12 +258,14 @@ function App() {
               <ProtectedRoute allowedRole="instructor">
                 <AppLayout>
                   <InstructorDeposits />
-=======
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
             <Route path="/instructor/configuration" element={
               <ProtectedRoute allowedRole="instructor">
                 <AppLayout>
                   <InstructorConfiguration />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                 </AppLayout>
               </ProtectedRoute>
             } />
