@@ -9,6 +9,7 @@ const ReferralService = require('../services/referralService');
 const ExportService = require('../services/exportService');
 const predictiveAnalyticsService = require('../services/predictiveAnalyticsService');
 const campaignService = require('../services/campaignService');
+const abTestingService = require('../services/abTestingService');
 const { authenticate } = require('../middleware/auth');
 const { requireInstructor } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
