@@ -9,6 +9,7 @@ const { generateReferralCode } = require('../utils/generateReferralCode');
 const { validate } = require('../utils/validation');
 const { registerLimiter, loginLimiter } = require('../middleware/rateLimiter');
 const { checkSimulationActive } = require('../middleware/simulationStatus');
+const { trackLogin, trackFailedLogin } = require('../middleware/fraudTracking');
 
 /**
  * POST /api/v1/auth/register
@@ -142,6 +143,11 @@ router.post('/login',
       const user = await User.findByEmail(email);
 
       if (!user) {
+        // Track failed login
+        const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        await trackFailedLogin(email, ipAddress, userAgent, 'Invalid credentials');
+
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -152,6 +158,11 @@ router.post('/login',
       const isValidPassword = await comparePassword(password, user.password_hash);
 
       if (!isValidPassword) {
+        // Track failed login
+        const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        await trackFailedLogin(email, ipAddress, userAgent, 'Invalid password');
+
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -176,6 +187,10 @@ router.post('/login',
 
       // Update last login
       await User.updateLastLogin(user.id);
+
+      // Track successful login for fraud detection
+      req.user = { id: user.id };
+      await trackLogin(req, res, () => {});
 
       // Generate JWT token
       const token = generateToken(user);
