@@ -1962,4 +1962,315 @@ router.get('/campaigns/:id/recipients', async (req, res) => {
   }
 });
 
+/**
+ * A/B TESTING ENDPOINTS
+ */
+
+// POST /api/v1/instructor/ab-experiments - Create new A/B test
+router.post('/ab-experiments', async (req, res) => {
+  try {
+    const experimentData = {
+      ...req.body,
+      created_by: req.user.id
+    };
+
+    const experiment = await abTestingService.createExperiment(experimentData);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'create_ab_experiment',
+      details: {
+        experiment_id: experiment.id,
+        experiment_name: experiment.name,
+        experiment_type: experiment.experiment_type
+      },
+      ip_address: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      data: { experiment }
+    });
+  } catch (error) {
+    console.error('Create A/B experiment error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to create experiment',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/ab-experiments - List all experiments
+router.get('/ab-experiments', async (req, res) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      experiment_type: req.query.experiment_type,
+      limit: req.query.limit ? parseInt(req.query.limit) : undefined
+    };
+
+    const experiments = await abTestingService.getAllExperiments(filters);
+
+    res.json({
+      success: true,
+      data: { experiments }
+    });
+  } catch (error) {
+    console.error('Get experiments error:', error);
+    res.status(500).json({
+      error: 'Failed to load experiments',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/ab-experiments/summary - Get experiments summary
+router.get('/ab-experiments/summary', async (req, res) => {
+  try {
+    const summary = await abTestingService.getExperimentsSummary();
+
+    res.json({
+      success: true,
+      data: { summary }
+    });
+  } catch (error) {
+    console.error('Get experiments summary error:', error);
+    res.status(500).json({
+      error: 'Failed to load experiments summary',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/ab-experiments/:id - Get experiment details
+router.get('/ab-experiments/:id', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const experiment = await abTestingService.getExperimentById(experimentId);
+
+    if (!experiment) {
+      return res.status(404).json({
+        error: 'Experiment not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { experiment }
+    });
+  } catch (error) {
+    console.error('Get experiment error:', error);
+    res.status(500).json({
+      error: 'Failed to load experiment',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/ab-experiments/:id/results - Get experiment results
+router.get('/ab-experiments/:id/results', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const results = await abTestingService.getExperimentResults(experimentId);
+
+    res.json({
+      success: true,
+      data: { results }
+    });
+  } catch (error) {
+    console.error('Get experiment results error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to load experiment results',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/instructor/ab-experiments/:id - Update experiment
+router.put('/ab-experiments/:id', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const updateData = req.body;
+
+    const experiment = await abTestingService.updateExperiment(experimentId, updateData);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'update_ab_experiment',
+      details: {
+        experiment_id: experimentId,
+        updates: Object.keys(updateData)
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: { experiment }
+    });
+  } catch (error) {
+    console.error('Update experiment error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to update experiment',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/instructor/ab-experiments/:id/status - Update experiment status
+router.put('/ab-experiments/:id/status', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    const experiment = await abTestingService.updateExperimentStatus(experimentId, status);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'update_ab_experiment_status',
+      details: {
+        experiment_id: experimentId,
+        new_status: status
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Experiment status updated to ${status}`,
+        experiment
+      }
+    });
+  } catch (error) {
+    console.error('Update experiment status error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to update experiment status',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/ab-experiments/:id/winner - Set experiment winner
+router.post('/ab-experiments/:id/winner', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const { winnerVariant } = req.body;
+
+    if (!['a', 'b', 'c', 'inconclusive'].includes(winnerVariant)) {
+      return res.status(400).json({
+        error: 'Invalid winner variant. Must be a, b, c, or inconclusive',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const experiment = await abTestingService.setExperimentWinner(experimentId, winnerVariant);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'set_ab_experiment_winner',
+      details: {
+        experiment_id: experimentId,
+        winner_variant: winnerVariant
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Experiment winner set to variant ${winnerVariant.toUpperCase()}`,
+        experiment
+      }
+    });
+  } catch (error) {
+    console.error('Set experiment winner error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to set experiment winner',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/instructor/ab-experiments/:id - Delete experiment
+router.delete('/ab-experiments/:id', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+
+    const experiment = await abTestingService.getExperimentById(experimentId);
+    if (!experiment) {
+      return res.status(404).json({
+        error: 'Experiment not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    await abTestingService.deleteExperiment(experimentId);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'delete_ab_experiment',
+      details: {
+        experiment_id: experimentId,
+        experiment_name: experiment.name
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: { message: 'Experiment deleted successfully' }
+    });
+  } catch (error) {
+    console.error('Delete experiment error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to delete experiment',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/ab-experiments/:id/track - Track event for experiment
+router.post('/ab-experiments/:id/track', async (req, res) => {
+  try {
+    const experimentId = parseInt(req.params.id);
+    const { userId, eventType, eventValue, metadata } = req.body;
+
+    if (!userId || !eventType) {
+      return res.status(400).json({
+        error: 'userId and eventType are required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const event = await abTestingService.trackEvent(
+      experimentId,
+      userId,
+      eventType,
+      eventValue,
+      metadata
+    );
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Event tracked successfully',
+        event
+      }
+    });
+  } catch (error) {
+    console.error('Track event error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to track event',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
