@@ -20,6 +20,7 @@ const { validate } = require('../utils/validation');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 const upload = require('../config/multer');
 const path = require('path');
+const Notification = require('../models/Notification');
 
 // Apply authentication to all student routes
 router.use(authenticate);
@@ -1907,6 +1908,150 @@ router.post('/preferences/complete-onboarding', async (req, res) => {
     console.error('Complete onboarding error:', error);
     res.status(500).json({
       error: 'Failed to complete onboarding',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * NOTIFICATIONS ENDPOINTS
+ */
+
+// GET /api/v1/student/notifications - Get user's notifications
+router.get('/notifications', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const unreadOnly = req.query.unread === 'true';
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const notifications = await Notification.getUserNotifications(userId, {
+      unreadOnly,
+      limit,
+      offset
+    });
+
+    res.json({
+      success: true,
+      data: { notifications }
+    });
+  } catch (error) {
+    console.error('Notifications error:', error);
+    res.status(500).json({
+      error: 'Failed to load notifications',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/notifications/unread-count - Get unread notification count
+router.get('/notifications/unread-count', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const count = await Notification.getUnreadCount(userId);
+
+    res.json({
+      success: true,
+      data: { unreadCount: count }
+    });
+  } catch (error) {
+    console.error('Unread count error:', error);
+    res.status(500).json({
+      error: 'Failed to get unread count',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/student/notifications/:id/read - Mark notification as read
+router.put('/notifications/:id/read', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const notificationId = parseInt(req.params.id);
+
+    const notification = await Notification.markAsRead(notificationId, userId);
+
+    if (!notification) {
+      return res.status(404).json({
+        error: 'Notification not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { notification }
+    });
+  } catch (error) {
+    console.error('Mark read error:', error);
+    res.status(500).json({
+      error: 'Failed to mark notification as read',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/student/notifications/read-all - Mark all notifications as read
+router.put('/notifications/read-all', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Notification.markAllAsRead(userId);
+
+    res.json({
+      success: true,
+      data: { message: 'All notifications marked as read' }
+    });
+  } catch (error) {
+    console.error('Mark all read error:', error);
+    res.status(500).json({
+      error: 'Failed to mark all as read',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/student/notifications/:id - Delete notification
+router.delete('/notifications/:id', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const notificationId = parseInt(req.params.id);
+
+    const notification = await Notification.delete(notificationId, userId);
+
+    if (!notification) {
+      return res.status(404).json({
+        error: 'Notification not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { message: 'Notification deleted successfully' }
+    });
+  } catch (error) {
+    console.error('Delete notification error:', error);
+    res.status(500).json({
+      error: 'Failed to delete notification',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/student/notifications/read - Delete all read notifications
+router.delete('/notifications/read', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Notification.deleteAllRead(userId);
+
+    res.json({
+      success: true,
+      data: { message: 'All read notifications deleted' }
+    });
+  } catch (error) {
+    console.error('Delete read notifications error:', error);
+    res.status(500).json({
+      error: 'Failed to delete read notifications',
       code: 'DATABASE_ERROR'
     });
   }
