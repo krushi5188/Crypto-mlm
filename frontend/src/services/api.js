@@ -135,12 +135,31 @@ export const instructorAPI = {
   resume: () => api.post('/instructor/resume'),
   reset: (data) => api.post('/instructor/reset', data),
   export: (data) => api.post('/instructor/export', data, { responseType: 'blob' }),
-  updateConfig: (data) => api.put('/instructor/config', data)
+  updateConfig: (data) => api.put('/instructor/config', data),
+  
+  // Bulk Operations
+  bulkApprove: (userIds) => api.post('/instructor/bulk-approve', { userIds }),
+  bulkReject: (userIds, reason) => api.post('/instructor/bulk-reject', { userIds, reason }),
+  bulkFreeze: (userIds, reason) => api.post('/instructor/bulk-freeze', { userIds, reason }),
+  bulkUnfreeze: (userIds) => api.post('/instructor/bulk-unfreeze', { userIds }),
+  
+  // Freeze/Unfreeze Individual Accounts
+  freezeAccount: (id, reason) => api.post(`/instructor/participants/${id}/freeze`, { reason }),
+  unfreezeAccount: (id) => api.post(`/instructor/participants/${id}/unfreeze`),
+  
+  // Commission Rate Adjustments
+  adjustCommissionRate: (id, commissionRate, useDefault = false) => 
+    api.put(`/instructor/participants/${id}/commission-rate`, { commissionRate, useDefault }),
+  
+  // Manual Transactions
+  createTransaction: (data) => api.post('/instructor/transactions/create', data),
+  reverseTransaction: (id, reason) => api.post(`/instructor/transactions/${id}/reverse`, { reason })
 };
 
 // System API
 export const systemAPI = {
-  getStatus: () => api.get('/system/status')
+  getStatus: () => api.get('/system/status'),
+  getConfig: () => api.get('/system/config')
 };
 
 export default api;
