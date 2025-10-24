@@ -2444,6 +2444,34 @@ router.get('/rank/leaderboard', async (req, res) => {
  * DEPOSIT ENDPOINTS
  */
 
+// GET /api/v1/student/deposits/wallet-addresses - Get platform wallet addresses
+router.get('/deposits/wallet-addresses', async (req, res) => {
+  try {
+    const SystemConfig = require('../models/SystemConfig');
+
+    const trc20 = await SystemConfig.get('platform_wallet_trc20');
+    const erc20 = await SystemConfig.get('platform_wallet_erc20');
+    const bep20 = await SystemConfig.get('platform_wallet_bep20');
+
+    res.json({
+      success: true,
+      data: {
+        wallets: {
+          TRC20: trc20 || 'TYourPlatformTRC20WalletAddressHere123456',
+          ERC20: erc20 || 'EYourPlatformERC20WalletAddressHere123456',
+          BEP20: bep20 || 'BYourPlatformBEP20WalletAddressHere123456'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get wallet addresses error:', error);
+    res.status(500).json({
+      error: 'Failed to load wallet addresses',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 // GET /api/v1/student/deposits - Get user's deposits
 router.get('/deposits', async (req, res) => {
   try {
