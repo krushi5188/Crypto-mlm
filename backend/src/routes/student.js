@@ -1732,4 +1732,74 @@ router.get('/api-keys/:id/history', async (req, res) => {
   }
 });
 
+/**
+ * MARKETING CAMPAIGN TRACKING ENDPOINTS
+ */
+
+// GET /api/v1/student/campaigns/track/open/:recipientId - Track email open
+router.get('/campaigns/track/open/:recipientId', async (req, res) => {
+  try {
+    const recipientId = parseInt(req.params.recipientId);
+    
+    await campaignService.trackOpen(recipientId);
+    
+    // Return 1x1 transparent pixel
+    const pixel = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      'base64'
+    );
+    
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Content-Length': pixel.length,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private'
+    });
+    res.end(pixel);
+  } catch (error) {
+    console.error('Track open error:', error);
+    // Return pixel even on error to avoid broken images
+    const pixel = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      'base64'
+    );
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Content-Length': pixel.length
+    });
+    res.end(pixel);
+  }
+});
+
+// GET /api/v1/student/campaigns/track/click/:recipientId - Track email click
+router.get('/campaigns/track/click/:recipientId', async (req, res) => {
+  try {
+    const recipientId = parseInt(req.params.recipientId);
+    const redirectUrl = req.query.url;
+    
+    await campaignService.trackClick(recipientId);
+    
+    // Redirect to the intended URL
+    if (redirectUrl) {
+      res.redirect(redirectUrl);
+    } else {
+      res.json({
+        success: true,
+        data: { message: 'Click tracked' }
+      });
+    }
+  } catch (error) {
+    console.error('Track click error:', error);
+    // Redirect even on error
+    const redirectUrl = req.query.url;
+    if (redirectUrl) {
+      res.redirect(redirectUrl);
+    } else {
+      res.status(500).json({
+        error: 'Failed to track click',
+        code: 'TRACKING_ERROR'
+      });
+    }
+  }
+});
+
 module.exports = router;
