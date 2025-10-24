@@ -734,36 +734,6 @@ router.put('/config', validate('updateConfig'), async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// ============================================
-// FRAUD DETECTION ENDPOINTS
-// ============================================
-
-/**
- * GET /api/v1/instructor/fraud-detection/dashboard
- * Get fraud detection dashboard statistics
- */
-router.get('/fraud-detection/dashboard', async (req, res) => {
-  try {
-    const stats = await FraudDetection.getDashboardStats();
-
-    // Get recent high-risk users
-    const highRiskUsers = await pool.query(
-      `SELECT id, username, email, risk_score, is_flagged, created_at
-       FROM users
-       WHERE role = 'student' AND risk_score >= 51
-       ORDER BY risk_score DESC
-       LIMIT 10`
-    );
-
-    // Get recent security events
-    const recentEvents = await pool.query(
-      `SELECT * FROM security_events
-       WHERE created_at > NOW() - INTERVAL '24 hours'
-       ORDER BY created_at DESC
-       LIMIT 20`
-    );
-=======
 /**
  * POST /api/v1/instructor/bulk-approve
  * Approve multiple participants at once
@@ -816,22 +786,10 @@ router.post('/bulk-approve', async (req, res) => {
       details: { user_ids: userIds, approved_count: approvedCount, errors },
       ip_address: req.ip
     });
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 
     res.json({
       success: true,
       data: {
-<<<<<<< HEAD
-        stats,
-        highRiskUsers: highRiskUsers.rows,
-        recentEvents: recentEvents.rows
-      }
-    });
-  } catch (error) {
-    console.error('Fraud dashboard error:', error);
-    res.status(500).json({
-      error: 'Failed to load fraud detection dashboard',
-=======
         message: `${approvedCount} participants approved`,
         approvedCount,
         totalRequested: userIds.length,
@@ -842,31 +800,12 @@ router.post('/bulk-approve', async (req, res) => {
     console.error('Bulk approve error:', error);
     res.status(500).json({
       error: 'Failed to approve participants',
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
       code: 'DATABASE_ERROR'
     });
   }
 });
 
 /**
-<<<<<<< HEAD
- * GET /api/v1/instructor/fraud-detection/flagged-users
- * Get list of flagged users
- */
-router.get('/fraud-detection/flagged-users', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT
-        u.id, u.username, u.email, u.risk_score,
-        u.is_flagged, u.flagged_at, u.flagged_reason,
-        u.created_at, u.last_login,
-        reviewer.username as reviewed_by_name
-       FROM users u
-       LEFT JOIN users reviewer ON u.reviewed_by = reviewer.id
-       WHERE u.is_flagged = true
-       ORDER BY u.flagged_at DESC`
-    );
-=======
  * POST /api/v1/instructor/bulk-reject
  * Reject multiple participants at once
  */
@@ -907,20 +846,10 @@ router.post('/bulk-reject', async (req, res) => {
       details: { user_ids: userIds, rejected_count: rejectedCount, reason, errors },
       ip_address: req.ip
     });
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 
     res.json({
       success: true,
       data: {
-<<<<<<< HEAD
-        flaggedUsers: result.rows
-      }
-    });
-  } catch (error) {
-    console.error('Flagged users error:', error);
-    res.status(500).json({
-      error: 'Failed to load flagged users',
-=======
         message: `${rejectedCount} participants rejected`,
         rejectedCount,
         totalRequested: userIds.length,
@@ -931,25 +860,12 @@ router.post('/bulk-reject', async (req, res) => {
     console.error('Bulk reject error:', error);
     res.status(500).json({
       error: 'Failed to reject participants',
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
       code: 'DATABASE_ERROR'
     });
   }
 });
 
 /**
-<<<<<<< HEAD
- * GET /api/v1/instructor/fraud-detection/user/:id
- * Get detailed fraud analysis for specific user
- */
-router.get('/fraud-detection/user/:id', async (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-
-    // Get user info
-    const user = await User.findById(userId);
-    if (!user) {
-=======
  * POST /api/v1/instructor/participants/:id/freeze
  * Freeze a user account
  */
@@ -1386,14 +1302,173 @@ router.post('/transactions/:id/reverse', async (req, res) => {
     const participant = await User.findById(userId);
 
     if (!participant) {
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
       return res.status(404).json({
         error: 'User not found',
         code: 'NOT_FOUND'
       });
     }
 
-<<<<<<< HEAD
+    // Calculate reversal amount (opposite of original)
+    const reversalAmount = -parseFloat(originalTransaction.amount);
+    const currentBalance = parseFloat(participant.balance);
+    const newBalance = currentBalance + reversalAmount;
+
+    if (newBalance < 0) {
+      return res.status(400).json({
+        error: 'Insufficient balance for reversal',
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    // Update balance
+    await pool.query(
+      'UPDATE users SET balance = $1 WHERE id = $2',
+      [newBalance, userId]
+    );
+
+    // Create reversal transaction
+    const reversalDescription = `Reversal of transaction #${transactionId}${reason ? ` - ${reason}` : ''}`;
+    const reversalResult = await pool.query(
+      `INSERT INTO transactions (user_id, amount, type, description, balance_after, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING id, created_at`,
+      [userId, reversalAmount, 'reversal', reversalDescription, newBalance]
+    );
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'reverse_transaction',
+      target_user_id: userId,
+      details: {
+        username: participant.username,
+        original_transaction_id: transactionId,
+        reversal_transaction_id: reversalResult.rows[0].id,
+        amount: reversalAmount,
+        reason
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Transaction #${transactionId} reversed`,
+        reversal: {
+          id: reversalResult.rows[0].id,
+          originalTransactionId: transactionId,
+          userId,
+          amount: reversalAmount,
+          balanceAfter: newBalance,
+          createdAt: reversalResult.rows[0].created_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Reverse transaction error:', error);
+    res.status(500).json({
+      error: 'Failed to reverse transaction',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// ============================================
+// FRAUD DETECTION ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/v1/instructor/fraud-detection/dashboard
+ * Get fraud detection dashboard statistics
+ */
+router.get('/fraud-detection/dashboard', async (req, res) => {
+  try {
+    const stats = await FraudDetection.getDashboardStats();
+
+    // Get recent high-risk users
+    const highRiskUsers = await pool.query(
+      `SELECT id, username, email, risk_score, is_flagged, created_at
+       FROM users
+       WHERE role = 'member' AND risk_score >= 51
+       ORDER BY risk_score DESC
+       LIMIT 10`
+    );
+
+    // Get recent security events
+    const recentEvents = await pool.query(
+      `SELECT * FROM security_events
+       WHERE created_at > NOW() - INTERVAL '24 hours'
+       ORDER BY created_at DESC
+       LIMIT 20`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        stats,
+        highRiskUsers: highRiskUsers.rows,
+        recentEvents: recentEvents.rows
+      }
+    });
+  } catch (error) {
+    console.error('Fraud dashboard error:', error);
+    res.status(500).json({
+      error: 'Failed to load fraud detection dashboard',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/flagged-users
+ * Get list of flagged users
+ */
+router.get('/fraud-detection/flagged-users', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+        u.id, u.username, u.email, u.risk_score,
+        u.is_flagged, u.flagged_at, u.flagged_reason,
+        u.created_at, u.last_login,
+        reviewer.username as reviewed_by_name
+       FROM users u
+       LEFT JOIN users reviewer ON u.reviewed_by = reviewer.id
+       WHERE u.is_flagged = true
+       ORDER BY u.flagged_at DESC`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        flaggedUsers: result.rows
+      }
+    });
+  } catch (error) {
+    console.error('Flagged users error:', error);
+    res.status(500).json({
+      error: 'Failed to load flagged users',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/user/:id
+ * Get detailed fraud analysis for specific user
+ */
+router.get('/fraud-detection/user/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    // Get user info
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
     // Recalculate risk score
     const riskAnalysis = await FraudDetection.calculateRiskScore(userId);
 
@@ -1632,7 +1707,7 @@ router.get('/bi/retention', async (req, res) => {
           DATE_TRUNC('month', created_at) as cohort_month,
           created_at
         FROM users
-        WHERE role = 'student'
+        WHERE role = 'member'
       ),
       activity AS (
         SELECT
@@ -1684,7 +1759,7 @@ router.get('/bi/conversion', async (req, res) => {
         COUNT(CASE WHEN network_size >= 10 THEN 1 END) as network_over_10,
         AVG(EXTRACT(DAY FROM (SELECT MIN(t.created_at) FROM transactions t WHERE t.user_id = users.id AND t.type = 'referral_commission') - users.created_at)) as avg_days_to_first_commission
       FROM users
-      WHERE role = 'student'
+      WHERE role = 'member'
     `;
 
     const result = await pool.query(funnelQuery);
@@ -1761,7 +1836,7 @@ router.get('/bi/network-depth', async (req, res) => {
           nl.level + 1 as level
         FROM users u
         INNER JOIN network_levels nl ON u.referred_by_id = nl.id
-        WHERE u.role = 'student' AND nl.level < 20
+        WHERE u.role = 'member' AND nl.level < 20
       )
       SELECT
         level,
@@ -1827,7 +1902,7 @@ router.get('/bi/earnings-distribution', async (req, res) => {
         MAX(total_earned) as max_earned,
         AVG(total_earned) as avg_earned
       FROM users
-      WHERE role = 'student'
+      WHERE role = 'member'
       GROUP BY earnings_bracket
       ORDER BY MIN(total_earned) ASC
     `;
@@ -1843,7 +1918,7 @@ router.get('/bi/earnings-distribution', async (req, res) => {
         PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY total_earned) as p90,
         PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY total_earned) as p95
       FROM users
-      WHERE role = 'student'
+      WHERE role = 'member'
     `;
 
     const percentilesResult = await pool.query(percentilesQuery);
@@ -1890,7 +1965,7 @@ router.get('/bi/growth-predictions', async (req, res) => {
         COUNT(*) as new_users,
         SUM(COUNT(*)) OVER (ORDER BY DATE_TRUNC('day', created_at)) as cumulative_users
       FROM users
-      WHERE role = 'student' AND created_at >= NOW() - INTERVAL '30 days'
+      WHERE role = 'member' AND created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE_TRUNC('day', created_at)
       ORDER BY date ASC
     `;
@@ -2107,45 +2182,6 @@ router.post('/deposits/:id/reject', async (req, res) => {
       details: {
         deposit_id: depositId,
         amount: parseFloat(deposit.amount),
-=======
-    // Calculate reversal amount (opposite of original)
-    const reversalAmount = -parseFloat(originalTransaction.amount);
-    const currentBalance = parseFloat(participant.balance);
-    const newBalance = currentBalance + reversalAmount;
-
-    if (newBalance < 0) {
-      return res.status(400).json({
-        error: 'Insufficient balance for reversal',
-        code: 'INSUFFICIENT_BALANCE'
-      });
-    }
-
-    // Update balance
-    await pool.query(
-      'UPDATE users SET balance = $1 WHERE id = $2',
-      [newBalance, userId]
-    );
-
-    // Create reversal transaction
-    const reversalDescription = `Reversal of transaction #${transactionId}${reason ? ` - ${reason}` : ''}`;
-    const reversalResult = await pool.query(
-      `INSERT INTO transactions (user_id, amount, type, description, balance_after, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING id, created_at`,
-      [userId, reversalAmount, 'reversal', reversalDescription, newBalance]
-    );
-
-    // Log action
-    await AdminAction.log({
-      admin_id: req.user.id,
-      action_type: 'reverse_transaction',
-      target_user_id: userId,
-      details: {
-        username: participant.username,
-        original_transaction_id: transactionId,
-        reversal_transaction_id: reversalResult.rows[0].id,
-        amount: reversalAmount,
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
         reason
       },
       ip_address: req.ip
@@ -2154,7 +2190,6 @@ router.post('/deposits/:id/reject', async (req, res) => {
     res.json({
       success: true,
       data: {
-<<<<<<< HEAD
         message: 'Deposit rejected',
         deposit
       }
@@ -2203,23 +2238,6 @@ router.get('/deposits/:id', async (req, res) => {
     console.error('Get deposit details error:', error);
     res.status(500).json({
       error: 'Failed to load deposit details',
-=======
-        message: `Transaction #${transactionId} reversed`,
-        reversal: {
-          id: reversalResult.rows[0].id,
-          originalTransactionId: transactionId,
-          userId,
-          amount: reversalAmount,
-          balanceAfter: newBalance,
-          createdAt: reversalResult.rows[0].created_at
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Reverse transaction error:', error);
-    res.status(500).json({
-      error: 'Failed to reverse transaction',
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
       code: 'DATABASE_ERROR'
     });
   }
