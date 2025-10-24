@@ -2,11 +2,18 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
+<<<<<<< HEAD
 import ThemeSwitcher from '../ThemeSwitcher';
 import NotificationCenter from '../NotificationCenter';
+=======
+import LanguageSwitcher from './LanguageSwitcher';
+import ThemeToggle from './ThemeToggle';
+import NotificationDropdown from '../NotificationDropdown';
+import RankBadge from '../RankBadge';
+>>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 
 const Navbar = () => {
-  const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
+  const { user, isAuthenticated, isInstructor, isMember, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -55,7 +62,7 @@ const Navbar = () => {
   return (
     <nav style={navStyles}>
       <Link 
-        to={isStudent() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
+        to={isMember() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
         style={logoStyles}
       >
         Atlas Network
@@ -64,7 +71,7 @@ const Navbar = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
         {isAuthenticated() ? (
           <>
-            {isStudent() && (
+            {isMember() && (
               <>
                 <Link 
                   to="/dashboard" 
@@ -91,12 +98,28 @@ const Navbar = () => {
                   Earnings
                 </Link>
                 <Link 
-                  to="/profile" 
+                  to="/member/achievements" 
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
-                  Profile
+                  🏆 Achievements
+                </Link>
+                <Link 
+                  to="/member/leaderboard" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  🏅 Leaderboard
+                </Link>
+                <Link 
+                  to="/member/security" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  🔒 Security
                 </Link>
                 <Link 
                   to="/security" 
@@ -176,11 +199,16 @@ const Navbar = () => {
                   Controls
                 </Link>
                 <Link 
+<<<<<<< HEAD
                   to="/instructor/fraud-detection" 
+=======
+                  to="/instructor/configuration" 
+>>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
+<<<<<<< HEAD
                   Fraud Detection
                 </Link>
                 <Link 
@@ -199,6 +227,18 @@ const Navbar = () => {
                 >
                   Deposits
                 </Link>
+=======
+                  Configuration
+                </Link>
+              </>
+            )}
+
+            {/* Notification Dropdown and Rank Badge for Members */}
+            {isMember() && (
+              <>
+                <NotificationDropdown />
+                <RankBadge />
+>>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
               </>
             )}
 
@@ -212,6 +252,8 @@ const Navbar = () => {
             }}>
               {user?.username}
             </span>
+            <LanguageSwitcher variant="compact" />
+            <ThemeToggle variant="compact" />
             <Button onClick={handleLogout} size="sm" variant="outline">
               Logout
             </Button>
@@ -227,6 +269,8 @@ const Navbar = () => {
             >
               Login
             </Link>
+            <LanguageSwitcher variant="compact" />
+            <ThemeToggle variant="compact" />
           </>
         )}
       </div>

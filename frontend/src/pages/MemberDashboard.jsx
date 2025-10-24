@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import WidgetGrid from '../components/dashboard/WidgetGrid';
 import { formatCurrency, formatTimeAgo } from '../utils/formatters';
 
-const StudentDashboard = () => {
+const MemberDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,7 +23,7 @@ const StudentDashboard = () => {
 
   const loadDashboard = async () => {
     try {
-      const response = await studentAPI.getDashboard();
+      const response = await memberAPI.getDashboard();
       setData(response.data.data);
       setError(null);
     } catch (error) {
@@ -401,4 +401,4 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard;
+export default MemberDashboard;

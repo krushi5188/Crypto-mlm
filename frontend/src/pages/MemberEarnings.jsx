@@ -1,15 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import { formatCurrency, formatDateTime, redactEmail } from '../utils/formatters';
 
-const StudentEarnings = () => {
+const MemberEarnings = () => {
   const [earnings, setEarnings] = useState([]);
   const [invites, setInvites] = useState([]);
   const [expandedInvite, setExpandedInvite] = useState(null);
   const [inviteTransactions, setInviteTransactions] = useState({});
   const [loading, setLoading] = useState(true);
   const [totalEarned, setTotalEarned] = useState(0);
+  
+  // Search/Filter states
+  const [searchEmail, setSearchEmail] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadEarnings();
@@ -18,8 +26,8 @@ const StudentEarnings = () => {
   const loadEarnings = async () => {
     try {
       const [earningsResponse, invitesResponse] = await Promise.all([
-        studentAPI.getEarnings(),
-        studentAPI.getDirectInvites()
+        memberAPI.getEarnings(),
+        memberAPI.getDirectInvites()
       ]);
 
       const earningsData = earningsResponse.data.data.transactions || [];
@@ -45,7 +53,7 @@ const StudentEarnings = () => {
     }
 
     try {
-      const response = await studentAPI.getInviteTransactions(inviteUserId);
+      const response = await memberAPI.getInviteTransactions(inviteUserId);
       setInviteTransactions(prev => ({
         ...prev,
         [inviteUserId]: response.data.data.transactions || []
@@ -63,6 +71,27 @@ const StudentEarnings = () => {
       await loadInviteTransactions(inviteUserId);
     }
   };
+
+  // Filter invites based on search criteria
+  const filteredInvites = useMemo(() => {
+    return invites.filter(invite => {
+      // Email search
+      if (searchEmail && !invite.email.toLowerCase().includes(searchEmail.toLowerCase())) {
+        return false;
+      }
+      
+      // Amount filters
+      if (minAmount && invite.totalEarned < parseFloat(minAmount)) {
+        return false;
+      }
+      
+      if (maxAmount && invite.totalEarned > parseFloat(maxAmount)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [invites, searchEmail, minAmount, maxAmount]);
 
   if (loading) {
     return (
@@ -105,10 +134,133 @@ const StudentEarnings = () => {
       {/* People You Invited */}
       <Card>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <h3 style={{ fontSize: '1.25rem' }}>People You Invited</h3>
-          <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            {invites.length} {invites.length === 1 ? 'invite' : 'invites'}
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.25rem' }}>People You Invited</h3>
+              <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {invites.length} {invites.length === 1 ? 'invite' : 'invites'} 
+                {invites.length !== invites.length && ` (filtered from ${invites.length})`}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              🔍 {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </button>
+          </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginTop: '1rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
+                  Search Email
+                </label>
+                <input
+                  type="text"
+                  placeholder="Filter by email..."
+                  value={searchEmail}
+                  onChange={(e) => setSearchEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
+                  Min Amount (USDT)
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
+                  Max Amount (USDT)
+                </label>
+                <input
+                  type="number"
+                  placeholder="Unlimited"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    setSearchEmail('');
+                    setMinAmount('');
+                    setMaxAmount('');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -121,14 +273,16 @@ const StudentEarnings = () => {
               </tr>
             </thead>
             <tbody>
-              {invites.length === 0 ? (
+              {filteredInvites.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
-                    No direct invites yet. Share your referral link to start earning!
+                    {invites.length === 0 
+                      ? 'No direct invites yet. Share your referral link to start earning!'
+                      : 'No invites match your filters. Try adjusting your search criteria.'}
                   </td>
                 </tr>
               ) : (
-                invites.map((invite) => (
+                filteredInvites.map((invite) => (
                   <React.Fragment key={invite.userId}>
                     {/* Main row */}
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
@@ -224,4 +378,4 @@ const StudentEarnings = () => {
   );
 };
 
-export default StudentEarnings;
+export default MemberEarnings;

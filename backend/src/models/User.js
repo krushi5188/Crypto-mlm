@@ -112,7 +112,7 @@ class User {
   // Count total students
   static async countStudents() {
     const result = await pool.query(
-      "SELECT COUNT(*) as count FROM users WHERE role = 'student'"
+      "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
     );
     return parseInt(result.rows[0].count);
   }
@@ -123,7 +123,7 @@ class User {
     let query = `SELECT id, email, username, balance, total_earned, direct_recruits,
                         network_size, referred_by_id, created_at, last_login
                  FROM users
-                 WHERE role = 'student'`;
+                 WHERE role = 'member'`;
     const params = [];
     let paramIndex = 1;
 
@@ -139,7 +139,7 @@ class User {
     const result = await pool.query(query, params);
 
     // Get total count for pagination
-    let countQuery = "SELECT COUNT(*) as total FROM users WHERE role = 'student'";
+    let countQuery = "SELECT COUNT(*) as total FROM users WHERE role = 'member'";
     const countParams = [];
 
     if (search) {
@@ -160,7 +160,7 @@ class User {
     const result = await pool.query(
       `SELECT id, username, balance, direct_recruits, network_size, created_at
        FROM users
-       WHERE role = 'student'
+       WHERE role = 'member'
        ORDER BY balance DESC
        LIMIT $1`,
       [limit]
@@ -174,7 +174,7 @@ class User {
       `SELECT u.id, u.username, u.created_at, r.username as referred_by
        FROM users u
        LEFT JOIN users r ON u.referred_by_id = r.id
-       WHERE u.role = 'student'
+       WHERE u.role = 'member'
        ORDER BY u.created_at DESC
        LIMIT $1`,
       [limit]
@@ -192,7 +192,7 @@ class User {
         SUM(CASE WHEN total_earned > 100 THEN 1 ELSE 0 END) as profited,
         SUM(balance) as total_balance
        FROM users
-       WHERE role = 'student'`
+       WHERE role = 'member'`
     );
     return result.rows[0];
   }

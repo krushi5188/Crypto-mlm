@@ -1,5 +1,18 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// Load .env file only in local development (not on Vercel)
+// On Vercel, environment variables are injected automatically
+const envPath = path.join(__dirname, '../../.env');
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+} else {
+  // On Vercel/serverless, dotenv won't find a file, but env vars are already available
+  require('dotenv').config();
+}
+
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const { pool, testConnection } = require('./config/database');
@@ -7,8 +20,10 @@ const { hashPassword } = require('./utils/passwordHash');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const User = require('./models/User');
 const { generateReferralCode } = require('./utils/generateReferralCode');
+const websocketService = require('./services/websocketService');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -465,38 +480,32 @@ const initializeDatabase = async () => {
   }
 };
 
-// Middleware to ensure database is initialized (for serverless)
-app.use(async (req, res, next) => {
-  if (!isInitialized) {
-    try {
-      await initializeDatabase();
-    } catch (error) {
-      console.error('Initialization error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
-      return res.status(503).json({
-        error: 'Service initializing, please try again',
-        code: 'INITIALIZING',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-  next();
-});
+// Lazy initialization - runs once in background, doesn't block requests
+// On Vercel/serverless, this will run on first cold start but won't block
+if (process.env.NODE_ENV === 'production') {
+  // In production (Vercel), skip blocking initialization
+  // Instructor account should already exist in database
+  console.log('Production mode: Skipping blocking initialization');
+  isInitialized = true; // Mark as initialized to skip checks
+} else {
+  // In development, initialize in background (non-blocking)
+  initializeDatabase().catch(err => {
+    console.error('Background initialization failed:', err);
+  });
+}
 
 // Routes
 const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/student');
+const memberRoutes = require('./routes/member');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
+const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/student', studentRoutes);
+app.use('/api/v1/member', memberRoutes);
 app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
+app.use('/api/v1/gamification', gamificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -505,9 +514,10 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/api/v1/auth',
-      student: '/api/v1/student',
+      member: '/api/v1/member',
       instructor: '/api/v1/instructor',
-      system: '/api/v1/system'
+      system: '/api/v1/system',
+      gamification: '/api/v1/gamification'
     }
   });
 });
@@ -534,7 +544,11 @@ const startServer = async () => {
   try {
     await initializeDatabase();
 
-    app.listen(PORT, () => {
+    // Initialize WebSocket
+    websocketService.initialize(server);
+    console.log('✓ WebSocket service initialized');
+
+    server.listen(PORT, () => {
       console.log('');
       console.log('========================================');
       console.log('  Atlas Network API');
@@ -542,6 +556,7 @@ const startServer = async () => {
       console.log(`  Server running on port ${PORT}`);
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`  API Base: http://localhost:${PORT}/api/v1`);
+      console.log(`  WebSocket: Enabled`);
       console.log('========================================');
       console.log('');
     });

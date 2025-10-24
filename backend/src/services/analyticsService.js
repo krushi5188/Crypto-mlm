@@ -18,7 +18,7 @@ class AnalyticsService {
 
     // Calculate days active (from first user registration)
     const firstUserResult = await pool.query(
-      `SELECT MIN(created_at) as first_date FROM users WHERE role = 'student'`
+      `SELECT MIN(created_at) as first_date FROM users WHERE role = 'member'`
     );
     
     let daysRemaining = 0;
@@ -86,10 +86,10 @@ class AnalyticsService {
    * Calculate wealth concentration metrics including Gini coefficient
    */
   static async calculateWealthConcentration() {
-    // Get all student balances sorted
+    // Get all member balances sorted
     const result = await pool.query(
       `SELECT balance FROM users
-       WHERE role = 'student'
+       WHERE role = 'member'
        ORDER BY balance ASC`
     );
 

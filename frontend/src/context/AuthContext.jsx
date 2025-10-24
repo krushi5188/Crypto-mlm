@@ -125,9 +125,9 @@ export const AuthProvider = ({ children }) => {
     return user?.role === 'instructor';
   };
 
-  // Check if user is student
-  const isStudent = () => {
-    return user?.role === 'student';
+  // Check if user is member
+  const isMember = () => {
+    return user?.role === 'member';
   };
 
   const value = {
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     isAuthenticated,
     isInstructor,
-    isStudent
+    isMember
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

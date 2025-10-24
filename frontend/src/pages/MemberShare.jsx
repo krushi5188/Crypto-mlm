@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentShare = () => {
+const MemberShare = () => {
   const [profile, setProfile] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [shareStats, setShareStats] = useState(null);
@@ -21,9 +21,9 @@ const StudentShare = () => {
     try {
       setLoading(true);
       const [profileRes, templatesRes, statsRes] = await Promise.all([
-        studentAPI.getProfile(),
-        studentAPI.getTemplates(),
-        studentAPI.getShareStats()
+        memberAPI.getProfile(),
+        memberAPI.getTemplates(),
+        memberAPI.getShareStats()
       ]);
       setProfile(profileRes.data.data);
       setTemplates(templatesRes.data.data.templates);
@@ -40,7 +40,7 @@ const StudentShare = () => {
   const handleSelectTemplate = async (template) => {
     setSelectedTemplate(template);
     try {
-      const response = await studentAPI.renderTemplate(template.id, {});
+      const response = await memberAPI.renderTemplate(template.id, {});
       setRenderedContent(response.data.data.rendered);
     } catch (error) {
       console.error('Failed to render template:', error);
@@ -49,7 +49,7 @@ const StudentShare = () => {
 
   const handleShare = async (platform) => {
     try {
-      await studentAPI.logShare(platform, selectedTemplate?.id);
+      await memberAPI.logShare(platform, selectedTemplate?.id);
 
       const baseUrl = `${window.location.origin}/register?ref=${profile.referralCode}`;
       const message = renderedContent?.content || `Join me on this amazing platform! ${baseUrl}`;
@@ -468,4 +468,4 @@ const StudentShare = () => {
   );
 };
 
-export default StudentShare;
+export default MemberShare;

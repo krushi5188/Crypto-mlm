@@ -19,20 +19,22 @@ const Rank = require('../models/Rank');
 const Deposit = require('../models/Deposit');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
+const predictiveAnalyticsService = require('../services/predictiveAnalyticsService');
+const campaignService = require('../services/campaignService');
 const { authenticate } = require('../middleware/auth');
-const { requireStudent } = require('../middleware/roleAuth');
+const { requireMember } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 const upload = require('../config/multer');
 const path = require('path');
 
-// Apply authentication to all student routes
+// Apply authentication to all member routes
 router.use(authenticate);
-router.use(requireStudent);
+router.use(requireMember);
 
 /**
- * GET /api/v1/student/dashboard
- * Get dashboard data for logged-in student
+ * GET /api/v1/member/dashboard
+ * Get dashboard data for logged-in member
  */
 router.get('/dashboard', async (req, res) => {
   try {
@@ -75,7 +77,7 @@ router.get('/dashboard', async (req, res) => {
 });
 
 /**
- * GET /api/v1/student/network
+ * GET /api/v1/member/network
  * Get downline network visualization data
  */
 router.get('/network', async (req, res) => {
@@ -127,7 +129,7 @@ router.get('/network', async (req, res) => {
 });
 
 /**
- * GET /api/v1/student/earnings
+ * GET /api/v1/member/earnings
  * Get earnings history with filtering and sorting
  */
 router.get('/earnings', async (req, res) => {
@@ -191,7 +193,7 @@ router.get('/earnings', async (req, res) => {
 });
 
 /**
- * GET /api/v1/student/direct-invites
+ * GET /api/v1/member/direct-invites
  * Get list of direct invites with earnings summary
  */
 router.get('/direct-invites', async (req, res) => {
@@ -221,7 +223,7 @@ router.get('/direct-invites', async (req, res) => {
 });
 
 /**
- * GET /api/v1/student/invite-transactions/:inviteUserId
+ * GET /api/v1/member/invite-transactions/:inviteUserId
  * Get all transactions triggered by a specific invite
  */
 router.get('/invite-transactions/:inviteUserId', async (req, res) => {
@@ -268,8 +270,8 @@ router.get('/invite-transactions/:inviteUserId', async (req, res) => {
 });
 
 /**
- * GET /api/v1/student/profile
- * Get student's own profile information
+ * GET /api/v1/member/profile
+ * Get member's own profile information
  */
 router.get('/profile', async (req, res) => {
   try {
@@ -314,8 +316,8 @@ router.get('/profile', async (req, res) => {
 });
 
 /**
- * PUT /api/v1/student/profile
- * Update student profile
+ * PUT /api/v1/member/profile
+ * Update member profile
  */
 router.put('/profile', validate('profileUpdate'), async (req, res) => {
   try {
@@ -438,7 +440,7 @@ router.post('/profile/avatar', upload.single('avatar'), async (req, res) => {
  * WITHDRAWAL ENDPOINTS
  */
 
-// GET /api/v1/student/withdrawals - Get user's withdrawal history
+// GET /api/v1/member/withdrawals - Get user's withdrawal history
 router.get('/withdrawals', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -467,7 +469,7 @@ router.get('/withdrawals', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/withdrawals - Create withdrawal request
+// POST /api/v1/member/withdrawals - Create withdrawal request
 router.post('/withdrawals', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -543,7 +545,7 @@ router.post('/withdrawals', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/withdrawals/:id - Cancel pending withdrawal
+// DELETE /api/v1/member/withdrawals/:id - Cancel pending withdrawal
 router.delete('/withdrawals/:id', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -577,7 +579,7 @@ router.delete('/withdrawals/:id', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/withdrawal-stats - Get withdrawal statistics
+// GET /api/v1/member/withdrawal-stats - Get withdrawal statistics
 router.get('/withdrawal-stats', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -600,7 +602,7 @@ router.get('/withdrawal-stats', async (req, res) => {
  * GOALS ENDPOINTS
  */
 
-// GET /api/v1/student/goals - Get user's goals
+// GET /api/v1/member/goals - Get user's goals
 router.get('/goals', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -624,7 +626,7 @@ router.get('/goals', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/goals - Create new goal
+// POST /api/v1/member/goals - Create new goal
 router.post('/goals', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -674,7 +676,7 @@ router.post('/goals', async (req, res) => {
   }
 });
 
-// PUT /api/v1/student/goals/:id - Update goal
+// PUT /api/v1/member/goals/:id - Update goal
 router.put('/goals/:id', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -703,7 +705,7 @@ router.put('/goals/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/goals/:id - Delete goal
+// DELETE /api/v1/member/goals/:id - Delete goal
 router.delete('/goals/:id', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -731,7 +733,7 @@ router.delete('/goals/:id', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/goal-recommendations - Get recommended goals
+// GET /api/v1/member/goal-recommendations - Get recommended goals
 router.get('/goal-recommendations', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -754,7 +756,7 @@ router.get('/goal-recommendations', async (req, res) => {
  * WALLET ENDPOINTS
  */
 
-// GET /api/v1/student/wallets - Get user's wallets
+// GET /api/v1/member/wallets - Get user's wallets
 router.get('/wallets', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -773,7 +775,7 @@ router.get('/wallets', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/wallets - Add new wallet
+// POST /api/v1/member/wallets - Add new wallet
 router.post('/wallets', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -816,7 +818,7 @@ router.post('/wallets', async (req, res) => {
   }
 });
 
-// PUT /api/v1/student/wallets/:id/primary - Set wallet as primary
+// PUT /api/v1/member/wallets/:id/primary - Set wallet as primary
 router.put('/wallets/:id/primary', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -844,7 +846,7 @@ router.put('/wallets/:id/primary', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/wallets/:id - Delete wallet
+// DELETE /api/v1/member/wallets/:id - Delete wallet
 router.delete('/wallets/:id', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -876,7 +878,7 @@ router.delete('/wallets/:id', async (req, res) => {
  * ANALYTICS ENDPOINTS
  */
 
-// GET /api/v1/student/analytics/earnings-chart - Get earnings over time
+// GET /api/v1/member/analytics/earnings-chart - Get earnings over time
 router.get('/analytics/earnings-chart', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -897,7 +899,7 @@ router.get('/analytics/earnings-chart', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/analytics/network-growth - Get network growth over time
+// GET /api/v1/member/analytics/network-growth - Get network growth over time
 router.get('/analytics/network-growth', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -918,7 +920,7 @@ router.get('/analytics/network-growth', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/analytics/top-performers - Get top performers
+// GET /api/v1/member/analytics/top-performers - Get top performers
 router.get('/analytics/top-performers', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -939,7 +941,7 @@ router.get('/analytics/top-performers', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/analytics/dashboard-stats - Get comprehensive dashboard stats
+// GET /api/v1/member/analytics/dashboard-stats - Get comprehensive dashboard stats
 router.get('/analytics/dashboard-stats', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -959,10 +961,98 @@ router.get('/analytics/dashboard-stats', async (req, res) => {
 });
 
 /**
+ * PREDICTIVE ANALYTICS ENDPOINTS
+ */
+
+// GET /api/v1/member/analytics/predictions - Get user's predictive analytics
+router.get('/analytics/predictions', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const analytics = await predictiveAnalyticsService.getUserAnalytics(userId);
+
+    res.json({
+      success: true,
+      data: {
+        analytics: {
+          avgDailyEarnings: parseFloat(analytics.avg_daily_earnings),
+          avgWeeklyEarnings: parseFloat(analytics.avg_weekly_earnings),
+          avgMonthlyEarnings: parseFloat(analytics.avg_monthly_earnings),
+          earningsGrowthRate: parseFloat(analytics.earnings_growth_rate),
+          predicted30dEarnings: parseFloat(analytics.predicted_30d_earnings),
+          predicted90dEarnings: parseFloat(analytics.predicted_90d_earnings),
+          predicted30dRecruits: parseInt(analytics.predicted_30d_recruits),
+          networkGrowthRate: parseFloat(analytics.network_growth_rate),
+          churnRiskScore: parseFloat(analytics.churn_risk_score),
+          churnRiskLevel: analytics.churn_risk_level,
+          activityScore: parseFloat(analytics.activity_score),
+          daysActive: parseInt(analytics.days_active),
+          daysInactive: parseInt(analytics.days_inactive),
+          bestRecruitmentDay: analytics.best_recruitment_day,
+          bestRecruitmentHour: analytics.best_recruitment_hour,
+          lastUpdated: analytics.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Predictions error:', error);
+    res.status(500).json({
+      error: 'Failed to load predictions',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/member/analytics/insights - Get actionable insights
+router.get('/analytics/insights', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const insights = await predictiveAnalyticsService.getUserInsights(userId);
+
+    res.json({
+      success: true,
+      data: { insights }
+    });
+  } catch (error) {
+    console.error('Insights error:', error);
+    res.status(500).json({
+      error: 'Failed to load insights',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/member/analytics/recalculate - Force recalculate analytics
+router.post('/analytics/recalculate', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const analytics = await predictiveAnalyticsService.calculateUserAnalytics(userId);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Analytics recalculated successfully',
+        analytics: {
+          predicted30dEarnings: parseFloat(analytics.predicted_30d_earnings),
+          predicted90dEarnings: parseFloat(analytics.predicted_90d_earnings),
+          churnRiskLevel: analytics.churn_risk_level,
+          lastUpdated: analytics.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Recalculate error:', error);
+    res.status(500).json({
+      error: 'Failed to recalculate analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
  * TRAINING RESOURCES ENDPOINTS
  */
 
-// GET /api/v1/student/resources - Get all training resources
+// GET /api/v1/member/resources - Get all training resources
 router.get('/resources', async (req, res) => {
   try {
     const { type, category, search, page = 1, limit = 20 } = req.query;
@@ -997,7 +1087,7 @@ router.get('/resources', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/resources/:id - Get single resource
+// GET /api/v1/member/resources/:id - Get single resource
 router.get('/resources/:id', async (req, res) => {
   try {
     const resourceId = parseInt(req.params.id);
@@ -1026,7 +1116,7 @@ router.get('/resources/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/resources/:id/download - Log download
+// POST /api/v1/member/resources/:id/download - Log download
 router.post('/resources/:id/download', async (req, res) => {
   try {
     const resourceId = parseInt(req.params.id);
@@ -1045,7 +1135,7 @@ router.post('/resources/:id/download', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/resources/categories - Get resource categories
+// GET /api/v1/member/resources/categories - Get resource categories
 router.get('/resources-categories', async (req, res) => {
   try {
     const categories = await TeamResource.getCategories();
@@ -1063,7 +1153,7 @@ router.get('/resources-categories', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/resources/popular - Get popular resources
+// GET /api/v1/member/resources/popular - Get popular resources
 router.get('/resources-popular', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -1086,7 +1176,7 @@ router.get('/resources-popular', async (req, res) => {
  * TEAM EVENTS ENDPOINTS
  */
 
-// GET /api/v1/student/events - Get all events
+// GET /api/v1/member/events - Get all events
 router.get('/events', async (req, res) => {
   try {
     const { type, upcoming = 'true', page = 1, limit = 20 } = req.query;
@@ -1114,7 +1204,7 @@ router.get('/events', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/events/:id - Get single event
+// GET /api/v1/member/events/:id - Get single event
 router.get('/events/:id', async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
@@ -1140,7 +1230,7 @@ router.get('/events/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/events/:id/rsvp - RSVP to event
+// POST /api/v1/member/events/:id/rsvp - RSVP to event
 router.post('/events/:id/rsvp', async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
@@ -1177,7 +1267,7 @@ router.post('/events/:id/rsvp', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/events/:id/rsvp - Cancel RSVP
+// DELETE /api/v1/member/events/:id/rsvp - Cancel RSVP
 router.delete('/events/:id/rsvp', async (req, res) => {
   try {
     const eventId = parseInt(req.params.id);
@@ -1203,7 +1293,7 @@ router.delete('/events/:id/rsvp', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/my-events - Get user's registered events
+// GET /api/v1/member/my-events - Get user's registered events
 router.get('/my-events', async (req, res) => {
   try {
     const { upcoming = 'true' } = req.query;
@@ -1226,7 +1316,7 @@ router.get('/my-events', async (req, res) => {
  * MESSAGE TEMPLATES ENDPOINTS
  */
 
-// GET /api/v1/student/templates - Get message templates
+// GET /api/v1/member/templates - Get message templates
 router.get('/templates', async (req, res) => {
   try {
     const { type } = req.query;
@@ -1245,7 +1335,7 @@ router.get('/templates', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/templates/:id - Get single template
+// GET /api/v1/member/templates/:id - Get single template
 router.get('/templates/:id', async (req, res) => {
   try {
     const templateId = parseInt(req.params.id);
@@ -1271,7 +1361,7 @@ router.get('/templates/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/templates/:id/render - Render template with user data
+// POST /api/v1/member/templates/:id/render - Render template with user data
 router.post('/templates/:id/render', async (req, res) => {
   try {
     const templateId = parseInt(req.params.id);
@@ -1312,7 +1402,7 @@ router.post('/templates/:id/render', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/templates/share - Log template share
+// POST /api/v1/member/templates/share - Log template share
 router.post('/templates/share', async (req, res) => {
   try {
     const { platform, template_id } = req.body;
@@ -1339,7 +1429,7 @@ router.post('/templates/share', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/share-stats - Get user's sharing statistics
+// GET /api/v1/member/share-stats - Get user's sharing statistics
 router.get('/share-stats', async (req, res) => {
   try {
     const stats = await MessageTemplate.getShareStats(req.user.id);
@@ -1357,7 +1447,7 @@ router.get('/share-stats', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/templates/trending - Get trending templates
+// GET /api/v1/member/templates/trending - Get trending templates
 router.get('/templates-trending', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 5;
@@ -1380,7 +1470,7 @@ router.get('/templates-trending', async (req, res) => {
  * WEBHOOKS ENDPOINTS
  */
 
-// GET /api/v1/student/webhooks - Get user's webhooks
+// GET /api/v1/member/webhooks - Get user's webhooks
 router.get('/webhooks', async (req, res) => {
   try {
     const webhooks = await Webhook.getUserWebhooks(req.user.id);
@@ -1398,7 +1488,7 @@ router.get('/webhooks', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/webhooks - Create webhook
+// POST /api/v1/member/webhooks - Create webhook
 router.post('/webhooks', async (req, res) => {
   try {
     const { url, events, retry_count = 3 } = req.body;
@@ -1430,7 +1520,7 @@ router.post('/webhooks', async (req, res) => {
   }
 });
 
-// PUT /api/v1/student/webhooks/:id - Update webhook
+// PUT /api/v1/member/webhooks/:id - Update webhook
 router.put('/webhooks/:id', async (req, res) => {
   try {
     const webhookId = parseInt(req.params.id);
@@ -1458,7 +1548,7 @@ router.put('/webhooks/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/webhooks/:id - Delete webhook
+// DELETE /api/v1/member/webhooks/:id - Delete webhook
 router.delete('/webhooks/:id', async (req, res) => {
   try {
     const webhookId = parseInt(req.params.id);
@@ -1484,7 +1574,7 @@ router.delete('/webhooks/:id', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/webhooks/:id/deliveries - Get webhook delivery history
+// GET /api/v1/member/webhooks/:id/deliveries - Get webhook delivery history
 router.get('/webhooks/:id/deliveries', async (req, res) => {
   try {
     const webhookId = parseInt(req.params.id);
@@ -1514,7 +1604,7 @@ router.get('/webhooks/:id/deliveries', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/webhooks/:id/stats - Get webhook statistics
+// GET /api/v1/member/webhooks/:id/stats - Get webhook statistics
 router.get('/webhooks/:id/stats', async (req, res) => {
   try {
     const webhookId = parseInt(req.params.id);
@@ -1547,7 +1637,7 @@ router.get('/webhooks/:id/stats', async (req, res) => {
  * API KEYS ENDPOINTS
  */
 
-// GET /api/v1/student/api-keys - Get user's API keys
+// GET /api/v1/member/api-keys - Get user's API keys
 router.get('/api-keys', async (req, res) => {
   try {
     const keys = await ApiKey.getUserKeys(req.user.id);
@@ -1565,7 +1655,7 @@ router.get('/api-keys', async (req, res) => {
   }
 });
 
-// POST /api/v1/student/api-keys - Create API key
+// POST /api/v1/member/api-keys - Create API key
 router.post('/api-keys', async (req, res) => {
   try {
     const { key_name, permissions = [], rate_limit_per_hour = 1000, expires_at } = req.body;
@@ -1601,7 +1691,7 @@ router.post('/api-keys', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/student/api-keys/:id - Revoke/delete API key
+// DELETE /api/v1/member/api-keys/:id - Revoke/delete API key
 router.delete('/api-keys/:id', async (req, res) => {
   try {
     const keyId = parseInt(req.params.id);
@@ -1627,7 +1717,7 @@ router.delete('/api-keys/:id', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/api-keys/:id/stats - Get API key statistics
+// GET /api/v1/member/api-keys/:id/stats - Get API key statistics
 router.get('/api-keys/:id/stats', async (req, res) => {
   try {
     const keyId = parseInt(req.params.id);
@@ -1658,7 +1748,7 @@ router.get('/api-keys/:id/stats', async (req, res) => {
   }
 });
 
-// GET /api/v1/student/api-keys/:id/history - Get API key request history
+// GET /api/v1/member/api-keys/:id/history - Get API key request history
 router.get('/api-keys/:id/history', async (req, res) => {
   try {
     const keyId = parseInt(req.params.id);
@@ -1691,6 +1781,7 @@ router.get('/api-keys/:id/history', async (req, res) => {
 });
 
 /**
+<<<<<<< HEAD:backend/src/routes/student.js
  * GLOBAL SEARCH ENDPOINT
  */
 
@@ -2609,6 +2700,74 @@ router.get('/deposits/:id', async (req, res) => {
       error: 'Failed to load deposit',
       code: 'DATABASE_ERROR'
     });
+=======
+ * MARKETING CAMPAIGN TRACKING ENDPOINTS
+ */
+
+// GET /api/v1/member/campaigns/track/open/:recipientId - Track email open
+router.get('/campaigns/track/open/:recipientId', async (req, res) => {
+  try {
+    const recipientId = parseInt(req.params.recipientId);
+    
+    await campaignService.trackOpen(recipientId);
+    
+    // Return 1x1 transparent pixel
+    const pixel = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      'base64'
+    );
+    
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Content-Length': pixel.length,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private'
+    });
+    res.end(pixel);
+  } catch (error) {
+    console.error('Track open error:', error);
+    // Return pixel even on error to avoid broken images
+    const pixel = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      'base64'
+    );
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Content-Length': pixel.length
+    });
+    res.end(pixel);
+  }
+});
+
+// GET /api/v1/member/campaigns/track/click/:recipientId - Track email click
+router.get('/campaigns/track/click/:recipientId', async (req, res) => {
+  try {
+    const recipientId = parseInt(req.params.recipientId);
+    const redirectUrl = req.query.url;
+    
+    await campaignService.trackClick(recipientId);
+    
+    // Redirect to the intended URL
+    if (redirectUrl) {
+      res.redirect(redirectUrl);
+    } else {
+      res.json({
+        success: true,
+        data: { message: 'Click tracked' }
+      });
+    }
+  } catch (error) {
+    console.error('Track click error:', error);
+    // Redirect even on error
+    const redirectUrl = req.query.url;
+    if (redirectUrl) {
+      res.redirect(redirectUrl);
+    } else {
+      res.status(500).json({
+        error: 'Failed to track click',
+        code: 'TRACKING_ERROR'
+      });
+    }
+>>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893:backend/src/routes/member.js
   }
 });
 
