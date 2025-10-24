@@ -284,7 +284,7 @@ class PredictiveAnalyticsService {
         u.balance
       FROM user_analytics_cache uac
       JOIN users u ON uac.user_id = u.id
-      WHERE u.role = 'student'
+      WHERE u.role = 'member'
     `;
 
     const params = [];
@@ -318,7 +318,7 @@ class PredictiveAnalyticsService {
           DATE(created_at) as signup_date,
           COUNT(*) as new_users
         FROM users
-        WHERE role = 'student' AND created_at >= CURRENT_DATE - INTERVAL '90 days'
+        WHERE role = 'member' AND created_at >= CURRENT_DATE - INTERVAL '90 days'
         GROUP BY DATE(created_at)
         ORDER BY signup_date ASC
       `;
@@ -347,7 +347,7 @@ class PredictiveAnalyticsService {
 
       // Get current total users
       const { rows: [{ count: currentUsers }] } = await client.query(
-        `SELECT COUNT(*) FROM users WHERE role = 'student'`
+        `SELECT COUNT(*) FROM users WHERE role = 'member'`
       );
 
       // Get currently active users (activity in last 7 days)
@@ -475,7 +475,7 @@ class PredictiveAnalyticsService {
         u.balance
       FROM user_analytics_cache uac
       JOIN users u ON uac.user_id = u.id
-      WHERE u.role = 'student'
+      WHERE u.role = 'member'
       ORDER BY ${orderBy}
       LIMIT $1
     `;
