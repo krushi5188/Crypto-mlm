@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
+import GlobalSearch, { useGlobalSearch } from './components/GlobalSearch';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ErrorPage from './pages/ErrorPage';
@@ -64,11 +65,14 @@ const PublicRoute = ({ children }) => {
 
 // Main App Layout
 const AppLayout = ({ children }) => {
+  const { isOpen, close } = useGlobalSearch();
+  
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '3rem' }}>
       <Navbar />
       <main>{children}</main>
       <Watermark />
+      <GlobalSearch isOpen={isOpen} onClose={close} />
     </div>
   );
 };
