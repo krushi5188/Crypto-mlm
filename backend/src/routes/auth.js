@@ -139,19 +139,12 @@ router.post('/login',
   validate('login'),
   async (req, res) => {
     try {
-      const { email, password, twoFactorToken } = req.validatedBody;
+      const { email, password } = req.validatedBody;
 
       // Find user by email
       const user = await User.findByEmail(email);
 
       if (!user) {
-        // Try to log failed login attempt (non-blocking)
-        try {
-          await SecurityService.logLogin(null, req.ip, req.headers['user-agent'], false, 'invalid_credentials');
-        } catch (secError) {
-          console.error('Security logging failed (non-critical):', secError.message);
-        }
-        
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -162,13 +155,6 @@ router.post('/login',
       const isValidPassword = await comparePassword(password, user.password_hash);
 
       if (!isValidPassword) {
-        // Try to log failed login attempt (non-blocking)
-        try {
-          await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, 'invalid_password');
-        } catch (secError) {
-          console.error('Security logging failed (non-critical):', secError.message);
-        }
-        
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -191,58 +177,6 @@ router.post('/login',
         }
       }
 
-      // Check if 2FA is enabled (non-blocking)
-      let is2FAEnabled = false;
-      try {
-        is2FAEnabled = await TwoFactorService.is2FAEnabled(user.id);
-      } catch (tfaError) {
-        console.error('2FA check failed (non-critical):', tfaError.message);
-        // Continue without 2FA if tables don't exist
-      }
-
-      if (is2FAEnabled) {
-        // Require 2FA token
-        if (!twoFactorToken) {
-          return res.status(200).json({
-            success: false,
-            requires2FA: true,
-            message: 'Two-factor authentication required'
-          });
-        }
-
-        // Verify 2FA token
-        try {
-          const verification = await TwoFactorService.verifyLogin2FA(user.id, twoFactorToken);
-
-          if (!verification.success) {
-            // Try to log failed 2FA attempt (non-blocking)
-            try {
-              await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, '2fa_failed');
-            } catch (secError) {
-              console.error('Security logging failed (non-critical):', secError.message);
-            }
-            
-            return res.status(401).json({
-              error: 'Invalid two-factor authentication code',
-              code: 'INVALID_2FA_TOKEN'
-            });
-          }
-        } catch (tfaError) {
-          console.error('2FA verification failed:', tfaError.message);
-          return res.status(500).json({
-            error: '2FA verification error',
-            code: '2FA_ERROR'
-          });
-        }
-      }
-
-      // Try to log successful login (non-blocking)
-      try {
-        await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], true);
-      } catch (secError) {
-        console.error('Security logging failed (non-critical):', secError.message);
-      }
-
       // Update last login
       await User.updateLastLogin(user.id);
 
@@ -260,24 +194,16 @@ router.post('/login',
             role: user.role,
             balance: parseFloat(user.balance),
             referralCode: user.referral_code,
-            approvalStatus: user.approval_status || 'approved',
-            has2FA: is2FAEnabled
+            approvalStatus: user.approval_status || 'approved'
           },
           token
         }
       });
     } catch (error) {
       console.error('Login error:', error);
-      console.error('Login error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack,
-        name: error.name
-      });
       res.status(500).json({
         error: 'Login failed',
-        code: 'DATABASE_ERROR',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        code: 'DATABASE_ERROR'
       });
     }
   }
