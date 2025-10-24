@@ -52,74 +52,74 @@ export const authAPI = {
 };
 
 // Student API
-export const studentAPI = {
+export const memberAPI = {
   // Dashboard & Profile
-  getDashboard: () => api.get('/student/dashboard'),
-  getNetwork: (level) => api.get('/student/network', { params: { level } }),
-  getEarnings: (params) => api.get('/student/earnings', { params }),
-  getProfile: () => api.get('/student/profile'),
-  updateProfile: (data) => api.put('/student/profile', data),
-  getDirectInvites: () => api.get('/student/direct-invites'),
+  getDashboard: () => api.get('/member/dashboard'),
+  getNetwork: (level) => api.get('/member/network', { params: { level } }),
+  getEarnings: (params) => api.get('/member/earnings', { params }),
+  getProfile: () => api.get('/member/profile'),
+  updateProfile: (data) => api.put('/member/profile', data),
+  getDirectInvites: () => api.get('/member/direct-invites'),
   getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`),
   
   // Withdrawals
-  getWithdrawals: (params) => api.get('/student/withdrawals', { params }),
-  createWithdrawal: (data) => api.post('/student/withdrawals', data),
+  getWithdrawals: (params) => api.get('/member/withdrawals', { params }),
+  createWithdrawal: (data) => api.post('/member/withdrawals', data),
   cancelWithdrawal: (id) => api.delete(`/student/withdrawals/${id}`),
-  getWithdrawalStats: () => api.get('/student/withdrawal-stats'),
+  getWithdrawalStats: () => api.get('/member/withdrawal-stats'),
   
   // Goals
-  getGoals: (params) => api.get('/student/goals', { params }),
-  createGoal: (data) => api.post('/student/goals', data),
+  getGoals: (params) => api.get('/member/goals', { params }),
+  createGoal: (data) => api.post('/member/goals', data),
   updateGoal: (id, data) => api.put(`/student/goals/${id}`, data),
   deleteGoal: (id) => api.delete(`/student/goals/${id}`),
-  getGoalRecommendations: () => api.get('/student/goal-recommendations'),
+  getGoalRecommendations: () => api.get('/member/goal-recommendations'),
   
   // Wallets
-  getWallets: () => api.get('/student/wallets'),
-  addWallet: (data) => api.post('/student/wallets', data),
+  getWallets: () => api.get('/member/wallets'),
+  addWallet: (data) => api.post('/member/wallets', data),
   setPrimaryWallet: (id) => api.put(`/student/wallets/${id}/primary`),
   deleteWallet: (id) => api.delete(`/student/wallets/${id}`),
   
   // Analytics
-  getEarningsChart: (period) => api.get('/student/analytics/earnings-chart', { params: { period } }),
-  getNetworkGrowth: (period) => api.get('/student/analytics/network-growth', { params: { period } }),
-  getTopPerformers: (limit) => api.get('/student/analytics/top-performers', { params: { limit } }),
-  getDashboardStats: () => api.get('/student/analytics/dashboard-stats'),
+  getEarningsChart: (period) => api.get('/member/analytics/earnings-chart', { params: { period } }),
+  getNetworkGrowth: (period) => api.get('/member/analytics/network-growth', { params: { period } }),
+  getTopPerformers: (limit) => api.get('/member/analytics/top-performers', { params: { limit } }),
+  getDashboardStats: () => api.get('/member/analytics/dashboard-stats'),
   
   // Training Resources
-  getResources: (params) => api.get('/student/resources', { params }),
+  getResources: (params) => api.get('/member/resources', { params }),
   getResource: (id) => api.get(`/student/resources/${id}`),
   logDownload: (id) => api.post(`/student/resources/${id}/download`),
-  getResourceCategories: () => api.get('/student/resources-categories'),
-  getPopularResources: (limit) => api.get('/student/resources-popular', { params: { limit } }),
+  getResourceCategories: () => api.get('/member/resources-categories'),
+  getPopularResources: (limit) => api.get('/member/resources-popular', { params: { limit } }),
   
   // Team Events
-  getEvents: (params) => api.get('/student/events', { params }),
+  getEvents: (params) => api.get('/member/events', { params }),
   getEvent: (id) => api.get(`/student/events/${id}`),
   rsvpEvent: (id, data) => api.post(`/student/events/${id}/rsvp`, data),
   cancelRsvp: (id) => api.delete(`/student/events/${id}/rsvp`),
-  getMyEvents: (params) => api.get('/student/my-events', { params }),
+  getMyEvents: (params) => api.get('/member/my-events', { params }),
   
   // Message Templates
-  getTemplates: (type) => api.get('/student/templates', { params: { type } }),
+  getTemplates: (type) => api.get('/member/templates', { params: { type } }),
   getTemplate: (id) => api.get(`/student/templates/${id}`),
   renderTemplate: (id, variables) => api.post(`/student/templates/${id}/render`, { variables }),
-  logShare: (platform, templateId) => api.post('/student/templates/share', { platform, template_id: templateId }),
-  getShareStats: () => api.get('/student/share-stats'),
-  getTrendingTemplates: (limit) => api.get('/student/templates-trending', { params: { limit } }),
+  logShare: (platform, templateId) => api.post('/member/templates/share', { platform, template_id: templateId }),
+  getShareStats: () => api.get('/member/share-stats'),
+  getTrendingTemplates: (limit) => api.get('/member/templates-trending', { params: { limit } }),
   
   // Webhooks
-  getWebhooks: () => api.get('/student/webhooks'),
-  createWebhook: (data) => api.post('/student/webhooks', data),
+  getWebhooks: () => api.get('/member/webhooks'),
+  createWebhook: (data) => api.post('/member/webhooks', data),
   updateWebhook: (id, data) => api.put(`/student/webhooks/${id}`, data),
   deleteWebhook: (id) => api.delete(`/student/webhooks/${id}`),
   getWebhookDeliveries: (id, limit) => api.get(`/student/webhooks/${id}/deliveries`, { params: { limit } }),
   getWebhookStats: (id) => api.get(`/student/webhooks/${id}/stats`),
   
   // API Keys
-  getApiKeys: () => api.get('/student/api-keys'),
-  createApiKey: (data) => api.post('/student/api-keys', data),
+  getApiKeys: () => api.get('/member/api-keys'),
+  createApiKey: (data) => api.post('/member/api-keys', data),
   deleteApiKey: (id) => api.delete(`/student/api-keys/${id}`),
   getApiKeyStats: (id) => api.get(`/student/api-keys/${id}/stats`),
   getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } })
