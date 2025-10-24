@@ -228,13 +228,13 @@ if (process.env.NODE_ENV === 'production') {
 
 // Routes
 const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/student');
+const memberRoutes = require('./routes/member');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
 const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/student', studentRoutes);
+app.use('/api/v1/member', memberRoutes);
 app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/gamification', gamificationRoutes);
@@ -246,7 +246,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/api/v1/auth',
-      student: '/api/v1/student',
+      member: '/api/v1/member',
       instructor: '/api/v1/instructor',
       system: '/api/v1/system',
       gamification: '/api/v1/gamification'
