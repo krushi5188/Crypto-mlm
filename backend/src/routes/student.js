@@ -6,7 +6,13 @@ const Withdrawal = require('../models/Withdrawal');
 const Goal = require('../models/Goal');
 const Wallet = require('../models/Wallet');
 const Analytics = require('../models/Analytics');
+const TeamResource = require('../models/TeamResource');
+const Event = require('../models/Event');
+const MessageTemplate = require('../models/MessageTemplate');
+const Webhook = require('../models/Webhook');
+const ApiKey = require('../models/ApiKey');
 const ReferralService = require('../services/referralService');
+const cacheService = require('../services/cacheService');
 const { authenticate } = require('../middleware/auth');
 const { requireStudent } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
@@ -899,6 +905,738 @@ router.get('/analytics/dashboard-stats', async (req, res) => {
     console.error('Dashboard stats error:', error);
     res.status(500).json({
       error: 'Failed to load dashboard statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * TRAINING RESOURCES ENDPOINTS
+ */
+
+// GET /api/v1/student/resources - Get all training resources
+router.get('/resources', async (req, res) => {
+  try {
+    const { type, category, search, page = 1, limit = 20 } = req.query;
+    
+    const filters = {
+      type,
+      category,
+      search,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    };
+
+    const { resources, total } = await TeamResource.getAll(filters);
+
+    res.json({
+      success: true,
+      data: {
+        resources,
+        pagination: {
+          currentPage: filters.page,
+          totalPages: Math.ceil(total / filters.limit),
+          totalRecords: total
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Resources error:', error);
+    res.status(500).json({
+      error: 'Failed to load training resources',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/resources/:id - Get single resource
+router.get('/resources/:id', async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id);
+    const resource = await TeamResource.getById(resourceId);
+
+    if (!resource) {
+      return res.status(404).json({
+        error: 'Resource not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Log access
+    await TeamResource.logAccess(resourceId, req.user.id, 'view');
+
+    res.json({
+      success: true,
+      data: { resource }
+    });
+  } catch (error) {
+    console.error('Resource error:', error);
+    res.status(500).json({
+      error: 'Failed to load resource',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/resources/:id/download - Log download
+router.post('/resources/:id/download', async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id);
+    await TeamResource.logAccess(resourceId, req.user.id, 'download');
+
+    res.json({
+      success: true,
+      data: { message: 'Download logged' }
+    });
+  } catch (error) {
+    console.error('Download log error:', error);
+    res.status(500).json({
+      error: 'Failed to log download',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/resources/categories - Get resource categories
+router.get('/resources-categories', async (req, res) => {
+  try {
+    const categories = await TeamResource.getCategories();
+
+    res.json({
+      success: true,
+      data: { categories }
+    });
+  } catch (error) {
+    console.error('Categories error:', error);
+    res.status(500).json({
+      error: 'Failed to load categories',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/resources/popular - Get popular resources
+router.get('/resources-popular', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const resources = await TeamResource.getPopular(limit);
+
+    res.json({
+      success: true,
+      data: { resources }
+    });
+  } catch (error) {
+    console.error('Popular resources error:', error);
+    res.status(500).json({
+      error: 'Failed to load popular resources',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * TEAM EVENTS ENDPOINTS
+ */
+
+// GET /api/v1/student/events - Get all events
+router.get('/events', async (req, res) => {
+  try {
+    const { type, upcoming = 'true', page = 1, limit = 20 } = req.query;
+
+    const filters = {
+      type,
+      upcoming: upcoming === 'true',
+      userId: req.user.id,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    };
+
+    const events = await Event.getAll(filters);
+
+    res.json({
+      success: true,
+      data: { events }
+    });
+  } catch (error) {
+    console.error('Events error:', error);
+    res.status(500).json({
+      error: 'Failed to load events',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/events/:id - Get single event
+router.get('/events/:id', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const event = await Event.getById(eventId, req.user.id);
+
+    if (!event) {
+      return res.status(404).json({
+        error: 'Event not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { event }
+    });
+  } catch (error) {
+    console.error('Event error:', error);
+    res.status(500).json({
+      error: 'Failed to load event',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/events/:id/rsvp - RSVP to event
+router.post('/events/:id/rsvp', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { status = 'accepted' } = req.body;
+
+    // Check if event exists and is not full
+    const event = await Event.getById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        error: 'Event not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    if (event.max_attendees && event.current_attendees >= event.max_attendees) {
+      return res.status(400).json({
+        error: 'Event is full',
+        code: 'EVENT_FULL'
+      });
+    }
+
+    const rsvp = await Event.rsvp(eventId, req.user.id, status);
+
+    res.json({
+      success: true,
+      data: { rsvp }
+    });
+  } catch (error) {
+    console.error('RSVP error:', error);
+    res.status(500).json({
+      error: 'Failed to RSVP',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/student/events/:id/rsvp - Cancel RSVP
+router.delete('/events/:id/rsvp', async (req, res) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const cancelled = await Event.cancelRsvp(eventId, req.user.id);
+
+    if (!cancelled) {
+      return res.status(404).json({
+        error: 'RSVP not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { message: 'RSVP cancelled successfully' }
+    });
+  } catch (error) {
+    console.error('Cancel RSVP error:', error);
+    res.status(500).json({
+      error: 'Failed to cancel RSVP',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/my-events - Get user's registered events
+router.get('/my-events', async (req, res) => {
+  try {
+    const { upcoming = 'true' } = req.query;
+    const events = await Event.getUserEvents(req.user.id, upcoming === 'true');
+
+    res.json({
+      success: true,
+      data: { events }
+    });
+  } catch (error) {
+    console.error('My events error:', error);
+    res.status(500).json({
+      error: 'Failed to load your events',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * MESSAGE TEMPLATES ENDPOINTS
+ */
+
+// GET /api/v1/student/templates - Get message templates
+router.get('/templates', async (req, res) => {
+  try {
+    const { type } = req.query;
+    const templates = await MessageTemplate.getAll(type);
+
+    res.json({
+      success: true,
+      data: { templates }
+    });
+  } catch (error) {
+    console.error('Templates error:', error);
+    res.status(500).json({
+      error: 'Failed to load templates',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/templates/:id - Get single template
+router.get('/templates/:id', async (req, res) => {
+  try {
+    const templateId = parseInt(req.params.id);
+    const template = await MessageTemplate.getById(templateId);
+
+    if (!template) {
+      return res.status(404).json({
+        error: 'Template not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { template }
+    });
+  } catch (error) {
+    console.error('Template error:', error);
+    res.status(500).json({
+      error: 'Failed to load template',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/templates/:id/render - Render template with user data
+router.post('/templates/:id/render', async (req, res) => {
+  try {
+    const templateId = parseInt(req.params.id);
+    const template = await MessageTemplate.getById(templateId);
+
+    if (!template) {
+      return res.status(404).json({
+        error: 'Template not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Get user data for template variables
+    const user = await User.findById(req.user.id);
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const referralLink = `${baseUrl}/register?ref=${user.referral_code}`;
+
+    const variables = {
+      name: user.username || user.email.split('@')[0],
+      email: user.email,
+      referral_code: user.referral_code,
+      referral_link: referralLink,
+      ...req.body.variables // Allow custom variables
+    };
+
+    const rendered = MessageTemplate.renderTemplate(template, variables);
+
+    res.json({
+      success: true,
+      data: { rendered }
+    });
+  } catch (error) {
+    console.error('Render template error:', error);
+    res.status(500).json({
+      error: 'Failed to render template',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/templates/share - Log template share
+router.post('/templates/share', async (req, res) => {
+  try {
+    const { platform, template_id } = req.body;
+
+    if (!platform) {
+      return res.status(400).json({
+        error: 'platform is required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    await MessageTemplate.logShare(req.user.id, platform, template_id || null);
+
+    res.json({
+      success: true,
+      data: { message: 'Share logged successfully' }
+    });
+  } catch (error) {
+    console.error('Log share error:', error);
+    res.status(500).json({
+      error: 'Failed to log share',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/share-stats - Get user's sharing statistics
+router.get('/share-stats', async (req, res) => {
+  try {
+    const stats = await MessageTemplate.getShareStats(req.user.id);
+
+    res.json({
+      success: true,
+      data: { stats }
+    });
+  } catch (error) {
+    console.error('Share stats error:', error);
+    res.status(500).json({
+      error: 'Failed to load share statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/templates/trending - Get trending templates
+router.get('/templates-trending', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const templates = await MessageTemplate.getTrending(limit);
+
+    res.json({
+      success: true,
+      data: { templates }
+    });
+  } catch (error) {
+    console.error('Trending templates error:', error);
+    res.status(500).json({
+      error: 'Failed to load trending templates',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * WEBHOOKS ENDPOINTS
+ */
+
+// GET /api/v1/student/webhooks - Get user's webhooks
+router.get('/webhooks', async (req, res) => {
+  try {
+    const webhooks = await Webhook.getUserWebhooks(req.user.id);
+
+    res.json({
+      success: true,
+      data: { webhooks }
+    });
+  } catch (error) {
+    console.error('Webhooks error:', error);
+    res.status(500).json({
+      error: 'Failed to load webhooks',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/webhooks - Create webhook
+router.post('/webhooks', async (req, res) => {
+  try {
+    const { url, events, retry_count = 3 } = req.body;
+
+    if (!url || !events || events.length === 0) {
+      return res.status(400).json({
+        error: 'url and events are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    const webhook = await Webhook.create({
+      user_id: req.user.id,
+      url,
+      events,
+      retry_count
+    });
+
+    res.json({
+      success: true,
+      data: { webhook }
+    });
+  } catch (error) {
+    console.error('Create webhook error:', error);
+    res.status(500).json({
+      error: 'Failed to create webhook',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/student/webhooks/:id - Update webhook
+router.put('/webhooks/:id', async (req, res) => {
+  try {
+    const webhookId = parseInt(req.params.id);
+    const updates = req.body;
+
+    const webhook = await Webhook.update(webhookId, updates, req.user.id);
+
+    if (!webhook) {
+      return res.status(404).json({
+        error: 'Webhook not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { webhook }
+    });
+  } catch (error) {
+    console.error('Update webhook error:', error);
+    res.status(500).json({
+      error: 'Failed to update webhook',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/student/webhooks/:id - Delete webhook
+router.delete('/webhooks/:id', async (req, res) => {
+  try {
+    const webhookId = parseInt(req.params.id);
+    const webhook = await Webhook.delete(webhookId, req.user.id);
+
+    if (!webhook) {
+      return res.status(404).json({
+        error: 'Webhook not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { message: 'Webhook deleted successfully' }
+    });
+  } catch (error) {
+    console.error('Delete webhook error:', error);
+    res.status(500).json({
+      error: 'Failed to delete webhook',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/webhooks/:id/deliveries - Get webhook delivery history
+router.get('/webhooks/:id/deliveries', async (req, res) => {
+  try {
+    const webhookId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit) || 50;
+
+    // Verify ownership
+    const webhook = await Webhook.getById(webhookId, req.user.id);
+    if (!webhook) {
+      return res.status(404).json({
+        error: 'Webhook not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const deliveries = await Webhook.getDeliveryHistory(webhookId, limit);
+
+    res.json({
+      success: true,
+      data: { deliveries }
+    });
+  } catch (error) {
+    console.error('Webhook deliveries error:', error);
+    res.status(500).json({
+      error: 'Failed to load webhook deliveries',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/webhooks/:id/stats - Get webhook statistics
+router.get('/webhooks/:id/stats', async (req, res) => {
+  try {
+    const webhookId = parseInt(req.params.id);
+
+    // Verify ownership
+    const webhook = await Webhook.getById(webhookId, req.user.id);
+    if (!webhook) {
+      return res.status(404).json({
+        error: 'Webhook not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const stats = await Webhook.getStats(webhookId);
+
+    res.json({
+      success: true,
+      data: { stats }
+    });
+  } catch (error) {
+    console.error('Webhook stats error:', error);
+    res.status(500).json({
+      error: 'Failed to load webhook statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * API KEYS ENDPOINTS
+ */
+
+// GET /api/v1/student/api-keys - Get user's API keys
+router.get('/api-keys', async (req, res) => {
+  try {
+    const keys = await ApiKey.getUserKeys(req.user.id);
+
+    res.json({
+      success: true,
+      data: { keys }
+    });
+  } catch (error) {
+    console.error('API keys error:', error);
+    res.status(500).json({
+      error: 'Failed to load API keys',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/api-keys - Create API key
+router.post('/api-keys', async (req, res) => {
+  try {
+    const { key_name, permissions = [], rate_limit_per_hour = 1000, expires_at } = req.body;
+
+    if (!key_name) {
+      return res.status(400).json({
+        error: 'key_name is required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    const apiKey = await ApiKey.create({
+      user_id: req.user.id,
+      key_name,
+      permissions,
+      rate_limit_per_hour,
+      expires_at
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'API key created successfully. Save the secret now - it will not be shown again.',
+        apiKey
+      }
+    });
+  } catch (error) {
+    console.error('Create API key error:', error);
+    res.status(500).json({
+      error: 'Failed to create API key',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/student/api-keys/:id - Revoke/delete API key
+router.delete('/api-keys/:id', async (req, res) => {
+  try {
+    const keyId = parseInt(req.params.id);
+    const deleted = await ApiKey.delete(keyId, req.user.id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        error: 'API key not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { message: 'API key deleted successfully' }
+    });
+  } catch (error) {
+    console.error('Delete API key error:', error);
+    res.status(500).json({
+      error: 'Failed to delete API key',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/api-keys/:id/stats - Get API key statistics
+router.get('/api-keys/:id/stats', async (req, res) => {
+  try {
+    const keyId = parseInt(req.params.id);
+
+    // Verify ownership
+    const keys = await ApiKey.getUserKeys(req.user.id);
+    const keyExists = keys.find(k => k.id === keyId);
+
+    if (!keyExists) {
+      return res.status(404).json({
+        error: 'API key not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const stats = await ApiKey.getStats(keyId);
+
+    res.json({
+      success: true,
+      data: { stats }
+    });
+  } catch (error) {
+    console.error('API key stats error:', error);
+    res.status(500).json({
+      error: 'Failed to load API key statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/api-keys/:id/history - Get API key request history
+router.get('/api-keys/:id/history', async (req, res) => {
+  try {
+    const keyId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit) || 100;
+
+    // Verify ownership
+    const keys = await ApiKey.getUserKeys(req.user.id);
+    const keyExists = keys.find(k => k.id === keyId);
+
+    if (!keyExists) {
+      return res.status(404).json({
+        error: 'API key not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const history = await ApiKey.getRequestHistory(keyId, limit);
+
+    res.json({
+      success: true,
+      data: { history }
+    });
+  } catch (error) {
+    console.error('API key history error:', error);
+    res.status(500).json({
+      error: 'Failed to load API key history',
       code: 'DATABASE_ERROR'
     });
   }
