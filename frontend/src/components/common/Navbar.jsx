@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
 import LanguageSwitcher from './LanguageSwitcher';
+import ThemeToggle from './ThemeToggle';
 import NotificationDropdown from '../NotificationDropdown';
 import RankBadge from '../RankBadge';
 
@@ -188,6 +189,7 @@ const Navbar = () => {
               {user?.username}
             </span>
             <LanguageSwitcher variant="compact" />
+            <ThemeToggle variant="compact" />
             <Button onClick={handleLogout} size="sm" variant="outline">
               Logout
             </Button>
@@ -203,6 +205,7 @@ const Navbar = () => {
               Login
             </Link>
             <LanguageSwitcher variant="compact" />
+            <ThemeToggle variant="compact" />
           </>
         )}
       </div>
