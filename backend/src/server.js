@@ -1,5 +1,16 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const fs = require('fs');
+
+// Load .env file only in local development (not on Vercel)
+// On Vercel, environment variables are injected automatically
+const envPath = path.join(__dirname, '../../.env');
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+} else {
+  // On Vercel/serverless, dotenv won't find a file, but env vars are already available
+  require('dotenv').config();
+}
+
 const express = require('express');
 const cors = require('cors');
 const { pool, testConnection } = require('./config/database');
