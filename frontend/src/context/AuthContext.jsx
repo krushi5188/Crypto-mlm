@@ -43,6 +43,14 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user };
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Check if this is an error that the interceptor is handling
+      // (network error, 500+, 503 - these trigger error page redirect)
+      if (!error.response || error.response?.status >= 500) {
+        // Interceptor is redirecting to error page - don't show login error
+        return { success: false, redirecting: true };
+      }
+      
       let errorMessage = 'Registration failed';
       
       if (error.response?.data?.error) {
@@ -74,6 +82,14 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user };
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Check if this is an error that the interceptor is handling
+      // (network error, 500+, 503 - these trigger error page redirect)
+      if (!error.response || error.response?.status >= 500) {
+        // Interceptor is redirecting to error page - don't show login error
+        return { success: false, redirecting: true };
+      }
+      
       let errorMessage = 'Login failed';
       
       if (error.response?.data?.error) {
