@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Referral = require('../models/Referral');
 const Transaction = require('../models/Transaction');
 const SystemConfig = require('../models/SystemConfig');
+const Achievement = require('../models/Achievement');
+const Rank = require('../models/Rank');
 
 class CommissionService {
   /**
