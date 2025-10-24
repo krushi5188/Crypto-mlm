@@ -13,6 +13,7 @@ const Webhook = require('../models/Webhook');
 const ApiKey = require('../models/ApiKey');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
+const predictiveAnalyticsService = require('../services/predictiveAnalyticsService');
 const { authenticate } = require('../middleware/auth');
 const { requireStudent } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
@@ -905,6 +906,94 @@ router.get('/analytics/dashboard-stats', async (req, res) => {
     console.error('Dashboard stats error:', error);
     res.status(500).json({
       error: 'Failed to load dashboard statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * PREDICTIVE ANALYTICS ENDPOINTS
+ */
+
+// GET /api/v1/student/analytics/predictions - Get user's predictive analytics
+router.get('/analytics/predictions', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const analytics = await predictiveAnalyticsService.getUserAnalytics(userId);
+
+    res.json({
+      success: true,
+      data: {
+        analytics: {
+          avgDailyEarnings: parseFloat(analytics.avg_daily_earnings),
+          avgWeeklyEarnings: parseFloat(analytics.avg_weekly_earnings),
+          avgMonthlyEarnings: parseFloat(analytics.avg_monthly_earnings),
+          earningsGrowthRate: parseFloat(analytics.earnings_growth_rate),
+          predicted30dEarnings: parseFloat(analytics.predicted_30d_earnings),
+          predicted90dEarnings: parseFloat(analytics.predicted_90d_earnings),
+          predicted30dRecruits: parseInt(analytics.predicted_30d_recruits),
+          networkGrowthRate: parseFloat(analytics.network_growth_rate),
+          churnRiskScore: parseFloat(analytics.churn_risk_score),
+          churnRiskLevel: analytics.churn_risk_level,
+          activityScore: parseFloat(analytics.activity_score),
+          daysActive: parseInt(analytics.days_active),
+          daysInactive: parseInt(analytics.days_inactive),
+          bestRecruitmentDay: analytics.best_recruitment_day,
+          bestRecruitmentHour: analytics.best_recruitment_hour,
+          lastUpdated: analytics.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Predictions error:', error);
+    res.status(500).json({
+      error: 'Failed to load predictions',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/analytics/insights - Get actionable insights
+router.get('/analytics/insights', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const insights = await predictiveAnalyticsService.getUserInsights(userId);
+
+    res.json({
+      success: true,
+      data: { insights }
+    });
+  } catch (error) {
+    console.error('Insights error:', error);
+    res.status(500).json({
+      error: 'Failed to load insights',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/analytics/recalculate - Force recalculate analytics
+router.post('/analytics/recalculate', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const analytics = await predictiveAnalyticsService.calculateUserAnalytics(userId);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Analytics recalculated successfully',
+        analytics: {
+          predicted30dEarnings: parseFloat(analytics.predicted_30d_earnings),
+          predicted90dEarnings: parseFloat(analytics.predicted_90d_earnings),
+          churnRiskLevel: analytics.churn_risk_level,
+          lastUpdated: analytics.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Recalculate error:', error);
+    res.status(500).json({
+      error: 'Failed to recalculate analytics',
       code: 'DATABASE_ERROR'
     });
   }
