@@ -107,7 +107,7 @@ class CampaignService {
     }
 
     let userQuery = 'SELECT id, email, username FROM users WHERE role = $1';
-    const params = ['student'];
+    const params = ['member'];
 
     // Apply audience targeting
     switch (campaign.target_audience) {
