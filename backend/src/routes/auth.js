@@ -170,7 +170,8 @@ router.post('/login',
         });
       }
 
-      // Check if 2FA is enabled
+      // Check if 2FA is enabled (OPTIONAL - only required if user enabled it)
+      // If user hasn't enabled 2FA, this entire block is skipped
       const has2FA = await TwoFactorAuth.isEnabled(user.id);
       
       if (has2FA) {
