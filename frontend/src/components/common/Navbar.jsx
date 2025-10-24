@@ -2,15 +2,10 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
-<<<<<<< HEAD
-import ThemeSwitcher from '../ThemeSwitcher';
-import NotificationCenter from '../NotificationCenter';
-=======
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import NotificationDropdown from '../NotificationDropdown';
 import RankBadge from '../RankBadge';
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 
 const Navbar = () => {
   const { user, isAuthenticated, isInstructor, isMember, logout } = useAuth();
@@ -59,175 +54,157 @@ const Navbar = () => {
     color: 'var(--text-primary)'
   };
 
+  const styles = {
+    rightSection: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--space-md)'
+    },
+    username: {
+      marginLeft: 'var(--space-md)',
+      fontSize: 'var(--text-sm)',
+      color: 'var(--text-dimmed)',
+      fontWeight: '500'
+    }
+  };
+
   return (
     <nav style={navStyles}>
-      <Link 
-        to={isMember() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
+      <Link
+        to={isMember() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'}
         style={logoStyles}
       >
         Atlas Network
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+      <div style={styles.rightSection}>
         {isAuthenticated() ? (
           <>
             {isMember() && (
               <>
-                <Link 
-                  to="/dashboard" 
+                <Link
+                  to="/dashboard"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Dashboard
                 </Link>
-                <Link 
-                  to="/network" 
+                <Link
+                  to="/network"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Network
                 </Link>
-                <Link 
-                  to="/earnings" 
+                <Link
+                  to="/earnings"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Earnings
                 </Link>
-                <Link 
-                  to="/member/achievements" 
+                <Link
+                  to="/achievements"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   🏆 Achievements
                 </Link>
-                <Link 
-                  to="/member/leaderboard" 
+                <Link
+                  to="/leaderboard"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   🏅 Leaderboard
                 </Link>
-                <Link 
-                  to="/member/security" 
+                <Link
+                  to="/security"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   🔒 Security
                 </Link>
-                <Link 
-                  to="/security" 
-                  style={linkStyles}
-                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
-                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
-                >
-                  Security
-                </Link>
-                <Link 
-                  to="/achievements" 
-                  style={linkStyles}
-                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
-                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
-                >
-                  Achievements
-                </Link>
-                <Link 
-                  to="/rank" 
-                  style={linkStyles}
-                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
-                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
-                >
-                  Rank
-                </Link>
-                <Link 
-                  to="/deposits" 
-                  style={linkStyles}
-                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
-                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
-                >
-                  Deposits
-                </Link>
               </>
             )}
 
             {isInstructor() && (
               <>
-                <Link 
-                  to="/instructor/analytics" 
+                <Link
+                  to="/instructor/analytics"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Analytics
                 </Link>
-                <Link 
-                  to="/instructor/participants" 
+                <Link
+                  to="/instructor/participants"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Participants
                 </Link>
-                <Link 
-                  to="/instructor/referrals" 
+                <Link
+                  to="/instructor/referrals"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Referrals
                 </Link>
-                <Link 
-                  to="/instructor/network" 
+                <Link
+                  to="/instructor/network"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Network
                 </Link>
-                <Link 
-                  to="/instructor/controls" 
+                <Link
+                  to="/instructor/controls"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Controls
                 </Link>
-                <Link 
-<<<<<<< HEAD
-                  to="/instructor/fraud-detection" 
-=======
-                  to="/instructor/configuration" 
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
+                <Link
+                  to="/instructor/fraud-detection"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
-<<<<<<< HEAD
                   Fraud Detection
                 </Link>
-                <Link 
-                  to="/instructor/bi" 
+                <Link
+                  to="/instructor/bi"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Business Intelligence
                 </Link>
-                <Link 
-                  to="/instructor/deposits" 
+                <Link
+                  to="/instructor/deposits"
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
                   Deposits
                 </Link>
-=======
+                <Link
+                  to="/instructor/configuration"
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
                   Configuration
                 </Link>
               </>
@@ -238,18 +215,10 @@ const Navbar = () => {
               <>
                 <NotificationDropdown />
                 <RankBadge />
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
               </>
             )}
 
-            <ThemeSwitcher />
-            {isStudent() && <NotificationCenter />}
-            <span style={{ 
-              marginLeft: 'var(--space-md)', 
-              fontSize: 'var(--text-sm)', 
-              color: 'var(--text-dimmed)',
-              fontWeight: '500'
-            }}>
+            <span style={styles.username}>
               {user?.username}
             </span>
             <LanguageSwitcher variant="compact" />
@@ -260,9 +229,8 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            <ThemeSwitcher />
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               style={linkStyles}
               onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
