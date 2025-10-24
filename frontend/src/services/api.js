@@ -52,7 +52,9 @@ export const studentAPI = {
   getNetwork: (level) => api.get('/student/network', { params: { level } }),
   getEarnings: (params) => api.get('/student/earnings', { params }),
   getProfile: () => api.get('/student/profile'),
-  updateProfile: (data) => api.put('/student/profile', data)
+  updateProfile: (data) => api.put('/student/profile', data),
+  getDirectInvites: () => api.get('/student/direct-invites'),
+  getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`)
 };
 
 // Instructor API
