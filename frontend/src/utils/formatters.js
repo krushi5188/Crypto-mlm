@@ -45,3 +45,41 @@ export const formatTimeAgo = (dateString) => {
 export const formatPercentage = (value, decimals = 2) => {
   return `${parseFloat(value).toFixed(decimals)}%`;
 };
+
+// Redact email address for privacy
+export const redactEmail = (email) => {
+  // Handle null/undefined
+  if (!email) return '-';
+  
+  // Check if email has @ symbol
+  if (!email.includes('@')) {
+    // Invalid format - redact middle characters
+    if (email.length <= 4) return email;
+    const start = email.substring(0, 2);
+    const end = email.substring(email.length - 2);
+    return `${start}***${end}`;
+  }
+  
+  const [local, domain] = email.split('@');
+  
+  // Redact local part (before @)
+  let redactedLocal;
+  if (local.length <= 1) {
+    redactedLocal = local + '**';
+  } else if (local.length === 2) {
+    redactedLocal = local[0] + '**';
+  } else {
+    redactedLocal = local.substring(0, 2) + '***';
+  }
+  
+  // Redact domain part (after @)
+  const domainParts = domain.split('.');
+  const redactedDomainParts = domainParts.map((part) => {
+    if (part.length === 0) return part;
+    if (part.length === 1) return part;
+    // Show first char, replace rest with asterisks (maintaining length)
+    return part[0] + '*'.repeat(part.length - 1);
+  });
+  
+  return `${redactedLocal}@${redactedDomainParts.join('.')}`;
+};
