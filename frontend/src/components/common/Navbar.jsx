@@ -114,6 +114,14 @@ const Navbar = () => {
                 >
                   Achievements
                 </Link>
+                <Link 
+                  to="/rank" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Rank
+                </Link>
               </>
             )}
 
