@@ -60,26 +60,26 @@ export const memberAPI = {
   getProfile: () => api.get('/member/profile'),
   updateProfile: (data) => api.put('/member/profile', data),
   getDirectInvites: () => api.get('/member/direct-invites'),
-  getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`),
+  getInviteTransactions: (inviteUserId) => api.get(`/member/invite-transactions/${inviteUserId}`),
   
   // Withdrawals
   getWithdrawals: (params) => api.get('/member/withdrawals', { params }),
   createWithdrawal: (data) => api.post('/member/withdrawals', data),
-  cancelWithdrawal: (id) => api.delete(`/student/withdrawals/${id}`),
+  cancelWithdrawal: (id) => api.delete(`/member/withdrawals/${id}`),
   getWithdrawalStats: () => api.get('/member/withdrawal-stats'),
   
   // Goals
   getGoals: (params) => api.get('/member/goals', { params }),
   createGoal: (data) => api.post('/member/goals', data),
-  updateGoal: (id, data) => api.put(`/student/goals/${id}`, data),
-  deleteGoal: (id) => api.delete(`/student/goals/${id}`),
+  updateGoal: (id, data) => api.put(`/member/goals/${id}`, data),
+  deleteGoal: (id) => api.delete(`/member/goals/${id}`),
   getGoalRecommendations: () => api.get('/member/goal-recommendations'),
   
   // Wallets
   getWallets: () => api.get('/member/wallets'),
   addWallet: (data) => api.post('/member/wallets', data),
-  setPrimaryWallet: (id) => api.put(`/student/wallets/${id}/primary`),
-  deleteWallet: (id) => api.delete(`/student/wallets/${id}`),
+  setPrimaryWallet: (id) => api.put(`/member/wallets/${id}/primary`),
+  deleteWallet: (id) => api.delete(`/member/wallets/${id}`),
   
   // Analytics
   getEarningsChart: (period) => api.get('/member/analytics/earnings-chart', { params: { period } }),
@@ -89,22 +89,22 @@ export const memberAPI = {
   
   // Training Resources
   getResources: (params) => api.get('/member/resources', { params }),
-  getResource: (id) => api.get(`/student/resources/${id}`),
-  logDownload: (id) => api.post(`/student/resources/${id}/download`),
+  getResource: (id) => api.get(`/member/resources/${id}`),
+  logDownload: (id) => api.post(`/member/resources/${id}/download`),
   getResourceCategories: () => api.get('/member/resources-categories'),
   getPopularResources: (limit) => api.get('/member/resources-popular', { params: { limit } }),
   
   // Team Events
   getEvents: (params) => api.get('/member/events', { params }),
-  getEvent: (id) => api.get(`/student/events/${id}`),
-  rsvpEvent: (id, data) => api.post(`/student/events/${id}/rsvp`, data),
-  cancelRsvp: (id) => api.delete(`/student/events/${id}/rsvp`),
+  getEvent: (id) => api.get(`/member/events/${id}`),
+  rsvpEvent: (id, data) => api.post(`/member/events/${id}/rsvp`, data),
+  cancelRsvp: (id) => api.delete(`/member/events/${id}/rsvp`),
   getMyEvents: (params) => api.get('/member/my-events', { params }),
   
   // Message Templates
   getTemplates: (type) => api.get('/member/templates', { params: { type } }),
-  getTemplate: (id) => api.get(`/student/templates/${id}`),
-  renderTemplate: (id, variables) => api.post(`/student/templates/${id}/render`, { variables }),
+  getTemplate: (id) => api.get(`/member/templates/${id}`),
+  renderTemplate: (id, variables) => api.post(`/member/templates/${id}/render`, { variables }),
   logShare: (platform, templateId) => api.post('/member/templates/share', { platform, template_id: templateId }),
   getShareStats: () => api.get('/member/share-stats'),
   getTrendingTemplates: (limit) => api.get('/member/templates-trending', { params: { limit } }),
@@ -112,17 +112,17 @@ export const memberAPI = {
   // Webhooks
   getWebhooks: () => api.get('/member/webhooks'),
   createWebhook: (data) => api.post('/member/webhooks', data),
-  updateWebhook: (id, data) => api.put(`/student/webhooks/${id}`, data),
-  deleteWebhook: (id) => api.delete(`/student/webhooks/${id}`),
-  getWebhookDeliveries: (id, limit) => api.get(`/student/webhooks/${id}/deliveries`, { params: { limit } }),
-  getWebhookStats: (id) => api.get(`/student/webhooks/${id}/stats`),
+  updateWebhook: (id, data) => api.put(`/member/webhooks/${id}`, data),
+  deleteWebhook: (id) => api.delete(`/member/webhooks/${id}`),
+  getWebhookDeliveries: (id, limit) => api.get(`/member/webhooks/${id}/deliveries`, { params: { limit } }),
+  getWebhookStats: (id) => api.get(`/member/webhooks/${id}/stats`),
   
   // API Keys
   getApiKeys: () => api.get('/member/api-keys'),
   createApiKey: (data) => api.post('/member/api-keys', data),
-  deleteApiKey: (id) => api.delete(`/student/api-keys/${id}`),
-  getApiKeyStats: (id) => api.get(`/student/api-keys/${id}/stats`),
-  getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } })
+  deleteApiKey: (id) => api.delete(`/member/api-keys/${id}`),
+  getApiKeyStats: (id) => api.get(`/member/api-keys/${id}/stats`),
+  getApiKeyHistory: (id, limit) => api.get(`/member/api-keys/${id}/history`, { params: { limit } })
 };
 
 // Instructor API
