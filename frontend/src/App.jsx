@@ -23,6 +23,7 @@ import InstructorNetwork from './pages/InstructorNetwork';
 import InstructorControls from './pages/InstructorControls';
 import InstructorFraudDetection from './pages/InstructorFraudDetection';
 import InstructorBI from './pages/InstructorBI';
+import InstructorDeposits from './pages/InstructorDeposits';
 import './styles/global.css';
 
 // Protected Route Component
@@ -233,6 +234,14 @@ function App() {
               <ProtectedRoute allowedRole="instructor">
                 <AppLayout>
                   <InstructorBI />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/instructor/deposits" element={
+              <ProtectedRoute allowedRole="instructor">
+                <AppLayout>
+                  <InstructorDeposits />
                 </AppLayout>
               </ProtectedRoute>
             } />
