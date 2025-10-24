@@ -236,11 +236,13 @@ const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
+const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
+app.use('/api/v1/gamification', gamificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -251,7 +253,8 @@ app.get('/', (req, res) => {
       auth: '/api/v1/auth',
       student: '/api/v1/student',
       instructor: '/api/v1/instructor',
-      system: '/api/v1/system'
+      system: '/api/v1/system',
+      gamification: '/api/v1/gamification'
     }
   });
 });
