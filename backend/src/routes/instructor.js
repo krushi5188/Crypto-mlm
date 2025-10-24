@@ -49,7 +49,7 @@ router.get('/participants', async (req, res) => {
     const sortOrder = req.query.sortOrder || 'desc';
     const search = req.query.search || '';
 
-    const { participants, total } = await User.getAllStudents(
+    const { participants, total } = await User.getAllMembers(
       page,
       limit,
       sortBy,
@@ -101,7 +101,7 @@ router.get('/participants/:id', async (req, res) => {
 
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -175,7 +175,7 @@ router.get('/participants/:id', async (req, res) => {
 
 /**
  * POST /api/v1/instructor/participants/:id/approve
- * Approve a pending student registration
+ * Approve a pending member registration
  */
 router.post('/participants/:id/approve', async (req, res) => {
   try {
@@ -184,7 +184,7 @@ router.post('/participants/:id/approve', async (req, res) => {
     // Get participant
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -242,7 +242,7 @@ router.post('/participants/:id/approve', async (req, res) => {
 
 /**
  * POST /api/v1/instructor/participants/:id/reject
- * Reject a pending student registration
+ * Reject a pending member registration
  */
 router.post('/participants/:id/reject', async (req, res) => {
   try {
@@ -252,7 +252,7 @@ router.post('/participants/:id/reject', async (req, res) => {
     // Get participant
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -299,15 +299,15 @@ router.post('/participants/:id/reject', async (req, res) => {
 });
 
 /**
- * POST /api/v1/instructor/add-student
- * Instructor directly adds a new student (auto-approved, no approval needed)
+ * POST /api/v1/instructor/add-member
+ * Instructor directly adds a new member (auto-approved, no approval needed)
  */
-router.post('/add-student', validate('instructorAddMember'), async (req, res) => {
+router.post('/add-member', validate('instructorAddMember'), async (req, res) => {
   try {
     const { email, username, password } = req.validatedBody;
 
     // Check participant limit
-    const participantCount = await User.countStudents();
+    const participantCount = await User.countMembers();
     const maxParticipants = await SystemConfig.get('max_participants');
 
     if (participantCount >= maxParticipants) {
@@ -355,7 +355,7 @@ router.post('/add-student', validate('instructorAddMember'), async (req, res) =>
       email,
       username,
       password_hash,
-      role: 'student',
+      role: 'member',
       referral_code: newReferralCode,
       referred_by_id: referrerId
     });
@@ -374,7 +374,7 @@ router.post('/add-student', validate('instructorAddMember'), async (req, res) =>
     // Log admin action
     await AdminAction.log({
       admin_id: req.user.id,
-      action_type: 'add_student',
+      action_type: 'add_member',
       target_user_id: userId,
       details: { username, email, referrer_id: referrerId },
       ip_address: req.ip
@@ -436,9 +436,9 @@ router.post('/inject-coins', validate('injectCoins'), async (req, res) => {
 
     await connection.beginTransaction();
 
-    // Verify user exists and is a student
+    // Verify user exists and is a member
     const user = await User.findById(userId);
-    if (!user || user.role !== 'student') {
+    if (!user || user.role !== 'member') {
       await connection.rollback();
       return res.status(404).json({
         error: 'Participant not found',
@@ -584,14 +584,14 @@ router.post('/reset', validate('reset'), async (req, res) => {
     let participantsAffected = 0;
 
     if (type === 'full') {
-      // Full reset: Delete all students
+      // Full reset: Delete all members
       const [countResult] = await connection.query(
-        "SELECT COUNT(*) as count FROM users WHERE role = 'student'"
+        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
       );
       participantsAffected = countResult[0].count;
 
-      // Delete students (CASCADE will delete referrals, transactions, admin_actions)
-      await connection.query("DELETE FROM users WHERE role = 'student'");
+      // Delete members (CASCADE will delete referrals, transactions, admin_actions)
+      await connection.query("DELETE FROM users WHERE role = 'member'");
 
       // Reset system totals
       await connection.query(
@@ -601,7 +601,7 @@ router.post('/reset', validate('reset'), async (req, res) => {
     } else if (type === 'soft') {
       // Soft reset: Reset balances but keep accounts
       const [countResult] = await connection.query(
-        "SELECT COUNT(*) as count FROM users WHERE role = 'student'"
+        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
       );
       participantsAffected = countResult[0].count;
 
@@ -612,7 +612,7 @@ router.post('/reset', validate('reset'), async (req, res) => {
          total_earned = 0,
          direct_recruits = 0,
          network_size = 0
-         WHERE role = 'student'`
+         WHERE role = 'member'`
       );
 
       // Delete transactions and referrals
@@ -753,7 +753,7 @@ router.post('/bulk-approve', async (req, res) => {
       try {
         const participant = await User.findById(userId);
 
-        if (participant && participant.role === 'student' && participant.approval_status !== 'approved') {
+        if (participant && participant.role === 'member' && participant.approval_status !== 'approved') {
           await pool.query(
             'UPDATE users SET approval_status = $1 WHERE id = $2',
             ['approved', userId]
@@ -824,7 +824,7 @@ router.post('/bulk-reject', async (req, res) => {
       try {
         const participant = await User.findById(userId);
 
-        if (participant && participant.role === 'student' && participant.approval_status !== 'approved') {
+        if (participant && participant.role === 'member' && participant.approval_status !== 'approved') {
           await pool.query(
             'UPDATE users SET approval_status = $1 WHERE id = $2',
             ['rejected', userId]
@@ -873,7 +873,7 @@ router.post('/participants/:id/freeze', async (req, res) => {
 
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -922,7 +922,7 @@ router.post('/participants/:id/unfreeze', async (req, res) => {
 
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -983,7 +983,7 @@ router.post('/bulk-freeze', async (req, res) => {
       try {
         const participant = await User.findById(userId);
 
-        if (participant && participant.role === 'student') {
+        if (participant && participant.role === 'member') {
           await pool.query(
             'UPDATE users SET account_status = $1 WHERE id = $2',
             ['frozen', userId]
@@ -1043,7 +1043,7 @@ router.post('/bulk-unfreeze', async (req, res) => {
       try {
         const participant = await User.findById(userId);
 
-        if (participant && participant.role === 'student') {
+        if (participant && participant.role === 'member') {
           await pool.query(
             'UPDATE users SET account_status = $1 WHERE id = $2',
             ['active', userId]
@@ -1092,7 +1092,7 @@ router.put('/participants/:id/commission-rate', async (req, res) => {
 
     const participant = await User.findById(participantId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
@@ -1184,7 +1184,7 @@ router.post('/transactions/create', async (req, res) => {
 
     const participant = await User.findById(userId);
 
-    if (!participant || participant.role !== 'student') {
+    if (!participant || participant.role !== 'member') {
       return res.status(404).json({
         error: 'Participant not found',
         code: 'NOT_FOUND'
