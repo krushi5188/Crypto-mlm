@@ -46,6 +46,10 @@ const LoginPage = () => {
       } else {
         navigate('/dashboard');
       }
+    } else if (result.redirecting) {
+      // Interceptor is handling the error and redirecting to error page
+      // Don't show error or reset loading - let redirect happen
+      return;
     } else {
       setError(result.error);
       setLoading(false);
