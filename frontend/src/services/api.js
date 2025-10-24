@@ -158,7 +158,19 @@ export const instructorAPI = {
   
   // Manual Transactions
   createTransaction: (data) => api.post('/instructor/transactions/create', data),
-  reverseTransaction: (id, reason) => api.post(`/instructor/transactions/${id}/reverse`, { reason })
+  reverseTransaction: (id, reason) => api.post(`/instructor/transactions/${id}/reverse`, { reason }),
+  
+  // Campaigns
+  getCampaigns: (params) => api.get('/instructor/campaigns', { params }),
+  getCampaign: (id) => api.get(`/instructor/campaigns/${id}`),
+  createCampaign: (data) => api.post('/instructor/campaigns', data),
+  updateCampaign: (id, data) => api.put(`/instructor/campaigns/${id}`, data),
+  deleteCampaign: (id) => api.delete(`/instructor/campaigns/${id}`),
+  updateCampaignStatus: (id, status) => api.put(`/instructor/campaigns/${id}/status`, { status }),
+  executeCampaign: (id) => api.post(`/instructor/campaigns/${id}/execute`),
+  getCampaignStats: (id) => api.get(`/instructor/campaigns/${id}/stats`),
+  addDripStep: (id, data) => api.post(`/instructor/campaigns/${id}/drip-step`, data),
+  getCampaignRecipients: (id, params) => api.get(`/instructor/campaigns/${id}/recipients`, { params })
 };
 
 // System API
