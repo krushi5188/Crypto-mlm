@@ -142,6 +142,14 @@ const Navbar = () => {
                 >
                   Controls
                 </Link>
+                <Link 
+                  to="/instructor/configuration" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Configuration
+                </Link>
               </>
             )}
 
