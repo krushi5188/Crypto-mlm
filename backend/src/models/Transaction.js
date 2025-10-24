@@ -21,9 +21,11 @@ class Transaction {
     const offset = (page - 1) * limit;
 
     const result = await pool.query(
-      `SELECT id, amount, type, level, description, balance_after, created_at
-       FROM transactions
-       WHERE user_id = $1
+      `SELECT t.id, t.amount, t.type, t.level, t.description, t.balance_after, t.created_at,
+              t.triggered_by_user_id, u.email as triggered_by_email
+       FROM transactions t
+       LEFT JOIN users u ON t.triggered_by_user_id = u.id
+       WHERE t.user_id = $1
        ORDER BY ${sortBy} ${sortOrder}
        LIMIT $2 OFFSET $3`,
       [userId, limit, offset]
@@ -39,6 +41,36 @@ class Transaction {
       transactions: result.rows,
       total: parseInt(countResult.rows[0].total)
     };
+  }
+
+  // Get direct invites with earnings summary
+  static async getDirectInvitesEarnings(userId) {
+    const result = await pool.query(
+      `SELECT 
+        u.id as user_id,
+        u.email,
+        COALESCE(SUM(t.amount), 0) as total_earned,
+        COUNT(t.id) as transaction_count
+      FROM users u
+      LEFT JOIN transactions t ON t.triggered_by_user_id = u.id AND t.user_id = $1
+      WHERE u.referred_by_id = $1
+      GROUP BY u.id, u.email
+      ORDER BY total_earned DESC`,
+      [userId]
+    );
+    return result.rows;
+  }
+
+  // Get transactions triggered by a specific user
+  static async getTransactionsByTriggeredUser(userId, triggeredByUserId) {
+    const result = await pool.query(
+      `SELECT id, amount, type, level, description, balance_after, created_at
+       FROM transactions
+       WHERE user_id = $1 AND triggered_by_user_id = $2
+       ORDER BY created_at DESC`,
+      [userId, triggeredByUserId]
+    );
+    return result.rows;
   }
 
   // Get recent transactions for user (for dashboard)
