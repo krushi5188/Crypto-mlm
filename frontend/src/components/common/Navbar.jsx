@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
 import ThemeSwitcher from '../ThemeSwitcher';
+import NotificationCenter from '../NotificationCenter';
 
 const Navbar = () => {
   const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
@@ -162,6 +163,7 @@ const Navbar = () => {
             )}
 
             <ThemeSwitcher />
+            {isStudent() && <NotificationCenter />}
             <span style={{ 
               marginLeft: 'var(--space-md)', 
               fontSize: 'var(--text-sm)', 
