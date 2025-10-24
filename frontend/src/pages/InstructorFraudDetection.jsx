@@ -607,7 +607,10 @@ const styles = {
   statLabel: {
     fontSize: 'var(--text-sm)',
     color: 'var(--text-muted)',
-    fontWeight: '500'
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-xs)'
   },
   tabs: {
     display: 'flex',
