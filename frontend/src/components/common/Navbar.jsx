@@ -8,7 +8,7 @@ import NotificationDropdown from '../NotificationDropdown';
 import RankBadge from '../RankBadge';
 
 const Navbar = () => {
-  const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
+  const { user, isAuthenticated, isInstructor, isMember, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -57,7 +57,7 @@ const Navbar = () => {
   return (
     <nav style={navStyles}>
       <Link 
-        to={isStudent() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
+        to={isMember() ? '/dashboard' : isInstructor() ? '/instructor/analytics' : '/'} 
         style={logoStyles}
       >
         Atlas Network
@@ -66,7 +66,7 @@ const Navbar = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
         {isAuthenticated() ? (
           <>
-            {isStudent() && (
+            {isMember() && (
               <>
                 <Link 
                   to="/dashboard" 
@@ -93,7 +93,7 @@ const Navbar = () => {
                   Earnings
                 </Link>
                 <Link 
-                  to="/student/achievements" 
+                  to="/member/achievements" 
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
@@ -101,7 +101,7 @@ const Navbar = () => {
                   🏆 Achievements
                 </Link>
                 <Link 
-                  to="/student/leaderboard" 
+                  to="/member/leaderboard" 
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
@@ -109,7 +109,7 @@ const Navbar = () => {
                   🏅 Leaderboard
                 </Link>
                 <Link 
-                  to="/student/security" 
+                  to="/member/security" 
                   style={linkStyles}
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
@@ -172,8 +172,8 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Notification Dropdown and Rank Badge for Students */}
-            {isStudent() && (
+            {/* Notification Dropdown and Rank Badge for Members */}
+            {isMember() && (
               <>
                 <NotificationDropdown />
                 <RankBadge />
