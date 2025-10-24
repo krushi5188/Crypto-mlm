@@ -109,6 +109,15 @@ export const studentAPI = {
   getEarnings: (params) => api.get('/student/earnings', { params }),
   getProfile: () => api.get('/student/profile'),
   updateProfile: (data) => api.put('/student/profile', data),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post('/student/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
   getDirectInvites: () => api.get('/student/direct-invites'),
   getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`),
   
