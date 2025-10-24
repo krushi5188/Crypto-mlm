@@ -16,6 +16,7 @@ import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
 import InstructorNetwork from './pages/InstructorNetwork';
 import InstructorControls from './pages/InstructorControls';
+import InstructorFraudDetection from './pages/InstructorFraudDetection';
 import './styles/global.css';
 
 // Protected Route Component
@@ -175,6 +176,14 @@ function App() {
               <ProtectedRoute allowedRole="instructor">
                 <AppLayout>
                   <InstructorControls />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/instructor/fraud-detection" element={
+              <ProtectedRoute allowedRole="instructor">
+                <AppLayout>
+                  <InstructorFraudDetection />
                 </AppLayout>
               </ProtectedRoute>
             } />
