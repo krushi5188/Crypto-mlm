@@ -10,6 +10,10 @@ import StudentDashboard from './pages/StudentDashboard';
 import StudentNetwork from './pages/StudentNetwork';
 import StudentEarnings from './pages/StudentEarnings';
 import StudentProfile from './pages/StudentProfile';
+import StudentAchievements from './pages/StudentAchievements';
+import StudentLeaderboard from './pages/StudentLeaderboard';
+import StudentNotifications from './pages/StudentNotifications';
+import StudentSecurity from './pages/StudentSecurity';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
@@ -130,6 +134,38 @@ function App() {
             <ProtectedRoute allowedRole="student">
               <AppLayout>
                 <StudentProfile />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/achievements" element={
+            <ProtectedRoute allowedRole="student">
+              <AppLayout>
+                <StudentAchievements />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/leaderboard" element={
+            <ProtectedRoute allowedRole="student">
+              <AppLayout>
+                <StudentLeaderboard />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/notifications" element={
+            <ProtectedRoute allowedRole="student">
+              <AppLayout>
+                <StudentNotifications />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/student/security" element={
+            <ProtectedRoute allowedRole="student">
+              <AppLayout>
+                <StudentSecurity />
               </AppLayout>
             </ProtectedRoute>
           } />
