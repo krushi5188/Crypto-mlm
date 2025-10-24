@@ -1557,4 +1557,408 @@ router.post('/transactions/:id/reverse', async (req, res) => {
   }
 });
 
+/**
+ * MARKETING CAMPAIGN ENDPOINTS
+ */
+
+// POST /api/v1/instructor/campaigns - Create new campaign
+router.post('/campaigns', async (req, res) => {
+  try {
+    const campaignData = {
+      ...req.body,
+      created_by: req.user.id
+    };
+
+    const campaign = await campaignService.createCampaign(campaignData);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'create_campaign',
+      details: {
+        campaign_id: campaign.id,
+        campaign_name: campaign.name,
+        campaign_type: campaign.campaign_type
+      },
+      ip_address: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      data: { campaign }
+    });
+  } catch (error) {
+    console.error('Create campaign error:', error);
+    res.status(500).json({
+      error: 'Failed to create campaign',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/campaigns - List all campaigns
+router.get('/campaigns', async (req, res) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      campaign_type: req.query.campaign_type,
+      limit: req.query.limit ? parseInt(req.query.limit) : undefined
+    };
+
+    const campaigns = await campaignService.getAllCampaigns(filters);
+
+    res.json({
+      success: true,
+      data: { campaigns }
+    });
+  } catch (error) {
+    console.error('Get campaigns error:', error);
+    res.status(500).json({
+      error: 'Failed to load campaigns',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/campaigns/:id - Get campaign details
+router.get('/campaigns/:id', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const campaign = await campaignService.getCampaignById(campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({
+        error: 'Campaign not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { campaign }
+    });
+  } catch (error) {
+    console.error('Get campaign error:', error);
+    res.status(500).json({
+      error: 'Failed to load campaign',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/instructor/campaigns/:id - Update campaign
+router.put('/campaigns/:id', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    
+    const campaign = await campaignService.getCampaignById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        error: 'Campaign not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const updates = req.body;
+    const updateQuery = [];
+    const params = [];
+    let paramCount = 1;
+
+    // Build dynamic update query
+    const allowedFields = ['name', 'description', 'subject_line', 'email_template', 
+                          'target_audience', 'schedule_type', 'schedule_time', 'schedule_days'];
+    
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        updateQuery.push(`${field} = $${paramCount}`);
+        params.push(updates[field]);
+        paramCount++;
+      }
+    }
+
+    if (updateQuery.length === 0) {
+      return res.status(400).json({
+        error: 'No valid fields to update',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    updateQuery.push(`updated_at = CURRENT_TIMESTAMP`);
+    params.push(campaignId);
+
+    const query = `UPDATE marketing_campaigns SET ${updateQuery.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const { rows } = await pool.query(query, params);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'update_campaign',
+      details: {
+        campaign_id: campaignId,
+        updates: Object.keys(updates)
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: { campaign: rows[0] }
+    });
+  } catch (error) {
+    console.error('Update campaign error:', error);
+    res.status(500).json({
+      error: 'Failed to update campaign',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// DELETE /api/v1/instructor/campaigns/:id - Delete campaign
+router.delete('/campaigns/:id', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    
+    const campaign = await campaignService.getCampaignById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        error: 'Campaign not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    await campaignService.deleteCampaign(campaignId);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'delete_campaign',
+      details: {
+        campaign_id: campaignId,
+        campaign_name: campaign.name
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: { message: 'Campaign deleted successfully' }
+    });
+  } catch (error) {
+    console.error('Delete campaign error:', error);
+    res.status(500).json({
+      error: 'Failed to delete campaign',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/instructor/campaigns/:id/status - Update campaign status
+router.put('/campaigns/:id/status', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    if (!['draft', 'active', 'paused', 'completed'].includes(status)) {
+      return res.status(400).json({
+        error: 'Invalid status. Must be draft, active, paused, or completed',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const campaign = await campaignService.updateCampaignStatus(campaignId, status);
+
+    if (!campaign) {
+      return res.status(404).json({
+        error: 'Campaign not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'update_campaign_status',
+      details: {
+        campaign_id: campaignId,
+        new_status: status
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Campaign status updated to ${status}`,
+        campaign
+      }
+    });
+  } catch (error) {
+    console.error('Update campaign status error:', error);
+    res.status(500).json({
+      error: 'Failed to update campaign status',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/campaigns/:id/execute - Execute campaign
+router.post('/campaigns/:id/execute', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+
+    const result = await campaignService.executeCampaign(campaignId);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'execute_campaign',
+      details: {
+        campaign_id: campaignId,
+        success_count: result.successCount,
+        fail_count: result.failCount,
+        total_processed: result.totalProcessed
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Campaign execution completed',
+        ...result
+      }
+    });
+  } catch (error) {
+    console.error('Execute campaign error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to execute campaign',
+      code: 'EXECUTION_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/campaigns/:id/stats - Get campaign statistics
+router.get('/campaigns/:id/stats', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+
+    const stats = await campaignService.getCampaignStats(campaignId);
+
+    res.json({
+      success: true,
+      data: { stats }
+    });
+  } catch (error) {
+    console.error('Get campaign stats error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to load campaign statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/campaigns/:id/drip-step - Add drip sequence step
+router.post('/campaigns/:id/drip-step', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    
+    const campaign = await campaignService.getCampaignById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        error: 'Campaign not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    if (campaign.campaign_type !== 'drip') {
+      return res.status(400).json({
+        error: 'Can only add drip steps to drip campaigns',
+        code: 'INVALID_CAMPAIGN_TYPE'
+      });
+    }
+
+    const stepData = req.body;
+    const step = await campaignService.addDripStep(campaignId, stepData);
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'add_drip_step',
+      details: {
+        campaign_id: campaignId,
+        step_id: step.id,
+        sequence_order: step.sequence_order
+      },
+      ip_address: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        message: 'Drip step added successfully',
+        step
+      }
+    });
+  } catch (error) {
+    console.error('Add drip step error:', error);
+    res.status(500).json({
+      error: 'Failed to add drip step',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/campaigns/:id/recipients - Get campaign recipients
+router.get('/campaigns/:id/recipients', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit) || 100;
+    const status = req.query.status;
+
+    let query = `
+      SELECT cr.*, u.email, u.username
+      FROM campaign_recipients cr
+      JOIN users u ON cr.user_id = u.id
+      WHERE cr.campaign_id = $1
+    `;
+    const params = [campaignId];
+
+    if (status) {
+      params.push(status);
+      query += ` AND cr.status = $${params.length}`;
+    }
+
+    query += ` ORDER BY cr.created_at DESC LIMIT $${params.length + 1}`;
+    params.push(limit);
+
+    const { rows: recipients } = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      data: {
+        recipients: recipients.map(r => ({
+          id: r.id,
+          userId: r.user_id,
+          email: r.email,
+          username: r.username,
+          status: r.status,
+          sequenceStep: r.sequence_step,
+          sentAt: r.sent_at,
+          openedAt: r.opened_at,
+          clickedAt: r.clicked_at,
+          openCount: r.open_count,
+          clickCount: r.click_count,
+          errorMessage: r.error_message
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Get campaign recipients error:', error);
+    res.status(500).json({
+      error: 'Failed to load campaign recipients',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
