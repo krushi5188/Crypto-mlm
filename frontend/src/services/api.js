@@ -217,7 +217,14 @@ export const instructorAPI = {
   flagUser: (id, reason) => api.post(`/instructor/fraud-detection/flag/${id}`, { reason }),
   unflagUser: (id, notes) => api.post(`/instructor/fraud-detection/unflag/${id}`, { notes }),
   getMultiAccounts: () => api.get('/instructor/fraud-detection/multi-accounts'),
-  getFraudAlerts: (params) => api.get('/instructor/fraud-detection/alerts', { params })
+  getFraudAlerts: (params) => api.get('/instructor/fraud-detection/alerts', { params }),
+  
+  // Business Intelligence
+  getBIRetention: () => api.get('/instructor/bi/retention'),
+  getBIConversion: () => api.get('/instructor/bi/conversion'),
+  getBINetworkDepth: () => api.get('/instructor/bi/network-depth'),
+  getBIEarningsDistribution: () => api.get('/instructor/bi/earnings-distribution'),
+  getBIGrowthPredictions: () => api.get('/instructor/bi/growth-predictions')
 };
 
 // System API
