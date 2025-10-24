@@ -63,7 +63,7 @@ CREATE TABLE referrals (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     upline_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 5),
+    level INTEGER NOT NULL CHECK (level >= 1),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -80,7 +80,7 @@ CREATE TABLE transactions (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL,
     type transaction_type NOT NULL,
-    level INTEGER NULL CHECK (level IS NULL OR (level BETWEEN 1 AND 5)),
+    level INTEGER NULL CHECK (level IS NULL OR level >= 1),
     triggered_by_user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
     description TEXT NULL,
     balance_after DECIMAL(10,2) NOT NULL,
@@ -132,14 +132,16 @@ CREATE INDEX idx_admin_actions_target_user ON admin_actions(target_user_id);
 INSERT INTO system_config (config_key, config_value, data_type, description) VALUES
 ('simulation_status', 'active', 'string', 'Platform status: active or paused'),
 ('max_participants', '300', 'integer', 'Maximum number of members'),
-('commission_level_1', '10', 'float', 'Level 1 commission percentage'),
-('commission_level_2', '7', 'float', 'Level 2 commission percentage'),
-('commission_level_3', '5', 'float', 'Level 3 commission percentage'),
-('commission_level_4', '3', 'float', 'Level 4 commission percentage'),
-('commission_level_5', '2', 'float', 'Level 5 commission percentage'),
-('recruitment_fee', '100', 'float', 'Fee per recruitment in USDT'),
-('total_coins_distributed', '0', 'float', 'Total USDT distributed as commissions'),
-('total_recruitment_fees', '0', 'float', 'Total recruitment fees collected');
+('commission_direct_fixed', '10', 'float', 'Direct inviter fixed commission (10 AC)'),
+('commission_level_1_cap', '4', 'float', 'Level 1 (top) maximum commission cap (4 AC)'),
+('commission_pool_total', '30', 'float', 'Total pool for chain distribution (30 AC)'),
+('commission_decrement_start', '0.1', 'float', 'Starting decrement between levels (0.1 AC)'),
+('commission_minimum_payout', '0.5', 'float', 'Minimum payout per level (0.5 AC)'),
+('recruitment_fee', '100', 'float', 'Fee per recruitment in AC'),
+('total_coins_distributed', '0', 'float', 'Total AC distributed as commissions'),
+('total_recruitment_fees', '0', 'float', 'Total recruitment fees collected'),
+('developer_pool_balance', '0', 'float', 'Developer pool accumulated balance'),
+('total_to_developer_pool', '0', 'float', 'Total AC sent to developer pool');
 
 -- Comments
 COMMENT ON TABLE users IS 'All user accounts (members and instructor)';
