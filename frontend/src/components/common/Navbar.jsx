@@ -2,12 +2,9 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
-<<<<<<< HEAD
 import LanguageSwitcher from './LanguageSwitcher';
-=======
 import NotificationDropdown from '../NotificationDropdown';
 import RankBadge from '../RankBadge';
->>>>>>> 5be7158 (Auto-commit: Agent tool execution)
 
 const Navbar = () => {
   const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
