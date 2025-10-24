@@ -1050,4 +1050,335 @@ router.get('/fraud-detection/alerts', async (req, res) => {
   }
 });
 
+// ============================================
+// BUSINESS INTELLIGENCE ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/v1/instructor/bi/retention
+ * Get user retention analytics by cohort
+ */
+router.get('/bi/retention', async (req, res) => {
+  try {
+    const cohortQuery = `
+      WITH cohorts AS (
+        SELECT
+          id as user_id,
+          DATE_TRUNC('month', created_at) as cohort_month,
+          created_at
+        FROM users
+        WHERE role = 'student'
+      ),
+      activity AS (
+        SELECT
+          c.cohort_month,
+          EXTRACT(MONTH FROM AGE(DATE_TRUNC('month', t.created_at), c.cohort_month)) as months_since,
+          COUNT(DISTINCT c.user_id) as active_users
+        FROM cohorts c
+        JOIN transactions t ON c.user_id = t.user_id
+        GROUP BY c.cohort_month, months_since
+      )
+      SELECT
+        cohort_month,
+        months_since,
+        active_users,
+        (SELECT COUNT(*) FROM cohorts WHERE cohort_month = activity.cohort_month) as cohort_size
+      FROM activity
+      ORDER BY cohort_month DESC, months_since ASC
+    `;
+
+    const result = await pool.query(cohortQuery);
+
+    res.json({
+      success: true,
+      data: {
+        retention: result.rows
+      }
+    });
+  } catch (error) {
+    console.error('Retention analytics error:', error);
+    res.status(500).json({
+      error: 'Failed to load retention analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/bi/conversion
+ * Get conversion funnel statistics
+ */
+router.get('/bi/conversion', async (req, res) => {
+  try {
+    const funnelQuery = `
+      SELECT
+        COUNT(*) as total_registered,
+        COUNT(CASE WHEN direct_recruits > 0 THEN 1 END) as made_first_recruit,
+        COUNT(CASE WHEN direct_recruits >= 3 THEN 1 END) as recruited_three,
+        COUNT(CASE WHEN total_earned > 10 THEN 1 END) as earned_over_10,
+        COUNT(CASE WHEN network_size >= 10 THEN 1 END) as network_over_10,
+        AVG(EXTRACT(DAY FROM (SELECT MIN(t.created_at) FROM transactions t WHERE t.user_id = users.id AND t.type = 'referral_commission') - users.created_at)) as avg_days_to_first_commission
+      FROM users
+      WHERE role = 'student'
+    `;
+
+    const result = await pool.query(funnelQuery);
+    const stats = result.rows[0];
+
+    const funnel = [
+      {
+        stage: 'Registered',
+        count: parseInt(stats.total_registered),
+        percentage: 100
+      },
+      {
+        stage: 'First Recruit',
+        count: parseInt(stats.made_first_recruit),
+        percentage: (parseInt(stats.made_first_recruit) / parseInt(stats.total_registered)) * 100
+      },
+      {
+        stage: '3+ Recruits',
+        count: parseInt(stats.recruited_three),
+        percentage: (parseInt(stats.recruited_three) / parseInt(stats.total_registered)) * 100
+      },
+      {
+        stage: 'Earned $10+',
+        count: parseInt(stats.earned_over_10),
+        percentage: (parseInt(stats.earned_over_10) / parseInt(stats.total_registered)) * 100
+      },
+      {
+        stage: 'Network 10+',
+        count: parseInt(stats.network_over_10),
+        percentage: (parseInt(stats.network_over_10) / parseInt(stats.total_registered)) * 100
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        funnel,
+        avgDaysToFirstCommission: parseFloat(stats.avg_days_to_first_commission) || 0
+      }
+    });
+  } catch (error) {
+    console.error('Conversion analytics error:', error);
+    res.status(500).json({
+      error: 'Failed to load conversion analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/bi/network-depth
+ * Get network depth distribution
+ */
+router.get('/bi/network-depth', async (req, res) => {
+  try {
+    const depthQuery = `
+      WITH RECURSIVE network_levels AS (
+        -- Level 0: Instructor (root)
+        SELECT
+          id,
+          username,
+          referred_by_id,
+          0 as level
+        FROM users
+        WHERE role = 'instructor'
+
+        UNION ALL
+
+        -- Recursive: Get all downline levels
+        SELECT
+          u.id,
+          u.username,
+          u.referred_by_id,
+          nl.level + 1 as level
+        FROM users u
+        INNER JOIN network_levels nl ON u.referred_by_id = nl.id
+        WHERE u.role = 'student' AND nl.level < 20
+      )
+      SELECT
+        level,
+        COUNT(*) as user_count,
+        AVG(u.network_size) as avg_network_size,
+        SUM(u.total_earned) as total_earned_at_level
+      FROM network_levels nl
+      JOIN users u ON nl.id = u.id
+      WHERE level > 0
+      GROUP BY level
+      ORDER BY level ASC
+    `;
+
+    const result = await pool.query(depthQuery);
+
+    const distribution = result.rows.map(row => ({
+      level: parseInt(row.level),
+      userCount: parseInt(row.user_count),
+      avgNetworkSize: parseFloat(row.avg_network_size),
+      totalEarned: parseFloat(row.total_earned_at_level)
+    }));
+
+    const maxDepth = distribution.length > 0 ? Math.max(...distribution.map(d => d.level)) : 0;
+    const avgDepth = distribution.reduce((sum, d) => sum + (d.level * d.userCount), 0) /
+                     distribution.reduce((sum, d) => sum + d.userCount, 0) || 0;
+
+    res.json({
+      success: true,
+      data: {
+        distribution,
+        maxDepth,
+        avgDepth: parseFloat(avgDepth.toFixed(2))
+      }
+    });
+  } catch (error) {
+    console.error('Network depth analytics error:', error);
+    res.status(500).json({
+      error: 'Failed to load network depth analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/bi/earnings-distribution
+ * Get earnings distribution statistics
+ */
+router.get('/bi/earnings-distribution', async (req, res) => {
+  try {
+    const distributionQuery = `
+      SELECT
+        CASE
+          WHEN total_earned = 0 THEN '0'
+          WHEN total_earned <= 10 THEN '0-10'
+          WHEN total_earned <= 50 THEN '10-50'
+          WHEN total_earned <= 100 THEN '50-100'
+          WHEN total_earned <= 500 THEN '100-500'
+          WHEN total_earned <= 1000 THEN '500-1000'
+          ELSE '1000+'
+        END as earnings_bracket,
+        COUNT(*) as user_count,
+        MIN(total_earned) as min_earned,
+        MAX(total_earned) as max_earned,
+        AVG(total_earned) as avg_earned
+      FROM users
+      WHERE role = 'student'
+      GROUP BY earnings_bracket
+      ORDER BY MIN(total_earned) ASC
+    `;
+
+    const result = await pool.query(distributionQuery);
+
+    // Calculate percentiles
+    const percentilesQuery = `
+      SELECT
+        PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY total_earned) as p25,
+        PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY total_earned) as p50,
+        PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY total_earned) as p75,
+        PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY total_earned) as p90,
+        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY total_earned) as p95
+      FROM users
+      WHERE role = 'student'
+    `;
+
+    const percentilesResult = await pool.query(percentilesQuery);
+    const percentiles = percentilesResult.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        distribution: result.rows.map(row => ({
+          bracket: row.earnings_bracket,
+          userCount: parseInt(row.user_count),
+          minEarned: parseFloat(row.min_earned),
+          maxEarned: parseFloat(row.max_earned),
+          avgEarned: parseFloat(row.avg_earned)
+        })),
+        percentiles: {
+          p25: parseFloat(percentiles.p25),
+          p50: parseFloat(percentiles.p50),
+          p75: parseFloat(percentiles.p75),
+          p90: parseFloat(percentiles.p90),
+          p95: parseFloat(percentiles.p95)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Earnings distribution analytics error:', error);
+    res.status(500).json({
+      error: 'Failed to load earnings distribution analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/bi/growth-predictions
+ * Get growth predictions and projections
+ */
+router.get('/bi/growth-predictions', async (req, res) => {
+  try {
+    // Get historical growth data
+    const growthQuery = `
+      SELECT
+        DATE_TRUNC('day', created_at) as date,
+        COUNT(*) as new_users,
+        SUM(COUNT(*)) OVER (ORDER BY DATE_TRUNC('day', created_at)) as cumulative_users
+      FROM users
+      WHERE role = 'student' AND created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE_TRUNC('day', created_at)
+      ORDER BY date ASC
+    `;
+
+    const growthResult = await pool.query(growthQuery);
+
+    // Simple linear regression for projection
+    const data = growthResult.rows.map((row, index) => ({
+      day: index,
+      users: parseInt(row.cumulative_users)
+    }));
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    const n = data.length;
+
+    data.forEach(point => {
+      sumX += point.day;
+      sumY += point.users;
+      sumXY += point.day * point.users;
+      sumX2 += point.day * point.day;
+    });
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Project next 30 days
+    const projections = [];
+    for (let day = n; day < n + 30; day++) {
+      projections.push({
+        day: day - n + 1,
+        projectedUsers: Math.round(slope * day + intercept)
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        historicalGrowth: growthResult.rows.map(row => ({
+          date: row.date,
+          newUsers: parseInt(row.new_users),
+          cumulativeUsers: parseInt(row.cumulative_users)
+        })),
+        projections,
+        growthRate: slope.toFixed(2) + ' users/day'
+      }
+    });
+  } catch (error) {
+    console.error('Growth predictions error:', error);
+    res.status(500).json({
+      error: 'Failed to load growth predictions',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
