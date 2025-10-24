@@ -12,6 +12,8 @@ const MessageTemplate = require('../models/MessageTemplate');
 const Webhook = require('../models/Webhook');
 const ApiKey = require('../models/ApiKey');
 const UserPreferences = require('../models/UserPreferences');
+const Notification = require('../models/Notification');
+const TwoFactorAuth = require('../models/TwoFactorAuth');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
 const { authenticate } = require('../middleware/auth');
@@ -20,7 +22,6 @@ const { validate } = require('../utils/validation');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 const upload = require('../config/multer');
 const path = require('path');
-const Notification = require('../models/Notification');
 
 // Apply authentication to all student routes
 router.use(authenticate);
@@ -2052,6 +2053,187 @@ router.delete('/notifications/read', async (req, res) => {
     console.error('Delete read notifications error:', error);
     res.status(500).json({
       error: 'Failed to delete read notifications',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * TWO-FACTOR AUTHENTICATION ENDPOINTS
+ */
+
+// GET /api/v1/student/security/2fa - Get 2FA status
+router.get('/security/2fa', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const settings = await TwoFactorAuth.getSettings(userId);
+
+    res.json({
+      success: true,
+      data: { settings }
+    });
+  } catch (error) {
+    console.error('Get 2FA settings error:', error);
+    res.status(500).json({
+      error: 'Failed to get 2FA settings',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/security/2fa/setup - Generate 2FA secret
+router.post('/security/2fa/setup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    const { secret, qrCode, otpauthUrl } = await TwoFactorAuth.generateSecret(userId, userEmail);
+
+    res.json({
+      success: true,
+      data: {
+        secret,
+        qrCode,
+        otpauthUrl
+      }
+    });
+  } catch (error) {
+    console.error('Setup 2FA error:', error);
+    res.status(500).json({
+      error: 'Failed to setup 2FA',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/security/2fa/enable - Enable 2FA with verification
+router.post('/security/2fa/enable', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token, secret } = req.body;
+
+    if (!token || !secret) {
+      return res.status(400).json({
+        error: 'Token and secret are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    const result = await TwoFactorAuth.enable(userId, token, secret);
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: result.error,
+        code: 'INVALID_TOKEN'
+      });
+    }
+
+    // Create security notification
+    await Notification.notifySecurityAlert(
+      userId,
+      'two_factor_enabled',
+      'Two-factor authentication has been enabled on your account'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        message: '2FA enabled successfully',
+        backupCodes: result.backupCodes
+      }
+    });
+  } catch (error) {
+    console.error('Enable 2FA error:', error);
+    res.status(500).json({
+      error: 'Failed to enable 2FA',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/security/2fa/disable - Disable 2FA
+router.post('/security/2fa/disable', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        error: 'Password is required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Verify password
+    const user = await User.findById(userId);
+    const isValidPassword = await require('../utils/passwordHash').comparePassword(password, user.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: 'Invalid password',
+        code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    await TwoFactorAuth.disable(userId);
+
+    // Create security notification
+    await Notification.notifySecurityAlert(
+      userId,
+      'two_factor_disabled',
+      'Two-factor authentication has been disabled on your account'
+    );
+
+    res.json({
+      success: true,
+      data: { message: '2FA disabled successfully' }
+    });
+  } catch (error) {
+    console.error('Disable 2FA error:', error);
+    res.status(500).json({
+      error: 'Failed to disable 2FA',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/security/2fa/regenerate-backup - Regenerate backup codes
+router.post('/security/2fa/regenerate-backup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        error: 'Password is required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Verify password
+    const user = await User.findById(userId);
+    const isValidPassword = await require('../utils/passwordHash').comparePassword(password, user.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: 'Invalid password',
+        code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    const backupCodes = await TwoFactorAuth.regenerateBackupCodes(userId);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Backup codes regenerated successfully',
+        backupCodes
+      }
+    });
+  } catch (error) {
+    console.error('Regenerate backup codes error:', error);
+    res.status(500).json({
+      error: 'Failed to regenerate backup codes',
       code: 'DATABASE_ERROR'
     });
   }
