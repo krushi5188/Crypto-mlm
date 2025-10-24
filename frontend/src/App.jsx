@@ -12,6 +12,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import StudentNetwork from './pages/StudentNetwork';
 import StudentEarnings from './pages/StudentEarnings';
 import StudentProfile from './pages/StudentProfile';
+import StudentSecurity from './pages/StudentSecurity';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
@@ -140,6 +141,14 @@ function App() {
               <ProtectedRoute allowedRole="student">
                 <AppLayout>
                   <StudentProfile />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/security" element={
+              <ProtectedRoute allowedRole="student">
+                <AppLayout>
+                  <StudentSecurity />
                 </AppLayout>
               </ProtectedRoute>
             } />
