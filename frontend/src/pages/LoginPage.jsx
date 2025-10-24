@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -7,9 +7,26 @@ import Input from '../components/common/Input';
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [authMessage, setAuthMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Check for auth message from expired session
+  useEffect(() => {
+    const message = localStorage.getItem('authMessage');
+    if (message) {
+      setAuthMessage(message);
+      localStorage.removeItem('authMessage');
+      
+      // Auto-dismiss after 5 seconds
+      const timer = setTimeout(() => {
+        setAuthMessage('');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -65,6 +82,23 @@ const LoginPage = () => {
             Sign in to access your account
           </p>
         </div>
+
+        {/* Auth Message (Session Expired) */}
+        {authMessage && (
+          <div style={{
+            background: '#ff9800',
+            color: '#ffffff',
+            borderRadius: 'var(--radius-md)',
+            padding: '10px 15px',
+            marginBottom: 'var(--space-lg)',
+            textAlign: 'center',
+            fontSize: '13px',
+            fontWeight: '500',
+            boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)'
+          }}>
+            {authMessage}
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
