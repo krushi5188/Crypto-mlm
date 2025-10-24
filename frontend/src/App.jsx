@@ -15,6 +15,7 @@ import StudentProfile from './pages/StudentProfile';
 import StudentSecurity from './pages/StudentSecurity';
 import StudentAchievements from './pages/StudentAchievements';
 import StudentRank from './pages/StudentRank';
+import StudentDeposits from './pages/StudentDeposits';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
@@ -167,6 +168,14 @@ function App() {
               <ProtectedRoute allowedRole="student">
                 <AppLayout>
                   <StudentRank />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/deposits" element={
+              <ProtectedRoute allowedRole="student">
+                <AppLayout>
+                  <StudentDeposits />
                 </AppLayout>
               </ProtectedRoute>
             } />
