@@ -12,11 +12,8 @@ const { generateReferralCode } = require('../utils/generateReferralCode');
 const { validate } = require('../utils/validation');
 const { registerLimiter, loginLimiter } = require('../middleware/rateLimiter');
 const { checkSimulationActive } = require('../middleware/simulationStatus');
-<<<<<<< HEAD
 const { trackLogin, trackFailedLogin } = require('../middleware/fraudTracking');
-=======
 const { authenticate } = require('../middleware/auth');
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 
 /**
  * POST /api/v1/auth/register
@@ -176,7 +173,6 @@ router.post('/login',
         });
       }
 
-<<<<<<< HEAD
       // Check if 2FA is enabled (OPTIONAL - only required if user enabled it)
       // If user hasn't enabled 2FA, this entire block is skipped
       const has2FA = await TwoFactorAuth.isEnabled(user.id);
@@ -205,12 +201,8 @@ router.post('/login',
         }
       }
 
-      // Check approval status (students only)
-      if (user.role === 'student') {
-=======
       // Check approval status (members only)
       if (user.role === 'member') {
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
         if (user.approval_status === 'pending') {
           return res.status(403).json({
             error: 'Your account is pending instructor approval. Please wait for approval to login.',
