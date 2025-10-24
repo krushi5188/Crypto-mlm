@@ -1686,6 +1686,141 @@ router.get('/api-keys/:id/history', async (req, res) => {
 });
 
 /**
+ * GLOBAL SEARCH ENDPOINT
+ */
+
+// GET /api/v1/student/search - Global search across user's data
+router.get('/search', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const query = req.query.q || '';
+    const limit = parseInt(req.query.limit) || 20;
+
+    if (!query.trim()) {
+      return res.json({
+        success: true,
+        data: { results: [] }
+      });
+    }
+
+    const searchPattern = `%${query.toLowerCase()}%`;
+    const results = [];
+
+    // Search network members
+    const networkQuery = `
+      WITH RECURSIVE downline AS (
+        SELECT id, username, email, created_at, 1 as level
+        FROM users
+        WHERE referred_by_id = $1
+        
+        UNION ALL
+        
+        SELECT u.id, u.username, u.email, u.created_at, d.level + 1
+        FROM users u
+        INNER JOIN downline d ON u.referred_by_id = d.id
+        WHERE d.level < 10
+      )
+      SELECT id, username, email, level, created_at
+      FROM downline
+      WHERE LOWER(username) LIKE $2 OR LOWER(email) LIKE $2
+      LIMIT 5
+    `;
+
+    const networkResults = await require('../config/database').pool.query(
+      networkQuery,
+      [userId, searchPattern]
+    );
+
+    for (const member of networkResults.rows) {
+      results.push({
+        type: 'network_member',
+        title: member.username || member.email,
+        subtitle: `Level ${member.level} • Joined ${new Date(member.created_at).toLocaleDateString()}`,
+        data: {
+          id: member.id,
+          level: member.level
+        }
+      });
+    }
+
+    // Search transactions
+    const transactionsQuery = `
+      SELECT t.id, t.description, t.amount, t.type, t.created_at, u.username
+      FROM transactions t
+      LEFT JOIN users u ON t.triggered_by_user_id = u.id
+      WHERE t.user_id = $1 AND LOWER(t.description) LIKE $2
+      ORDER BY t.created_at DESC
+      LIMIT 5
+    `;
+
+    const transactionResults = await require('../config/database').pool.query(
+      transactionsQuery,
+      [userId, searchPattern]
+    );
+
+    for (const txn of transactionResults.rows) {
+      results.push({
+        type: 'transaction',
+        title: txn.description,
+        subtitle: `${parseFloat(txn.amount).toFixed(2)} USDT • ${new Date(txn.created_at).toLocaleDateString()}`,
+        data: {
+          id: txn.id,
+          amount: parseFloat(txn.amount),
+          type: txn.type
+        }
+      });
+    }
+
+    // Search goals
+    const goalsQuery = `
+      SELECT id, goal_type, target_value, current_value, status
+      FROM goals
+      WHERE user_id = $1 AND LOWER(goal_type) LIKE $2 AND status != 'completed'
+      LIMIT 3
+    `;
+
+    const goalResults = await require('../config/database').pool.query(
+      goalsQuery,
+      [userId, searchPattern]
+    );
+
+    for (const goal of goalResults.rows) {
+      const progress = goal.target_value > 0 
+        ? Math.round((goal.current_value / goal.target_value) * 100)
+        : 0;
+      
+      results.push({
+        type: 'goal',
+        title: `${goal.goal_type.replace('_', ' ').toUpperCase()} Goal`,
+        subtitle: `${goal.current_value} / ${goal.target_value} (${progress}%)`,
+        data: {
+          id: goal.id,
+          status: goal.status,
+          progress
+        }
+      });
+    }
+
+    // Limit total results
+    const limitedResults = results.slice(0, limit);
+
+    res.json({
+      success: true,
+      data: {
+        results: limitedResults,
+        total: results.length
+      }
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({
+      error: 'Failed to perform search',
+      code: 'SEARCH_ERROR'
+    });
+  }
+});
+
+/**
  * USER PREFERENCES ENDPOINTS
  */
 
