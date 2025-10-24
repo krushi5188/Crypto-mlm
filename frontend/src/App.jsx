@@ -5,6 +5,7 @@ import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ErrorPage from './pages/ErrorPage';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentNetwork from './pages/StudentNetwork';
 import StudentEarnings from './pages/StudentEarnings';
@@ -98,6 +99,9 @@ function App() {
               </AppLayout>
             </PublicRoute>
           } />
+
+          {/* Error Route - Public, no auth required */}
+          <Route path="/error" element={<ErrorPage />} />
 
           {/* Student Routes */}
           <Route path="/dashboard" element={
