@@ -48,13 +48,39 @@ export const authAPI = {
 
 // Student API
 export const studentAPI = {
+  // Dashboard & Profile
   getDashboard: () => api.get('/student/dashboard'),
   getNetwork: (level) => api.get('/student/network', { params: { level } }),
   getEarnings: (params) => api.get('/student/earnings', { params }),
   getProfile: () => api.get('/student/profile'),
   updateProfile: (data) => api.put('/student/profile', data),
   getDirectInvites: () => api.get('/student/direct-invites'),
-  getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`)
+  getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`),
+  
+  // Withdrawals
+  getWithdrawals: (params) => api.get('/student/withdrawals', { params }),
+  createWithdrawal: (data) => api.post('/student/withdrawals', data),
+  cancelWithdrawal: (id) => api.delete(`/student/withdrawals/${id}`),
+  getWithdrawalStats: () => api.get('/student/withdrawal-stats'),
+  
+  // Goals
+  getGoals: (params) => api.get('/student/goals', { params }),
+  createGoal: (data) => api.post('/student/goals', data),
+  updateGoal: (id, data) => api.put(`/student/goals/${id}`, data),
+  deleteGoal: (id) => api.delete(`/student/goals/${id}`),
+  getGoalRecommendations: () => api.get('/student/goal-recommendations'),
+  
+  // Wallets
+  getWallets: () => api.get('/student/wallets'),
+  addWallet: (data) => api.post('/student/wallets', data),
+  setPrimaryWallet: (id) => api.put(`/student/wallets/${id}/primary`),
+  deleteWallet: (id) => api.delete(`/student/wallets/${id}`),
+  
+  // Analytics
+  getEarningsChart: (period) => api.get('/student/analytics/earnings-chart', { params: { period } }),
+  getNetworkGrowth: (period) => api.get('/student/analytics/network-growth', { params: { period } }),
+  getTopPerformers: (limit) => api.get('/student/analytics/top-performers', { params: { limit } }),
+  getDashboardStats: () => api.get('/student/analytics/dashboard-stats')
 };
 
 // Instructor API
