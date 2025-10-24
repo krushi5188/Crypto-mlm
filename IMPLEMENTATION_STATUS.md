@@ -13,13 +13,13 @@
 2. **Copy Referral Link**
    - ✅ One-click clipboard copy
    - ✅ Visual feedback
-   - **Location:** Already in StudentDashboard.jsx
+   - **Location:** Already in MemberDashboard.jsx
 
 3. **Transaction Search**
    - ✅ Email filtering
    - ✅ Amount range filtering
    - ✅ Real-time search with useMemo
-   - **File:** `StudentEarnings.jsx`
+   - **File:** `MemberEarnings.jsx`
 
 4. **Email Notifications**
    - ✅ Complete email service with nodemailer
@@ -180,7 +180,7 @@ const { notifications, isConnected } = useWebSocket();
 
 ### Priority 1: Complete Existing Features
 1. **Withdrawal System UI** (30 minutes)
-   - Create `StudentWithdrawals.jsx`
+   - Create `MemberWithdrawals.jsx`
    - Add route to App.jsx
    - Display withdrawal history
    - Request withdrawal form
@@ -199,7 +199,7 @@ const { notifications, isConnected } = useWebSocket();
    - Create API routes
 
 4. **Analytics Dashboard UI** (2 hours)
-   - Create `StudentAnalytics.jsx`
+   - Create `MemberAnalytics.jsx`
    - Add charts with Recharts
    - Show earnings projections
    - Show network growth forecast
