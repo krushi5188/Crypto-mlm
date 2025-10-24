@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { studentAPI } from '../services/api';
 import Card from '../components/common/Card';
-import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { formatCurrency, formatDateTime, redactEmail } from '../utils/formatters';
 
 const StudentEarnings = () => {
   const [earnings, setEarnings] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [expandedInvite, setExpandedInvite] = useState(null);
+  const [inviteTransactions, setInviteTransactions] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedLevel, setSelectedLevel] = useState('all');
-  const [stats, setStats] = useState({
-    totalEarned: 0,
-    byLevel: {}
-  });
+  const [totalEarned, setTotalEarned] = useState(0);
 
   useEffect(() => {
     loadEarnings();
@@ -18,10 +17,20 @@ const StudentEarnings = () => {
 
   const loadEarnings = async () => {
     try {
-      const response = await studentAPI.getEarnings();
-      const earningsData = response.data.data.earnings || [];
+      const [earningsResponse, invitesResponse] = await Promise.all([
+        studentAPI.getEarnings(),
+        studentAPI.getDirectInvites()
+      ]);
+
+      const earningsData = earningsResponse.data.data.transactions || [];
       setEarnings(earningsData);
-      calculateStats(earningsData);
+
+      const invitesData = invitesResponse.data.data.invites || [];
+      setInvites(invitesData);
+
+      // Calculate total from all earnings
+      const total = earningsData.reduce((sum, e) => sum + e.amount, 0);
+      setTotalEarned(total);
     } catch (error) {
       console.error('Failed to load earnings:', error);
     } finally {
@@ -29,23 +38,31 @@ const StudentEarnings = () => {
     }
   };
 
-  const calculateStats = (earningsData) => {
-    let totalEarned = 0;
-    const byLevel = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const loadInviteTransactions = async (inviteUserId) => {
+    if (inviteTransactions[inviteUserId]) {
+      // Already loaded
+      return;
+    }
 
-    earningsData.forEach((earning) => {
-      totalEarned += earning.amount;
-      if (earning.level && earning.level >= 1 && earning.level <= 5) {
-        byLevel[earning.level] += earning.amount;
-      }
-    });
-
-    setStats({ totalEarned, byLevel });
+    try {
+      const response = await studentAPI.getInviteTransactions(inviteUserId);
+      setInviteTransactions(prev => ({
+        ...prev,
+        [inviteUserId]: response.data.data.transactions || []
+      }));
+    } catch (error) {
+      console.error('Failed to load invite transactions:', error);
+    }
   };
 
-  const filteredEarnings = selectedLevel === 'all'
-    ? earnings
-    : earnings.filter(e => e.level === parseInt(selectedLevel));
+  const toggleExpand = async (inviteUserId) => {
+    if (expandedInvite === inviteUserId) {
+      setExpandedInvite(null);
+    } else {
+      setExpandedInvite(inviteUserId);
+      await loadInviteTransactions(inviteUserId);
+    }
+  };
 
   if (loading) {
     return (
@@ -62,16 +79,11 @@ const StudentEarnings = () => {
     padding: '2rem'
   };
 
-  const getLevelColor = (level) => {
-    const colors = ['#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e'];
-    return colors[level - 1] || '#a0aec0';
-  };
-
   return (
     <div style={containerStyles}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>My Earnings</h1>
-        <p style={{ color: '#a0aec0' }}>Your commission history and earnings breakdown</p>
+        <p style={{ color: '#a0aec0' }}>Your commission history from direct invites</p>
       </div>
 
       {/* Total Earned */}
@@ -85,136 +97,123 @@ const StudentEarnings = () => {
             Total Earned
           </div>
           <div style={{ fontSize: '3rem', fontWeight: '700', color: '#10b981' }}>
-            {formatCurrency(stats.totalEarned)} USDT
+            {formatCurrency(totalEarned)} USDT
           </div>
         </div>
       </Card>
 
-      {/* Earnings by Level */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        {[1, 2, 3, 4, 5].map(level => (
-          <Card key={level} style={{ textAlign: 'center', padding: '1.5rem' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-              Level {level}
-            </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: getLevelColor(level) }}>
-              {formatCurrency(stats.byLevel[level] || 0)} USDT
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filter */}
-      <Card style={{ marginBottom: '2rem', padding: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setSelectedLevel('all')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: selectedLevel === 'all' ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
-              color: selectedLevel === 'all' ? '#fff' : '#a0aec0',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            All Levels
-          </button>
-          {[1, 2, 3, 4, 5].map(level => (
-            <button
-              key={level}
-              onClick={() => setSelectedLevel(level.toString())}
-              style={{
-                padding: '0.5rem 1rem',
-                background: selectedLevel === level.toString() ? getLevelColor(level) : 'rgba(255, 255, 255, 0.1)',
-                color: selectedLevel === level.toString() ? '#1a1a1a' : '#a0aec0',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              Level {level}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Earnings History */}
+      {/* People You Invited */}
       <Card>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <h3 style={{ fontSize: '1.25rem' }}>Transaction History</h3>
+          <h3 style={{ fontSize: '1.25rem' }}>People You Invited</h3>
           <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            {filteredEarnings.length} {filteredEarnings.length === 1 ? 'transaction' : 'transactions'}
+            {invites.length} {invites.length === 1 ? 'invite' : 'invites'}
           </p>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Date</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Type</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Level</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>From</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Amount</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Invited User</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>Total Earned</th>
+                <th style={{ padding: '1rem', textAlign: 'center' }}>Transactions</th>
+                <th style={{ padding: '1rem', textAlign: 'center' }}>Details</th>
               </tr>
             </thead>
             <tbody>
-              {filteredEarnings.length === 0 ? (
+              {invites.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
-                    {earnings.length === 0
-                      ? 'No earnings yet. Start building your network to earn commissions!'
-                      : 'No transactions found for this filter.'}
+                  <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
+                    No direct invites yet. Share your referral link to start earning!
                   </td>
                 </tr>
               ) : (
-                filteredEarnings.map((earning, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <td style={{ padding: '1rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                      {formatDateTime(earning.createdAt)}
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '700',
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        color: '#10b981'
-                      }}>
-                        {earning.type === 'referral_bonus' ? 'REFERRAL' : 'COMMISSION'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      {earning.level ? (
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '12px',
-                          fontSize: '0.875rem',
-                          fontWeight: '700',
-                          background: `${getLevelColor(earning.level)}33`,
-                          color: getLevelColor(earning.level)
-                        }}>
-                          L{earning.level}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#a0aec0', fontSize: '0.875rem' }}>-</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '1rem', fontWeight: '600' }}>
-                      {earning.triggeredBy || earning.fromUser || '-'}
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}>
-                      +{formatCurrency(earning.amount)} USDT
-                    </td>
-                  </tr>
+                invites.map((invite) => (
+                  <React.Fragment key={invite.userId}>
+                    {/* Main row */}
+                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                      <td style={{ padding: '1rem', fontWeight: '600' }}>
+                        {redactEmail(invite.email)}
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'right', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}>
+                        {formatCurrency(invite.totalEarned)} USDT
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'center', color: '#a0aec0' }}>
+                        {invite.transactionCount} {invite.transactionCount === 1 ? 'transaction' : 'transactions'}
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                        <button
+                          onClick={() => toggleExpand(invite.userId)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: 'none',
+                            color: '#fff',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          {expandedInvite === invite.userId ? '▲ Hide' : '▼ Show'}
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Expanded row with transactions */}
+                    {expandedInvite === invite.userId && (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '0', background: 'rgba(255, 255, 255, 0.05)' }}>
+                          {!inviteTransactions[invite.userId] ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
+                              Loading transactions...
+                            </div>
+                          ) : inviteTransactions[invite.userId].length === 0 ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
+                              No transactions yet
+                            </div>
+                          ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Date</th>
+                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Type</th>
+                                  <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#a0aec0' }}>Amount</th>
+                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Description</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {inviteTransactions[invite.userId].map((transaction, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#a0aec0' }}>
+                                      {formatDateTime(transaction.createdAt)}
+                                    </td>
+                                    <td style={{ padding: '0.75rem' }}>
+                                      <span style={{
+                                        padding: '0.25rem 0.5rem',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '700',
+                                        background: 'rgba(16, 185, 129, 0.2)',
+                                        color: '#10b981'
+                                      }}>
+                                        {transaction.type === 'referral_bonus' ? 'REFERRAL' : transaction.type.toUpperCase()}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '600', color: '#10b981' }}>
+                                      +{formatCurrency(transaction.amount)} USDT
+                                    </td>
+                                    <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                                      {transaction.description || '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
