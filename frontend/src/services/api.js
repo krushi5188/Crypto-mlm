@@ -187,7 +187,10 @@ export const studentAPI = {
   getPreferences: () => api.get('/student/preferences'),
   createPreferences: () => api.post('/student/preferences'),
   updatePreferences: (data) => api.put('/student/preferences', data),
-  completeOnboarding: () => api.post('/student/preferences/complete-onboarding')
+  completeOnboarding: () => api.post('/student/preferences/complete-onboarding'),
+  
+  // Global Search
+  search: (query, limit) => api.get('/student/search', { params: { q: query, limit } })
 };
 
 // Instructor API
