@@ -281,7 +281,7 @@ class EmailService {
             </div>
             <p>Keep pushing forward and reaching new heights!</p>
             <p style="text-align: center;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}/student/achievements" class="button">View Achievements</a>
+              <a href="${process.env.APP_URL || 'http://localhost:3000'}/member/achievements" class="button">View Achievements</a>
             </p>
             <p>Best regards,<br>The Atlas Network Team</p>
           </div>
@@ -367,7 +367,7 @@ class EmailService {
             </div>
             <p>If this was you, no action is needed. If you don't recognize this activity, please secure your account immediately.</p>
             <p style="text-align: center;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}/student/security" class="button">Review Security</a>
+              <a href="${process.env.APP_URL || 'http://localhost:3000'}/member/security" class="button">Review Security</a>
             </p>
             <p>Best regards,<br>The Atlas Network Team</p>
           </div>
