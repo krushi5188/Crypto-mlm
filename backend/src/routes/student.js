@@ -14,6 +14,7 @@ const ApiKey = require('../models/ApiKey');
 const UserPreferences = require('../models/UserPreferences');
 const Notification = require('../models/Notification');
 const TwoFactorAuth = require('../models/TwoFactorAuth');
+const Achievement = require('../models/Achievement');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
 const { authenticate } = require('../middleware/auth');
@@ -2234,6 +2235,93 @@ router.post('/security/2fa/regenerate-backup', async (req, res) => {
     console.error('Regenerate backup codes error:', error);
     res.status(500).json({
       error: 'Failed to regenerate backup codes',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * ACHIEVEMENTS ENDPOINTS
+ */
+
+// GET /api/v1/student/achievements - Get user's achievement progress
+router.get('/achievements', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const progress = await Achievement.getUserProgress(userId);
+    const totalPoints = await Achievement.getUserPoints(userId);
+
+    res.json({
+      success: true,
+      data: {
+        achievements: progress,
+        totalPoints
+      }
+    });
+  } catch (error) {
+    console.error('Get achievements error:', error);
+    res.status(500).json({
+      error: 'Failed to load achievements',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/achievements/unlocked - Get only unlocked achievements
+router.get('/achievements/unlocked', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const unlocked = await Achievement.getUserAchievements(userId);
+
+    res.json({
+      success: true,
+      data: { achievements: unlocked }
+    });
+  } catch (error) {
+    console.error('Get unlocked achievements error:', error);
+    res.status(500).json({
+      error: 'Failed to load unlocked achievements',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/achievements/check - Manually check for new achievements
+router.post('/achievements/check', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const newAchievements = await Achievement.checkAchievements(userId);
+
+    res.json({
+      success: true,
+      data: {
+        message: newAchievements.length > 0 ? `Unlocked ${newAchievements.length} new achievement(s)!` : 'No new achievements',
+        newAchievements
+      }
+    });
+  } catch (error) {
+    console.error('Check achievements error:', error);
+    res.status(500).json({
+      error: 'Failed to check achievements',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/achievements/leaderboard - Get achievement leaderboard
+router.get('/achievements/leaderboard', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const leaderboard = await Achievement.getLeaderboard(limit);
+
+    res.json({
+      success: true,
+      data: { leaderboard }
+    });
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    res.status(500).json({
+      error: 'Failed to load leaderboard',
       code: 'DATABASE_ERROR'
     });
   }
