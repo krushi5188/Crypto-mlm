@@ -2440,4 +2440,148 @@ router.get('/rank/leaderboard', async (req, res) => {
   }
 });
 
+/**
+ * DEPOSIT ENDPOINTS
+ */
+
+// GET /api/v1/student/deposits - Get user's deposits
+router.get('/deposits', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    const { deposits, total } = await Deposit.getUserDeposits(userId, page, limit);
+
+    res.json({
+      success: true,
+      data: {
+        deposits,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalRecords: total
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get deposits error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposits',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/deposits - Submit deposit request
+router.post('/deposits', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { amount, wallet_address, network, transaction_hash } = req.body;
+
+    // Validate required fields
+    if (!amount || !wallet_address || !network || !transaction_hash) {
+      return res.status(400).json({
+        error: 'All fields are required (amount, wallet_address, network, transaction_hash)',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Validate amount
+    if (amount <= 0) {
+      return res.status(400).json({
+        error: 'Amount must be greater than 0',
+        code: 'INVALID_AMOUNT'
+      });
+    }
+
+    // Check if transaction hash already exists
+    const exists = await Deposit.existsByTxHash(transaction_hash);
+    if (exists) {
+      return res.status(400).json({
+        error: 'This transaction hash has already been submitted',
+        code: 'DUPLICATE_TRANSACTION'
+      });
+    }
+
+    // Create deposit
+    const deposit = await Deposit.create({
+      user_id: userId,
+      amount: parseFloat(amount),
+      wallet_address,
+      network,
+      transaction_hash
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Deposit request submitted successfully. It will be confirmed shortly.',
+        deposit
+      }
+    });
+  } catch (error) {
+    console.error('Create deposit error:', error);
+    res.status(500).json({
+      error: 'Failed to submit deposit',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/deposits/stats - Get deposit statistics
+router.get('/deposits/stats', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await Deposit.getUserStats(userId);
+
+    res.json({
+      success: true,
+      data: { stats }
+    });
+  } catch (error) {
+    console.error('Get deposit stats error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposit statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/deposits/:id - Get single deposit
+router.get('/deposits/:id', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const depositId = parseInt(req.params.id);
+
+    const deposit = await Deposit.getById(depositId);
+
+    if (!deposit) {
+      return res.status(404).json({
+        error: 'Deposit not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Verify ownership
+    if (deposit.user_id !== userId) {
+      return res.status(403).json({
+        error: 'Unauthorized access',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { deposit }
+    });
+  } catch (error) {
+    console.error('Get deposit error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposit',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
