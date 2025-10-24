@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentApiKeys = () => {
+const MemberApiKeys = () => {
   const [apiKeys, setApiKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +25,7 @@ const StudentApiKeys = () => {
   const loadApiKeys = async () => {
     try {
       setLoading(true);
-      const response = await studentAPI.getApiKeys();
+      const response = await memberAPI.getApiKeys();
       setApiKeys(response.data.data.keys);
       setError(null);
     } catch (error) {
@@ -39,7 +39,7 @@ const StudentApiKeys = () => {
   const handleCreateKey = async (e) => {
     e.preventDefault();
     try {
-      const response = await studentAPI.createApiKey(newKeyData);
+      const response = await memberAPI.createApiKey(newKeyData);
       setCreatedKey(response.data.data.apiKey);
       setShowCreateForm(false);
       setNewKeyData({
@@ -58,7 +58,7 @@ const StudentApiKeys = () => {
     if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return;
 
     try {
-      await studentAPI.deleteApiKey(keyId);
+      await memberAPI.deleteApiKey(keyId);
       alert('API key deleted successfully');
       loadApiKeys();
       if (selectedKey?.id === keyId) {
@@ -72,7 +72,7 @@ const StudentApiKeys = () => {
   const handleViewStats = async (key) => {
     setSelectedKey(key);
     try {
-      const response = await studentAPI.getApiKeyStats(key.id);
+      const response = await memberAPI.getApiKeyStats(key.id);
       setKeyStats(response.data.data.stats);
     } catch (error) {
       console.error('Failed to load stats:', error);
@@ -699,4 +699,4 @@ const StudentApiKeys = () => {
   );
 };
 
-export default StudentApiKeys;
+export default MemberApiKeys;

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency } from '../utils/formatters';
 
-const StudentProfile = () => {
+const MemberProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ const StudentProfile = () => {
 
   const loadProfile = async () => {
     try {
-      const response = await studentAPI.getProfile();
+      const response = await memberAPI.getProfile();
       setProfile(response.data.data);
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -193,4 +193,4 @@ const StudentProfile = () => {
   );
 };
 
-export default StudentProfile;
+export default MemberProfile;

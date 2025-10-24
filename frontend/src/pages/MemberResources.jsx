@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentResources = () => {
+const MemberResources = () => {
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,8 +23,8 @@ const StudentResources = () => {
     try {
       setLoading(true);
       const [resourcesRes, categoriesRes] = await Promise.all([
-        studentAPI.getResources(filters),
-        studentAPI.getResourceCategories()
+        memberAPI.getResources(filters),
+        memberAPI.getResourceCategories()
       ]);
       setResources(resourcesRes.data.data.resources);
       setCategories(categoriesRes.data.data.categories);
@@ -40,7 +40,7 @@ const StudentResources = () => {
   const handleViewResource = async (resource) => {
     setSelectedResource(resource);
     try {
-      await studentAPI.getResource(resource.id);
+      await memberAPI.getResource(resource.id);
     } catch (error) {
       console.error('Failed to log resource view:', error);
     }
@@ -48,7 +48,7 @@ const StudentResources = () => {
 
   const handleDownload = async (resourceId, fileUrl) => {
     try {
-      await studentAPI.logDownload(resourceId);
+      await memberAPI.logDownload(resourceId);
       window.open(fileUrl, '_blank');
     } catch (error) {
       console.error('Failed to log download:', error);
@@ -451,4 +451,4 @@ const StudentResources = () => {
   );
 };
 
-export default StudentResources;
+export default MemberResources;

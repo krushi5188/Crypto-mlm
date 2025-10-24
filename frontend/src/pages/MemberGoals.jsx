@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency } from '../utils/formatters';
 
-const StudentGoals = () => {
+const MemberGoals = () => {
   const [goals, setGoals] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ const StudentGoals = () => {
 
   const loadGoals = async () => {
     try {
-      const response = await studentAPI.getGoals();
+      const response = await memberAPI.getGoals();
       setGoals(response.data.data.goals || []);
     } catch (error) {
       console.error('Failed to load goals:', error);
@@ -33,7 +33,7 @@ const StudentGoals = () => {
 
   const loadRecommendations = async () => {
     try {
-      const response = await studentAPI.getGoalRecommendations();
+      const response = await memberAPI.getGoalRecommendations();
       setRecommendations(response.data.data.recommendations || []);
     } catch (error) {
       console.error('Failed to load recommendations:', error);
@@ -44,7 +44,7 @@ const StudentGoals = () => {
     e.preventDefault();
 
     try {
-      await studentAPI.createGoal({
+      await memberAPI.createGoal({
         goal_type: formData.goal_type,
         target_value: parseFloat(formData.target_value),
         target_date: formData.target_date || null
@@ -62,7 +62,7 @@ const StudentGoals = () => {
     if (!confirm('Are you sure you want to delete this goal?')) return;
 
     try {
-      await studentAPI.deleteGoal(id);
+      await memberAPI.deleteGoal(id);
       await loadGoals();
     } catch (error) {
       alert('Failed to delete goal');
@@ -411,4 +411,4 @@ const StudentGoals = () => {
   );
 };
 
-export default StudentGoals;
+export default MemberGoals;

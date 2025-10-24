@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import { formatCurrency, formatDateTime, redactEmail } from '../utils/formatters';
 
-const StudentEarnings = () => {
+const MemberEarnings = () => {
   const [earnings, setEarnings] = useState([]);
   const [invites, setInvites] = useState([]);
   const [expandedInvite, setExpandedInvite] = useState(null);
@@ -26,8 +26,8 @@ const StudentEarnings = () => {
   const loadEarnings = async () => {
     try {
       const [earningsResponse, invitesResponse] = await Promise.all([
-        studentAPI.getEarnings(),
-        studentAPI.getDirectInvites()
+        memberAPI.getEarnings(),
+        memberAPI.getDirectInvites()
       ]);
 
       const earningsData = earningsResponse.data.data.transactions || [];
@@ -53,7 +53,7 @@ const StudentEarnings = () => {
     }
 
     try {
-      const response = await studentAPI.getInviteTransactions(inviteUserId);
+      const response = await memberAPI.getInviteTransactions(inviteUserId);
       setInviteTransactions(prev => ({
         ...prev,
         [inviteUserId]: response.data.data.transactions || []
@@ -378,4 +378,4 @@ const StudentEarnings = () => {
   );
 };
 
-export default StudentEarnings;
+export default MemberEarnings;

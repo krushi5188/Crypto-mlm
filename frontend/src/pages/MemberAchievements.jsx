@@ -3,7 +3,7 @@ import { gamificationAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentAchievements = () => {
+const MemberAchievements = () => {
   const [progress, setProgress] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -305,4 +305,4 @@ const StudentAchievements = () => {
   );
 };
 
-export default StudentAchievements;
+export default MemberAchievements;

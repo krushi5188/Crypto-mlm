@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import { formatCurrency } from '../utils/formatters';
 
-const StudentNetwork = () => {
+const MemberNetwork = () => {
   const [network, setNetwork] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +13,7 @@ const StudentNetwork = () => {
 
   const loadNetwork = async () => {
     try {
-      const response = await studentAPI.getNetwork();
+      const response = await memberAPI.getNetwork();
       setNetwork(response.data.data.downline || []);
     } catch (error) {
       console.error('Failed to load network:', error);
@@ -83,4 +83,4 @@ const StudentNetwork = () => {
   );
 };
 
-export default StudentNetwork;
+export default MemberNetwork;

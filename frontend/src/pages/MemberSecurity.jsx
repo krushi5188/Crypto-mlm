@@ -4,7 +4,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatTimeAgo } from '../utils/formatters';
 
-const StudentSecurity = () => {
+const MemberSecurity = () => {
   const [loginHistory, setLoginHistory] = useState([]);
   const [securityEvents, setSecurityEvents] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -461,4 +461,4 @@ const StudentSecurity = () => {
   );
 };
 
-export default StudentSecurity;
+export default MemberSecurity;

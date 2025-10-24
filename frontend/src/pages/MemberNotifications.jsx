@@ -4,7 +4,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatTimeAgo } from '../utils/formatters';
 
-const StudentNotifications = () => {
+const MemberNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -329,4 +329,4 @@ const StudentNotifications = () => {
   );
 };
 
-export default StudentNotifications;
+export default MemberNotifications;

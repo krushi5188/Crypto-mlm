@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 
-const StudentWithdrawals = () => {
+const MemberWithdrawals = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [stats, setStats] = useState(null);
   const [wallets, setWallets] = useState([]);
@@ -36,9 +36,9 @@ const StudentWithdrawals = () => {
   const loadData = async () => {
     try {
       const [withdrawalsRes, statsRes, walletsRes] = await Promise.all([
-        studentAPI.getWithdrawals(),
-        studentAPI.getWithdrawalStats(),
-        studentAPI.getWallets()
+        memberAPI.getWithdrawals(),
+        memberAPI.getWithdrawalStats(),
+        memberAPI.getWallets()
       ]);
       setWithdrawals(withdrawalsRes.data.data.withdrawals || []);
       setStats(statsRes.data.data);
@@ -69,7 +69,7 @@ const StudentWithdrawals = () => {
         return;
       }
       const wallet = wallets.find(w => w.id === parseInt(selectedWallet));
-      await studentAPI.createWithdrawal({
+      await memberAPI.createWithdrawal({
         amount: withdrawAmount,
         wallet_id: parseInt(selectedWallet),
         wallet_address: wallet.address,
@@ -91,7 +91,7 @@ const StudentWithdrawals = () => {
   const handleCancelWithdrawal = async (withdrawalId) => {
     if (!window.confirm('Are you sure you want to cancel this withdrawal request?')) return;
     try {
-      await studentAPI.cancelWithdrawal(withdrawalId);
+      await memberAPI.cancelWithdrawal(withdrawalId);
       await loadData();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to cancel withdrawal');
@@ -220,4 +220,4 @@ const StudentWithdrawals = () => {
   );
 };
 
-export default StudentWithdrawals;
+export default MemberWithdrawals;

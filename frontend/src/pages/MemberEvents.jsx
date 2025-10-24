@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentEvents = () => {
+const MemberEvents = () => {
   const [events, setEvents] = useState([]);
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +19,10 @@ const StudentEvents = () => {
     try {
       setLoading(true);
       if (activeTab === 'all') {
-        const response = await studentAPI.getEvents({ upcoming: 'true' });
+        const response = await memberAPI.getEvents({ upcoming: 'true' });
         setEvents(response.data.data.events);
       } else {
-        const response = await studentAPI.getMyEvents({ upcoming: 'true' });
+        const response = await memberAPI.getMyEvents({ upcoming: 'true' });
         setMyEvents(response.data.data.events);
       }
       setError(null);
@@ -36,11 +36,11 @@ const StudentEvents = () => {
 
   const handleRSVP = async (eventId, status = 'accepted') => {
     try {
-      await studentAPI.rsvpEvent(eventId, { status });
+      await memberAPI.rsvpEvent(eventId, { status });
       alert(`Successfully RSVP'd to the event!`);
       loadEvents();
       if (selectedEvent && selectedEvent.id === eventId) {
-        const response = await studentAPI.getEvent(eventId);
+        const response = await memberAPI.getEvent(eventId);
         setSelectedEvent(response.data.data.event);
       }
     } catch (error) {
@@ -52,11 +52,11 @@ const StudentEvents = () => {
     if (!confirm('Are you sure you want to cancel your RSVP?')) return;
 
     try {
-      await studentAPI.cancelRsvp(eventId);
+      await memberAPI.cancelRsvp(eventId);
       alert('RSVP cancelled successfully');
       loadEvents();
       if (selectedEvent && selectedEvent.id === eventId) {
-        const response = await studentAPI.getEvent(eventId);
+        const response = await memberAPI.getEvent(eventId);
         setSelectedEvent(response.data.data.event);
       }
     } catch (error) {
@@ -246,7 +246,7 @@ const StudentEvents = () => {
                   e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
                 }}
                 onClick={() => {
-                  studentAPI.getEvent(event.id).then(res => {
+                  memberAPI.getEvent(event.id).then(res => {
                     setSelectedEvent(res.data.data.event);
                   });
                 }}
@@ -477,4 +477,4 @@ const StudentEvents = () => {
   );
 };
 
-export default StudentEvents;
+export default MemberEvents;

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency } from '../utils/formatters';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const StudentAnalytics = () => {
+const MemberAnalytics = () => {
   const [analytics, setAnalytics] = useState(null);
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,8 +20,8 @@ const StudentAnalytics = () => {
     try {
       setLoading(true);
       const [analyticsRes, insightsRes] = await Promise.all([
-        studentAPI.get('/analytics/predictions'),
-        studentAPI.get('/analytics/insights')
+        memberAPI.get('/analytics/predictions'),
+        memberAPI.get('/analytics/insights')
       ]);
 
       setAnalytics(analyticsRes.data.data.analytics);
@@ -38,7 +38,7 @@ const StudentAnalytics = () => {
   const handleRecalculate = async () => {
     try {
       setRecalculating(true);
-      await studentAPI.post('/analytics/recalculate');
+      await memberAPI.post('/analytics/recalculate');
       await loadAnalytics();
     } catch (error) {
       console.error('Failed to recalculate:', error);
@@ -453,4 +453,4 @@ const StudentAnalytics = () => {
   );
 };
 
-export default StudentAnalytics;
+export default MemberAnalytics;

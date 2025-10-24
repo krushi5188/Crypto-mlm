@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 
-const StudentWallets = () => {
+const MemberWallets = () => {
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -27,7 +27,7 @@ const StudentWallets = () => {
 
   const loadWallets = async () => {
     try {
-      const response = await studentAPI.getWallets();
+      const response = await memberAPI.getWallets();
       setWallets(response.data.data.wallets || []);
     } catch (error) {
       console.error('Failed to load wallets:', error);
@@ -65,7 +65,7 @@ const StudentWallets = () => {
     setError(null);
 
     try {
-      await studentAPI.addWallet(formData);
+      await memberAPI.addWallet(formData);
       setShowForm(false);
       setFormData({ wallet_address: '', wallet_type: 'manual', network: 'TRC20', label: '' });
       await loadWallets();
@@ -76,7 +76,7 @@ const StudentWallets = () => {
 
   const handleSetPrimary = async (id) => {
     try {
-      await studentAPI.setPrimaryWallet(id);
+      await memberAPI.setPrimaryWallet(id);
       await loadWallets();
     } catch (error) {
       alert('Failed to set primary wallet');
@@ -87,7 +87,7 @@ const StudentWallets = () => {
     if (!confirm('Are you sure you want to delete this wallet?')) return;
 
     try {
-      await studentAPI.deleteWallet(id);
+      await memberAPI.deleteWallet(id);
       await loadWallets();
     } catch (error) {
       alert('Failed to delete wallet');
@@ -367,4 +367,4 @@ const StudentWallets = () => {
   );
 };
 
-export default StudentWallets;
+export default MemberWallets;

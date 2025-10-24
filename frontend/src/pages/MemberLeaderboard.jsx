@@ -4,7 +4,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency } from '../utils/formatters';
 
-const StudentLeaderboard = () => {
+const MemberLeaderboard = () => {
   const [leaderboard, setLeaderboard] = useState(null);
   const [userPosition, setUserPosition] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -274,4 +274,4 @@ const StudentLeaderboard = () => {
   );
 };
 
-export default StudentLeaderboard;
+export default MemberLeaderboard;
