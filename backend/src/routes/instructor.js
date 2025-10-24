@@ -1382,4 +1382,226 @@ router.get('/bi/growth-predictions', async (req, res) => {
   }
 });
 
+// ============================================
+// DEPOSIT MANAGEMENT ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/v1/instructor/deposits
+ * Get all deposits with filtering
+ */
+router.get('/deposits', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const status = req.query.status || null;
+    const network = req.query.network || null;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (network) filters.network = network;
+
+    const { deposits, total } = await Deposit.getAll(filters, page, limit);
+
+    res.json({
+      success: true,
+      data: {
+        deposits,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalRecords: total
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get deposits error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposits',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/deposits/pending
+ * Get pending deposits for review
+ */
+router.get('/deposits/pending', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const deposits = await Deposit.getPendingDeposits(limit);
+
+    res.json({
+      success: true,
+      data: {
+        deposits
+      }
+    });
+  } catch (error) {
+    console.error('Get pending deposits error:', error);
+    res.status(500).json({
+      error: 'Failed to load pending deposits',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/deposits/stats
+ * Get deposit statistics
+ */
+router.get('/deposits/stats', async (req, res) => {
+  try {
+    const stats = await Deposit.getStats();
+
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          totalDeposits: parseInt(stats.total_deposits),
+          totalConfirmed: parseFloat(stats.total_confirmed),
+          totalPending: parseFloat(stats.total_pending),
+          confirmedCount: parseInt(stats.confirmed_count),
+          pendingCount: parseInt(stats.pending_count),
+          failedCount: parseInt(stats.failed_count),
+          uniqueDepositors: parseInt(stats.unique_depositors)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get deposit stats error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposit statistics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/deposits/:id/confirm
+ * Confirm a deposit and credit user balance
+ */
+router.post('/deposits/:id/confirm', async (req, res) => {
+  try {
+    const depositId = parseInt(req.params.id);
+
+    const deposit = await Deposit.confirm(depositId, req.user.id);
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'deposit_confirmed',
+      target_user_id: deposit.user_id,
+      details: {
+        deposit_id: depositId,
+        amount: parseFloat(deposit.amount),
+        transaction_hash: deposit.transaction_hash
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Deposit confirmed and credited to user account',
+        deposit
+      }
+    });
+  } catch (error) {
+    console.error('Confirm deposit error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to confirm deposit',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/deposits/:id/reject
+ * Reject a deposit
+ */
+router.post('/deposits/:id/reject', async (req, res) => {
+  try {
+    const depositId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    const deposit = await Deposit.reject(depositId, reason);
+
+    if (!deposit) {
+      return res.status(404).json({
+        error: 'Deposit not found or already processed',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'deposit_rejected',
+      target_user_id: deposit.user_id,
+      details: {
+        deposit_id: depositId,
+        amount: parseFloat(deposit.amount),
+        reason
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Deposit rejected',
+        deposit
+      }
+    });
+  } catch (error) {
+    console.error('Reject deposit error:', error);
+    res.status(500).json({
+      error: 'Failed to reject deposit',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/deposits/:id
+ * Get deposit details
+ */
+router.get('/deposits/:id', async (req, res) => {
+  try {
+    const depositId = parseInt(req.params.id);
+    const deposit = await Deposit.getById(depositId);
+
+    if (!deposit) {
+      return res.status(404).json({
+        error: 'Deposit not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Get user info
+    const user = await User.findById(deposit.user_id);
+
+    res.json({
+      success: true,
+      data: {
+        deposit,
+        user: user ? {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          balance: parseFloat(user.balance)
+        } : null
+      }
+    });
+  } catch (error) {
+    console.error('Get deposit details error:', error);
+    res.status(500).json({
+      error: 'Failed to load deposit details',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
