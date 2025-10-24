@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use relative path in production, localhost in development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.MODE === 'production' ? '/api/v1' : 'http://localhost:3001/api/v1');
 
 // Create axios instance
@@ -32,7 +32,6 @@ api.interceptors.response.use(
   (error) => {
     // 1. Check for network errors (backend not responding)
     if (!error.response && error.request) {
-      // Network error - backend not reachable
       const errorData = {
         type: 'NETWORK_ERROR',
         message: 'Backend server not responding. Check if server is running on localhost:3001',
@@ -62,17 +61,15 @@ api.interceptors.response.use(
     // 3. Check for 401 Unauthorized (auth errors)
     if (error.response?.status === 401) {
       const token = localStorage.getItem('token');
-      
+
       if (token) {
-        // Token exists but expired/invalid - clear storage and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.setItem('authMessage', 'Your session expired. Please log in again.');
         window.location.href = '/login';
         return Promise.reject(error);
       }
-      
-      // No token - pass through (normal auth flow)
+
       return Promise.reject(error);
     }
 
@@ -90,7 +87,6 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 5. All other errors (400, 403, 404, etc.) - pass through
     return Promise.reject(error);
   }
 );
@@ -99,82 +95,71 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  // 2FA
   setup2FA: () => api.post('/auth/2fa/setup'),
   enable2FA: (data) => api.post('/auth/2fa/enable', data),
   disable2FA: (data) => api.post('/auth/2fa/disable', data),
   get2FAStatus: () => api.get('/auth/2fa/status')
 };
 
-// Student API
+// Member API (formerly Student API)
 export const memberAPI = {
   // Dashboard & Profile
-<<<<<<< HEAD
-  getDashboard: () => api.get('/student/dashboard'),
-  getNetwork: (level) => api.get('/student/network', { params: { level } }),
-  getEarnings: (params) => api.get('/student/earnings', { params }),
-  getProfile: () => api.get('/student/profile'),
-  updateProfile: (data) => api.put('/student/profile', data),
-  uploadAvatar: (file) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    return api.post('/student/profile/avatar', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-  },
-  getDirectInvites: () => api.get('/student/direct-invites'),
-  getInviteTransactions: (inviteUserId) => api.get(`/student/invite-transactions/${inviteUserId}`),
-=======
   getDashboard: () => api.get('/member/dashboard'),
   getNetwork: (level) => api.get('/member/network', { params: { level } }),
   getEarnings: (params) => api.get('/member/earnings', { params }),
   getProfile: () => api.get('/member/profile'),
   updateProfile: (data) => api.put('/member/profile', data),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post('/member/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
   getDirectInvites: () => api.get('/member/direct-invites'),
   getInviteTransactions: (inviteUserId) => api.get(`/member/invite-transactions/${inviteUserId}`),
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
-  
+
   // Withdrawals
   getWithdrawals: (params) => api.get('/member/withdrawals', { params }),
   createWithdrawal: (data) => api.post('/member/withdrawals', data),
   cancelWithdrawal: (id) => api.delete(`/member/withdrawals/${id}`),
   getWithdrawalStats: () => api.get('/member/withdrawal-stats'),
-  
+
   // Goals
   getGoals: (params) => api.get('/member/goals', { params }),
   createGoal: (data) => api.post('/member/goals', data),
   updateGoal: (id, data) => api.put(`/member/goals/${id}`, data),
   deleteGoal: (id) => api.delete(`/member/goals/${id}`),
   getGoalRecommendations: () => api.get('/member/goal-recommendations'),
-  
+
   // Wallets
   getWallets: () => api.get('/member/wallets'),
   addWallet: (data) => api.post('/member/wallets', data),
   setPrimaryWallet: (id) => api.put(`/member/wallets/${id}/primary`),
   deleteWallet: (id) => api.delete(`/member/wallets/${id}`),
-  
+
   // Analytics
   getEarningsChart: (period) => api.get('/member/analytics/earnings-chart', { params: { period } }),
   getNetworkGrowth: (period) => api.get('/member/analytics/network-growth', { params: { period } }),
   getTopPerformers: (limit) => api.get('/member/analytics/top-performers', { params: { limit } }),
   getDashboardStats: () => api.get('/member/analytics/dashboard-stats'),
-  
+
   // Training Resources
   getResources: (params) => api.get('/member/resources', { params }),
   getResource: (id) => api.get(`/member/resources/${id}`),
   logDownload: (id) => api.post(`/member/resources/${id}/download`),
   getResourceCategories: () => api.get('/member/resources-categories'),
   getPopularResources: (limit) => api.get('/member/resources-popular', { params: { limit } }),
-  
+
   // Team Events
   getEvents: (params) => api.get('/member/events', { params }),
   getEvent: (id) => api.get(`/member/events/${id}`),
   rsvpEvent: (id, data) => api.post(`/member/events/${id}/rsvp`, data),
   cancelRsvp: (id) => api.delete(`/member/events/${id}/rsvp`),
   getMyEvents: (params) => api.get('/member/my-events', { params }),
-  
+
   // Message Templates
   getTemplates: (type) => api.get('/member/templates', { params: { type } }),
   getTemplate: (id) => api.get(`/member/templates/${id}`),
@@ -182,7 +167,7 @@ export const memberAPI = {
   logShare: (platform, templateId) => api.post('/member/templates/share', { platform, template_id: templateId }),
   getShareStats: () => api.get('/member/share-stats'),
   getTrendingTemplates: (limit) => api.get('/member/templates-trending', { params: { limit } }),
-  
+
   // Webhooks
   getWebhooks: () => api.get('/member/webhooks'),
   createWebhook: (data) => api.post('/member/webhooks', data),
@@ -190,30 +175,22 @@ export const memberAPI = {
   deleteWebhook: (id) => api.delete(`/member/webhooks/${id}`),
   getWebhookDeliveries: (id, limit) => api.get(`/member/webhooks/${id}/deliveries`, { params: { limit } }),
   getWebhookStats: (id) => api.get(`/member/webhooks/${id}/stats`),
-  
-  // API Keys
-<<<<<<< HEAD
-  getApiKeys: () => api.get('/student/api-keys'),
-  createApiKey: (data) => api.post('/student/api-keys', data),
-  deleteApiKey: (id) => api.delete(`/student/api-keys/${id}`),
-  getApiKeyStats: (id) => api.get(`/student/api-keys/${id}/stats`),
-  getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } }),
 
-  // User Preferences
-  getPreferences: () => api.get('/student/preferences'),
-  createPreferences: () => api.post('/student/preferences'),
-  updatePreferences: (data) => api.put('/student/preferences', data),
-  completeOnboarding: () => api.post('/student/preferences/complete-onboarding'),
-  
-  // Global Search
-  search: (query, limit) => api.get('/student/search', { params: { q: query, limit } })
-=======
+  // API Keys
   getApiKeys: () => api.get('/member/api-keys'),
   createApiKey: (data) => api.post('/member/api-keys', data),
   deleteApiKey: (id) => api.delete(`/member/api-keys/${id}`),
   getApiKeyStats: (id) => api.get(`/member/api-keys/${id}/stats`),
-  getApiKeyHistory: (id, limit) => api.get(`/member/api-keys/${id}/history`, { params: { limit } })
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
+  getApiKeyHistory: (id, limit) => api.get(`/member/api-keys/${id}/history`, { params: { limit } }),
+
+  // User Preferences
+  getPreferences: () => api.get('/member/preferences'),
+  createPreferences: () => api.post('/member/preferences'),
+  updatePreferences: (data) => api.put('/member/preferences', data),
+  completeOnboarding: () => api.post('/member/preferences/complete-onboarding'),
+
+  // Global Search
+  search: (query, limit) => api.get('/member/search', { params: { q: query, limit } })
 };
 
 // Instructor API
@@ -224,7 +201,7 @@ export const instructorAPI = {
   approveParticipant: (id) => api.post(`/instructor/participants/${id}/approve`),
   rejectParticipant: (id, data) => api.post(`/instructor/participants/${id}/reject`, data),
   addStudent: (data) => api.post('/instructor/add-student', data),
-  addMember: (data) => api.post('/instructor/add-student', data), // Alias for addStudent
+  addMember: (data) => api.post('/instructor/add-student', data),
   getNetworkGraph: () => api.get('/instructor/network-graph'),
   injectCoins: (data) => api.post('/instructor/inject-coins', data),
   pause: () => api.post('/instructor/pause'),
@@ -232,7 +209,6 @@ export const instructorAPI = {
   reset: (data) => api.post('/instructor/reset', data),
   export: (data) => api.post('/instructor/export', data, { responseType: 'blob' }),
   updateConfig: (data) => api.put('/instructor/config', data),
-<<<<<<< HEAD
 
   // Fraud Detection
   getFraudDashboard: () => api.get('/instructor/fraud-detection/dashboard'),
@@ -242,33 +218,32 @@ export const instructorAPI = {
   unflagUser: (id, notes) => api.post(`/instructor/fraud-detection/unflag/${id}`, { notes }),
   getMultiAccounts: () => api.get('/instructor/fraud-detection/multi-accounts'),
   getFraudAlerts: (params) => api.get('/instructor/fraud-detection/alerts', { params }),
-  
+
   // Business Intelligence
   getBIRetention: () => api.get('/instructor/bi/retention'),
   getBIConversion: () => api.get('/instructor/bi/conversion'),
   getBINetworkDepth: () => api.get('/instructor/bi/network-depth'),
   getBIEarningsDistribution: () => api.get('/instructor/bi/earnings-distribution'),
-  getBIGrowthPredictions: () => api.get('/instructor/bi/growth-predictions')
-=======
-  
+  getBIGrowthPredictions: () => api.get('/instructor/bi/growth-predictions'),
+
   // Bulk Operations
   bulkApprove: (userIds) => api.post('/instructor/bulk-approve', { userIds }),
   bulkReject: (userIds, reason) => api.post('/instructor/bulk-reject', { userIds, reason }),
   bulkFreeze: (userIds, reason) => api.post('/instructor/bulk-freeze', { userIds, reason }),
   bulkUnfreeze: (userIds) => api.post('/instructor/bulk-unfreeze', { userIds }),
-  
+
   // Freeze/Unfreeze Individual Accounts
   freezeAccount: (id, reason) => api.post(`/instructor/participants/${id}/freeze`, { reason }),
   unfreezeAccount: (id) => api.post(`/instructor/participants/${id}/unfreeze`),
-  
+
   // Commission Rate Adjustments
-  adjustCommissionRate: (id, commissionRate, useDefault = false) => 
+  adjustCommissionRate: (id, commissionRate, useDefault = false) =>
     api.put(`/instructor/participants/${id}/commission-rate`, { commissionRate, useDefault }),
-  
+
   // Manual Transactions
   createTransaction: (data) => api.post('/instructor/transactions/create', data),
   reverseTransaction: (id, reason) => api.post(`/instructor/transactions/${id}/reverse`, { reason }),
-  
+
   // Campaigns
   getCampaigns: (params) => api.get('/instructor/campaigns', { params }),
   getCampaign: (id) => api.get(`/instructor/campaigns/${id}`),
@@ -280,7 +255,7 @@ export const instructorAPI = {
   getCampaignStats: (id) => api.get(`/instructor/campaigns/${id}/stats`),
   addDripStep: (id, data) => api.post(`/instructor/campaigns/${id}/drip-step`, data),
   getCampaignRecipients: (id, params) => api.get(`/instructor/campaigns/${id}/recipients`, { params }),
-  
+
   // A/B Testing
   getExperiments: (params) => api.get('/instructor/ab-experiments', { params }),
   getExperiment: (id) => api.get(`/instructor/ab-experiments/${id}`),
@@ -292,7 +267,6 @@ export const instructorAPI = {
   setExperimentWinner: (id, winnerVariant) => api.post(`/instructor/ab-experiments/${id}/winner`, { winnerVariant }),
   deleteExperiment: (id) => api.delete(`/instructor/ab-experiments/${id}`),
   trackExperimentEvent: (id, data) => api.post(`/instructor/ab-experiments/${id}/track`, data)
->>>>>>> cff4413b1c03039cbf120a9440b4da1d73a81893
 };
 
 // System API
@@ -308,20 +282,20 @@ export const gamificationAPI = {
   getSecurityEvents: (params) => api.get('/gamification/security-events', { params }),
   getSecuritySummary: () => api.get('/gamification/security-summary'),
   resolveSecurityEvent: (id) => api.put(`/gamification/security-events/${id}/resolve`),
-  
+
   // Achievements
   getAllAchievements: () => api.get('/gamification/achievements'),
   getUserAchievements: () => api.get('/gamification/achievements/user'),
   getAchievementProgress: () => api.get('/gamification/achievements/progress'),
   getAchievementSummary: () => api.get('/gamification/achievements/summary'),
   getAchievementsByCategory: (category) => api.get(`/gamification/achievements/category/${category}`),
-  
+
   // Ranks
   getUserRank: () => api.get('/gamification/rank'),
   getRankProgress: () => api.get('/gamification/rank/progress'),
   getAllRanks: () => api.get('/gamification/ranks'),
   getRankPerks: (id) => api.get(`/gamification/ranks/${id}/perks`),
-  
+
   // Leaderboards
   getTopEarners: (params) => api.get('/gamification/leaderboard/earners', { params }),
   getTopRecruiters: (params) => api.get('/gamification/leaderboard/recruiters', { params }),
@@ -329,7 +303,7 @@ export const gamificationAPI = {
   getCombinedLeaderboard: (params) => api.get('/gamification/leaderboard/combined', { params }),
   getUserPosition: (params) => api.get('/gamification/leaderboard/position', { params }),
   getLeaderboardStats: (params) => api.get('/gamification/leaderboard/stats', { params }),
-  
+
   // Notifications
   getNotifications: (params) => api.get('/gamification/notifications', { params }),
   getUnreadCount: () => api.get('/gamification/notifications/unread-count'),
