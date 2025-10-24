@@ -74,7 +74,7 @@ class Referral {
     const nodesResult = await pool.query(
       `SELECT id, username, balance, direct_recruits, total_earned
        FROM users
-       WHERE role = 'student'`
+       WHERE role = 'member'`
     );
 
     return { nodes: nodesResult.rows, edges: edgesResult.rows };
