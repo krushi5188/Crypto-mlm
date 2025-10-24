@@ -98,6 +98,14 @@ const Navbar = () => {
                 >
                   Profile
                 </Link>
+                <Link 
+                  to="/security" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Security
+                </Link>
               </>
             )}
 
