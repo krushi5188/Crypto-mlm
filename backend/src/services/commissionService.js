@@ -251,6 +251,27 @@ class CommissionService {
         [recruitmentFee]
       );
 
+      // Step 8: Auto-check achievements and ranks for new user and upline
+      // Check new user's achievements and rank
+      try {
+        await Achievement.checkAchievements(newUserId);
+        await Rank.checkAndPromote(newUserId);
+      } catch (error) {
+        console.error('Achievement/rank check failed for new user:', error);
+        // Don't fail the entire transaction if achievement check fails
+      }
+
+      // Check achievements and ranks for all upline members (they got commissions/network updates)
+      for (const upline of uplineChain) {
+        try {
+          await Achievement.checkAchievements(upline.id);
+          await Rank.checkAndPromote(upline.id);
+        } catch (error) {
+          console.error(`Achievement/rank check failed for user ${upline.id}:`, error);
+          // Don't fail the entire transaction if achievement check fails
+        }
+      }
+
       await client.query('COMMIT');
 
       const usedFromPool = chainWithoutDirect.length > 0
