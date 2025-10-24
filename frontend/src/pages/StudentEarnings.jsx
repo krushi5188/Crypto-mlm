@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { studentAPI } from '../services/api';
 import Card from '../components/common/Card';
 import { formatCurrency, formatDateTime, redactEmail } from '../utils/formatters';
@@ -71,6 +71,27 @@ const StudentEarnings = () => {
       await loadInviteTransactions(inviteUserId);
     }
   };
+
+  // Filter invites based on search criteria
+  const filteredInvites = useMemo(() => {
+    return invites.filter(invite => {
+      // Email search
+      if (searchEmail && !invite.email.toLowerCase().includes(searchEmail.toLowerCase())) {
+        return false;
+      }
+      
+      // Amount filters
+      if (minAmount && invite.totalEarned < parseFloat(minAmount)) {
+        return false;
+      }
+      
+      if (maxAmount && invite.totalEarned > parseFloat(maxAmount)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [invites, searchEmail, minAmount, maxAmount]);
 
   if (loading) {
     return (
@@ -252,14 +273,16 @@ const StudentEarnings = () => {
               </tr>
             </thead>
             <tbody>
-              {invites.length === 0 ? (
+              {filteredInvites.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
-                    No direct invites yet. Share your referral link to start earning!
+                    {invites.length === 0 
+                      ? 'No direct invites yet. Share your referral link to start earning!'
+                      : 'No invites match your filters. Try adjusting your search criteria.'}
                   </td>
                 </tr>
               ) : (
-                invites.map((invite) => (
+                filteredInvites.map((invite) => (
                   <React.Fragment key={invite.userId}>
                     {/* Main row */}
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
