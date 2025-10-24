@@ -172,7 +172,13 @@ export const studentAPI = {
   createApiKey: (data) => api.post('/student/api-keys', data),
   deleteApiKey: (id) => api.delete(`/student/api-keys/${id}`),
   getApiKeyStats: (id) => api.get(`/student/api-keys/${id}/stats`),
-  getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } })
+  getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } }),
+
+  // User Preferences
+  getPreferences: () => api.get('/student/preferences'),
+  createPreferences: () => api.post('/student/preferences'),
+  updatePreferences: (data) => api.put('/student/preferences', data),
+  completeOnboarding: () => api.post('/student/preferences/complete-onboarding')
 };
 
 // Instructor API
@@ -190,7 +196,16 @@ export const instructorAPI = {
   resume: () => api.post('/instructor/resume'),
   reset: (data) => api.post('/instructor/reset', data),
   export: (data) => api.post('/instructor/export', data, { responseType: 'blob' }),
-  updateConfig: (data) => api.put('/instructor/config', data)
+  updateConfig: (data) => api.put('/instructor/config', data),
+
+  // Fraud Detection
+  getFraudDashboard: () => api.get('/instructor/fraud-detection/dashboard'),
+  getFlaggedUsers: () => api.get('/instructor/fraud-detection/flagged-users'),
+  getUserFraudDetails: (id) => api.get(`/instructor/fraud-detection/user/${id}`),
+  flagUser: (id, reason) => api.post(`/instructor/fraud-detection/flag/${id}`, { reason }),
+  unflagUser: (id, notes) => api.post(`/instructor/fraud-detection/unflag/${id}`, { notes }),
+  getMultiAccounts: () => api.get('/instructor/fraud-detection/multi-accounts'),
+  getFraudAlerts: (params) => api.get('/instructor/fraud-detection/alerts', { params })
 };
 
 // System API
