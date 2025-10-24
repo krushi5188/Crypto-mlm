@@ -8,6 +8,11 @@ const StudentDeposits = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [platformWallets, setPlatformWallets] = useState({
+    TRC20: 'Loading...',
+    ERC20: 'Loading...',
+    BEP20: 'Loading...'
+  });
   const [formData, setFormData] = useState({
     amount: '',
     wallet_address: '',
@@ -15,16 +20,19 @@ const StudentDeposits = () => {
     transaction_hash: ''
   });
 
-  // Platform deposit addresses (these would normally come from backend config)
-  const platformWallets = {
-    TRC20: 'TYourPlatformTRC20WalletAddressHere123456',
-    ERC20: 'EYourPlatformERC20WalletAddressHere123456',
-    BEP20: 'BYourPlatformBEP20WalletAddressHere123456'
-  };
-
   useEffect(() => {
     loadDepositData();
+    loadWalletAddresses();
   }, []);
+
+  const loadWalletAddresses = async () => {
+    try {
+      const response = await apiService.get('/student/deposits/wallet-addresses');
+      setPlatformWallets(response.data.wallets);
+    } catch (error) {
+      console.error('Failed to load wallet addresses:', error);
+    }
+  };
 
   const loadDepositData = async () => {
     try {
