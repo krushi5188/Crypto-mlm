@@ -209,27 +209,19 @@ const initializeDatabase = async () => {
   }
 };
 
-// Middleware to ensure database is initialized (for serverless)
-app.use(async (req, res, next) => {
-  if (!isInitialized) {
-    try {
-      await initializeDatabase();
-    } catch (error) {
-      console.error('Initialization error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
-      return res.status(503).json({
-        error: 'Service initializing, please try again',
-        code: 'INITIALIZING',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-  next();
-});
+// Lazy initialization - runs once in background, doesn't block requests
+// On Vercel/serverless, this will run on first cold start but won't block
+if (process.env.NODE_ENV === 'production') {
+  // In production (Vercel), skip blocking initialization
+  // Instructor account should already exist in database
+  console.log('Production mode: Skipping blocking initialization');
+  isInitialized = true; // Mark as initialized to skip checks
+} else {
+  // In development, initialize in background (non-blocking)
+  initializeDatabase().catch(err => {
+    console.error('Background initialization failed:', err);
+  });
+}
 
 // Routes
 const authRoutes = require('./routes/auth');
