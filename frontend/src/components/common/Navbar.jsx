@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
+import ThemeSwitcher from '../ThemeSwitcher';
 
 const Navbar = () => {
   const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
@@ -144,6 +145,7 @@ const Navbar = () => {
               </>
             )}
 
+            <ThemeSwitcher />
             <span style={{ 
               marginLeft: 'var(--space-md)', 
               fontSize: 'var(--text-sm)', 
@@ -158,6 +160,7 @@ const Navbar = () => {
           </>
         ) : (
           <>
+            <ThemeSwitcher />
             <Link 
               to="/login" 
               style={linkStyles}
