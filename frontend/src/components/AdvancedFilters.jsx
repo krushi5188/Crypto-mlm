@@ -130,7 +130,10 @@ const AdvancedFilters = ({ onFilterChange, savedPresets = [], onSavePreset, onDe
   const labelStyle = {
     fontSize: 'var(--text-sm)',
     fontWeight: '600',
-    color: 'var(--text-secondary)'
+    color: 'var(--text-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-xs)'
   };
 
   const inputStyle = {
