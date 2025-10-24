@@ -106,6 +106,14 @@ const Navbar = () => {
                 >
                   Security
                 </Link>
+                <Link 
+                  to="/achievements" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Achievements
+                </Link>
               </>
             )}
 
