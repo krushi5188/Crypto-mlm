@@ -12,14 +12,17 @@ if (fs.existsSync(envPath)) {
 }
 
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const { pool, testConnection } = require('./config/database');
 const { hashPassword } = require('./utils/passwordHash');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const User = require('./models/User');
 const { generateReferralCode } = require('./utils/generateReferralCode');
+const websocketService = require('./services/websocketService');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -273,7 +276,11 @@ const startServer = async () => {
   try {
     await initializeDatabase();
 
-    app.listen(PORT, () => {
+    // Initialize WebSocket
+    websocketService.initialize(server);
+    console.log('✓ WebSocket service initialized');
+
+    server.listen(PORT, () => {
       console.log('');
       console.log('========================================');
       console.log('  Atlas Network API');
@@ -281,6 +288,7 @@ const startServer = async () => {
       console.log(`  Server running on port ${PORT}`);
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`  API Base: http://localhost:${PORT}/api/v1`);
+      console.log(`  WebSocket: Enabled`);
       console.log('========================================');
       console.log('');
     });
