@@ -731,4 +731,643 @@ router.put('/config', validate('updateConfig'), async (req, res) => {
   }
 });
 
+/**
+ * POST /api/v1/instructor/bulk-approve
+ * Approve multiple participants at once
+ */
+router.post('/bulk-approve', async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid user IDs array',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    let approvedCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const participant = await User.findById(userId);
+
+        if (participant && participant.role === 'student' && participant.approval_status !== 'approved') {
+          await pool.query(
+            'UPDATE users SET approval_status = $1 WHERE id = $2',
+            ['approved', userId]
+          );
+
+          // Distribute commissions if has referrer
+          if (participant.referred_by_id) {
+            const CommissionService = require('../services/commissionService');
+            await CommissionService.distributeCommissions(
+              userId,
+              participant.username,
+              participant.referred_by_id
+            );
+          }
+
+          approvedCount++;
+        }
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'bulk_approve',
+      details: { user_ids: userIds, approved_count: approvedCount, errors },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${approvedCount} participants approved`,
+        approvedCount,
+        totalRequested: userIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Bulk approve error:', error);
+    res.status(500).json({
+      error: 'Failed to approve participants',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/bulk-reject
+ * Reject multiple participants at once
+ */
+router.post('/bulk-reject', async (req, res) => {
+  try {
+    const { userIds, reason } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid user IDs array',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    let rejectedCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const participant = await User.findById(userId);
+
+        if (participant && participant.role === 'student' && participant.approval_status !== 'approved') {
+          await pool.query(
+            'UPDATE users SET approval_status = $1 WHERE id = $2',
+            ['rejected', userId]
+          );
+          rejectedCount++;
+        }
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'bulk_reject',
+      details: { user_ids: userIds, rejected_count: rejectedCount, reason, errors },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${rejectedCount} participants rejected`,
+        rejectedCount,
+        totalRequested: userIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Bulk reject error:', error);
+    res.status(500).json({
+      error: 'Failed to reject participants',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/participants/:id/freeze
+ * Freeze a user account
+ */
+router.post('/participants/:id/freeze', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    const participant = await User.findById(participantId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update account status to frozen
+    await pool.query(
+      'UPDATE users SET account_status = $1 WHERE id = $2',
+      ['frozen', participantId]
+    );
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'freeze_account',
+      target_user_id: participantId,
+      details: { username: participant.username, reason },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${participant.username}'s account has been frozen`,
+        userId: participantId,
+        status: 'frozen'
+      }
+    });
+  } catch (error) {
+    console.error('Freeze account error:', error);
+    res.status(500).json({
+      error: 'Failed to freeze account',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/participants/:id/unfreeze
+ * Unfreeze a user account
+ */
+router.post('/participants/:id/unfreeze', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+
+    const participant = await User.findById(participantId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Update account status to active
+    await pool.query(
+      'UPDATE users SET account_status = $1 WHERE id = $2',
+      ['active', participantId]
+    );
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'unfreeze_account',
+      target_user_id: participantId,
+      details: { username: participant.username },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${participant.username}'s account has been unfrozen`,
+        userId: participantId,
+        status: 'active'
+      }
+    });
+  } catch (error) {
+    console.error('Unfreeze account error:', error);
+    res.status(500).json({
+      error: 'Failed to unfreeze account',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/bulk-freeze
+ * Freeze multiple accounts at once
+ */
+router.post('/bulk-freeze', async (req, res) => {
+  try {
+    const { userIds, reason } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid user IDs array',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    let frozenCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const participant = await User.findById(userId);
+
+        if (participant && participant.role === 'student') {
+          await pool.query(
+            'UPDATE users SET account_status = $1 WHERE id = $2',
+            ['frozen', userId]
+          );
+          frozenCount++;
+        }
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'bulk_freeze',
+      details: { user_ids: userIds, frozen_count: frozenCount, reason, errors },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${frozenCount} accounts frozen`,
+        frozenCount,
+        totalRequested: userIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Bulk freeze error:', error);
+    res.status(500).json({
+      error: 'Failed to freeze accounts',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/bulk-unfreeze
+ * Unfreeze multiple accounts at once
+ */
+router.post('/bulk-unfreeze', async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid user IDs array',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    let unfrozenCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const participant = await User.findById(userId);
+
+        if (participant && participant.role === 'student') {
+          await pool.query(
+            'UPDATE users SET account_status = $1 WHERE id = $2',
+            ['active', userId]
+          );
+          unfrozenCount++;
+        }
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'bulk_unfreeze',
+      details: { user_ids: userIds, unfrozen_count: unfrozenCount, errors },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `${unfrozenCount} accounts unfrozen`,
+        unfrozenCount,
+        totalRequested: userIds.length,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Bulk unfreeze error:', error);
+    res.status(500).json({
+      error: 'Failed to unfreeze accounts',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/instructor/participants/:id/commission-rate
+ * Adjust custom commission rate for a user
+ */
+router.put('/participants/:id/commission-rate', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+    const { commissionRate, useDefault } = req.body;
+
+    const participant = await User.findById(participantId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    if (useDefault) {
+      // Remove custom commission rate (use default)
+      await pool.query(
+        'UPDATE users SET custom_commission_rate = NULL WHERE id = $1',
+        [participantId]
+      );
+    } else {
+      // Validate commission rate
+      if (commissionRate < 0 || commissionRate > 100) {
+        return res.status(400).json({
+          error: 'Commission rate must be between 0 and 100',
+          code: 'VALIDATION_ERROR'
+        });
+      }
+
+      // Set custom commission rate
+      await pool.query(
+        'UPDATE users SET custom_commission_rate = $1 WHERE id = $2',
+        [commissionRate, participantId]
+      );
+    }
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'adjust_commission_rate',
+      target_user_id: participantId,
+      details: {
+        username: participant.username,
+        commission_rate: useDefault ? 'default' : commissionRate
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: useDefault
+          ? `${participant.username} now uses default commission rates`
+          : `${participant.username}'s commission rate set to ${commissionRate}%`,
+        userId: participantId,
+        commissionRate: useDefault ? null : commissionRate
+      }
+    });
+  } catch (error) {
+    console.error('Adjust commission rate error:', error);
+    res.status(500).json({
+      error: 'Failed to adjust commission rate',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/transactions/create
+ * Manually create a transaction (credit or debit)
+ */
+router.post('/transactions/create', async (req, res) => {
+  try {
+    const { userId, amount, type, description } = req.body;
+
+    // Validate inputs
+    if (!userId || !amount || !type || !description) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (!['credit', 'debit'].includes(type)) {
+      return res.status(400).json({
+        error: 'Type must be credit or debit',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        error: 'Amount must be positive',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const participant = await User.findById(userId);
+
+    if (!participant || participant.role !== 'student') {
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Calculate new balance
+    const currentBalance = parseFloat(participant.balance);
+    const transactionAmount = type === 'credit' ? amount : -amount;
+    const newBalance = currentBalance + transactionAmount;
+
+    if (newBalance < 0) {
+      return res.status(400).json({
+        error: 'Insufficient balance for debit transaction',
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    // Update balance
+    await pool.query(
+      'UPDATE users SET balance = $1 WHERE id = $2',
+      [newBalance, userId]
+    );
+
+    // Create transaction record
+    const transactionResult = await pool.query(
+      `INSERT INTO transactions (user_id, amount, type, description, balance_after, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING id, created_at`,
+      [userId, transactionAmount, 'manual_' + type, description, newBalance]
+    );
+
+    const transactionId = transactionResult.rows[0].id;
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'create_transaction',
+      target_user_id: userId,
+      details: {
+        username: participant.username,
+        type,
+        amount,
+        transaction_id: transactionId,
+        description
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Transaction created for ${participant.username}`,
+        transaction: {
+          id: transactionId,
+          userId,
+          amount: transactionAmount,
+          type: 'manual_' + type,
+          description,
+          balanceAfter: newBalance,
+          createdAt: transactionResult.rows[0].created_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Create transaction error:', error);
+    res.status(500).json({
+      error: 'Failed to create transaction',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/transactions/:id/reverse
+ * Reverse a transaction
+ */
+router.post('/transactions/:id/reverse', async (req, res) => {
+  try {
+    const transactionId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    // Get original transaction
+    const transactionResult = await pool.query(
+      'SELECT * FROM transactions WHERE id = $1',
+      [transactionId]
+    );
+
+    if (transactionResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Transaction not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    const originalTransaction = transactionResult.rows[0];
+    const userId = originalTransaction.user_id;
+
+    // Check if already reversed
+    const reversalCheck = await pool.query(
+      'SELECT id FROM transactions WHERE type = $1 AND description LIKE $2',
+      ['reversal', `%Reversal of transaction #${transactionId}%`]
+    );
+
+    if (reversalCheck.rows.length > 0) {
+      return res.status(400).json({
+        error: 'Transaction already reversed',
+        code: 'ALREADY_REVERSED'
+      });
+    }
+
+    const participant = await User.findById(userId);
+
+    if (!participant) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Calculate reversal amount (opposite of original)
+    const reversalAmount = -parseFloat(originalTransaction.amount);
+    const currentBalance = parseFloat(participant.balance);
+    const newBalance = currentBalance + reversalAmount;
+
+    if (newBalance < 0) {
+      return res.status(400).json({
+        error: 'Insufficient balance for reversal',
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    // Update balance
+    await pool.query(
+      'UPDATE users SET balance = $1 WHERE id = $2',
+      [newBalance, userId]
+    );
+
+    // Create reversal transaction
+    const reversalDescription = `Reversal of transaction #${transactionId}${reason ? ` - ${reason}` : ''}`;
+    const reversalResult = await pool.query(
+      `INSERT INTO transactions (user_id, amount, type, description, balance_after, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING id, created_at`,
+      [userId, reversalAmount, 'reversal', reversalDescription, newBalance]
+    );
+
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'reverse_transaction',
+      target_user_id: userId,
+      details: {
+        username: participant.username,
+        original_transaction_id: transactionId,
+        reversal_transaction_id: reversalResult.rows[0].id,
+        amount: reversalAmount,
+        reason
+      },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Transaction #${transactionId} reversed`,
+        reversal: {
+          id: reversalResult.rows[0].id,
+          originalTransactionId: transactionId,
+          userId,
+          amount: reversalAmount,
+          balanceAfter: newBalance,
+          createdAt: reversalResult.rows[0].created_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Reverse transaction error:', error);
+    res.status(500).json({
+      error: 'Failed to reverse transaction',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
