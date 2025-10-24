@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { instructorAPI } from '../services/api';
+import HelpTooltip from '../components/HelpTooltip';
 
 const InstructorBI = () => {
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,10 @@ const InstructorBI = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Business Intelligence</h1>
-        <p style={styles.subtitle}>Advanced analytics and insights</p>
+        <p style={styles.subtitle}>
+          Advanced analytics and insights
+          <HelpTooltip content="Track key business metrics including user retention, conversion rates, network depth, earnings distribution, and growth predictions." position="right" maxWidth="250px" />
+        </p>
       </div>
 
       {/* Tabs */}
@@ -228,7 +232,10 @@ const InstructorBI = () => {
 
         {activeTab === 'conversion' && data.conversion && (
           <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>Conversion Funnel Analysis</h2>
+            <h2 style={styles.sectionTitle}>
+              Conversion Funnel Analysis
+              <HelpTooltip content="Shows the percentage of users progressing through each stage from registration to active participation. Helps identify where users drop off." position="right" maxWidth="280px" />
+            </h2>
             <div style={styles.largeCard}>
               {data.conversion.funnel.map((stage, index) => (
                 <div key={index} style={styles.largeFunnelStage}>
@@ -262,10 +269,16 @@ const InstructorBI = () => {
 
         {activeTab === 'network' && data.networkDepth && (
           <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>Network Depth Distribution</h2>
+            <h2 style={styles.sectionTitle}>
+              Network Depth Distribution
+              <HelpTooltip content="Shows how many users exist at each level of the referral tree. Higher average depth indicates deeper network penetration." position="right" maxWidth="280px" />
+            </h2>
             <div style={styles.statsRow}>
               <div style={styles.statCard}>
-                <span style={styles.statCardLabel}>Maximum Depth</span>
+                <span style={styles.statCardLabel}>
+                  Maximum Depth
+                  <HelpTooltip content="The deepest level reached in the referral network." position="top" />
+                </span>
                 <span style={styles.statCardValue}>{data.networkDepth.maxDepth}</span>
                 <span style={styles.statCardUnit}>levels</span>
               </div>
@@ -302,9 +315,15 @@ const InstructorBI = () => {
 
         {activeTab === 'earnings' && data.earningsDistribution && (
           <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>Earnings Distribution</h2>
+            <h2 style={styles.sectionTitle}>
+              Earnings Distribution
+              <HelpTooltip content="Statistical breakdown of user earnings showing percentiles and distribution across earning brackets." position="right" maxWidth="280px" />
+            </h2>
 
-            <h3 style={styles.subsectionTitle}>Percentiles</h3>
+            <h3 style={styles.subsectionTitle}>
+              Percentiles
+              <HelpTooltip content="P50 (median) means 50% of users earned this amount or less. P90 means 90% earned this amount or less." position="right" maxWidth="280px" />
+            </h3>
             <div style={styles.percentileRow}>
               {Object.entries(data.earningsDistribution.percentiles).map(([key, value]) => (
                 <div key={key} style={styles.percentileCard}>
@@ -338,7 +357,10 @@ const InstructorBI = () => {
 
         {activeTab === 'growth' && data.growthPredictions && (
           <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>Growth Predictions</h2>
+            <h2 style={styles.sectionTitle}>
+              Growth Predictions
+              <HelpTooltip content="Linear regression projections based on historical growth patterns over the last 30 days." position="right" maxWidth="280px" />
+            </h2>
 
             <div style={styles.growthSummary}>
               <div style={styles.growthStatCard}>
