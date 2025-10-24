@@ -198,9 +198,16 @@ router.post('/login',
       });
     } catch (error) {
       console.error('Login error:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        name: error.name
+      });
       res.status(500).json({
         error: 'Login failed',
-        code: 'DATABASE_ERROR'
+        code: 'DATABASE_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
