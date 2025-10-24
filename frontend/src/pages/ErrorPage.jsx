@@ -92,6 +92,10 @@ const ErrorPage = () => {
     window.open('/api/v1/status', '_blank');
   };
 
+  const handleCheckEnvVars = () => {
+    window.open('/api/v1/env-check', '_blank');
+  };
+
   const handleGoToLogin = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -147,6 +151,26 @@ const ErrorPage = () => {
         }}>
           {errorData.message}
         </p>
+
+        {/* Environment Variables Check Callout - for network/503 errors */}
+        {(errorData.type === 'NETWORK_ERROR' || errorData.type === 'SERVICE_UNAVAILABLE') && (
+          <div style={{
+            background: 'rgba(33, 150, 243, 0.1)',
+            border: '1px solid rgba(33, 150, 243, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-md)',
+            marginBottom: 'var(--space-xl)',
+            color: '#64b5f6',
+            fontSize: '13px',
+            lineHeight: '1.6'
+          }}>
+            <strong>💡 Most Common Fix:</strong>
+            <p style={{ margin: '8px 0 0 0' }}>
+              This error is usually caused by missing or incorrect environment variables. 
+              Click "Check Environment Variables" below to see exactly what's misconfigured and how to fix it.
+            </p>
+          </div>
+        )}
 
         {/* Technical Details */}
         {errorData.details && (
@@ -265,6 +289,25 @@ const ErrorPage = () => {
             onMouseLeave={(e) => e.target.style.background = '#cccccc'}
           >
             🔍 View Diagnostics
+          </button>
+
+          <button
+            onClick={handleCheckEnvVars}
+            style={{
+              background: '#cccccc',
+              color: '#000000',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px',
+              fontSize: '13px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
+            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
+          >
+            🔍 Check Environment Variables
           </button>
 
           <button
