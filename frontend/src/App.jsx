@@ -16,6 +16,7 @@ import StudentLeaderboard from './pages/StudentLeaderboard';
 import StudentNotifications from './pages/StudentNotifications';
 import StudentSecurity from './pages/StudentSecurity';
 import StudentWithdrawals from './pages/StudentWithdrawals';
+import StudentAnalytics from './pages/StudentAnalytics';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
@@ -177,6 +178,14 @@ function App() {
               <ProtectedRoute allowedRole="student">
                 <AppLayout>
                   <StudentWithdrawals />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/student/analytics" element={
+              <ProtectedRoute allowedRole="student">
+                <AppLayout>
+                  <StudentAnalytics />
                 </AppLayout>
               </ProtectedRoute>
             } />
