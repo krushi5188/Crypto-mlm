@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Navbar = () => {
   const { user, isAuthenticated, isInstructor, isStudent, logout } = useAuth();
@@ -152,6 +153,7 @@ const Navbar = () => {
             }}>
               {user?.username}
             </span>
+            <LanguageSwitcher variant="compact" />
             <Button onClick={handleLogout} size="sm" variant="outline">
               Logout
             </Button>
@@ -166,6 +168,7 @@ const Navbar = () => {
             >
               Login
             </Link>
+            <LanguageSwitcher variant="compact" />
           </>
         )}
       </div>
