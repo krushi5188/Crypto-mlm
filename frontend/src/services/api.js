@@ -30,12 +30,67 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    // 1. Check for network errors (backend not responding)
+    if (!error.response && error.request) {
+      // Network error - backend not reachable
+      const errorData = {
+        type: 'NETWORK_ERROR',
+        message: 'Backend server not responding. Check if server is running on localhost:3001',
+        details: error.message || 'Network connection failed',
+        statusCode: null,
+        timestamp: new Date().toISOString()
+      };
+      sessionStorage.setItem('apiError', JSON.stringify(errorData));
+      window.location.href = '/error';
+      return Promise.reject(error);
     }
+
+    // 2. Check for 503 Service Unavailable (database/initialization issues)
+    if (error.response?.status === 503) {
+      const errorData = {
+        type: 'SERVICE_UNAVAILABLE',
+        message: 'Service is initializing. Database may not be configured.',
+        details: error.response?.data?.message || error.response?.data?.error || 'Service temporarily unavailable. Check .env file for database credentials.',
+        statusCode: 503,
+        timestamp: new Date().toISOString()
+      };
+      sessionStorage.setItem('apiError', JSON.stringify(errorData));
+      window.location.href = '/error';
+      return Promise.reject(error);
+    }
+
+    // 3. Check for 401 Unauthorized (auth errors)
+    if (error.response?.status === 401) {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        // Token exists but expired/invalid - clear storage and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.setItem('authMessage', 'Your session expired. Please log in again.');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
+      // No token - pass through (normal auth flow)
+      return Promise.reject(error);
+    }
+
+    // 4. Check for other 5xx errors (500, 502, 504)
+    if (error.response?.status >= 500 && error.response?.status < 600) {
+      const errorData = {
+        type: 'SERVER_ERROR',
+        message: 'Server error occurred. Try again in a moment.',
+        details: error.response?.data?.message || error.response?.data?.error || `HTTP ${error.response?.status}: ${error.message}`,
+        statusCode: error.response?.status,
+        timestamp: new Date().toISOString()
+      };
+      sessionStorage.setItem('apiError', JSON.stringify(errorData));
+      window.location.href = '/error';
+      return Promise.reject(error);
+    }
+
+    // 5. All other errors (400, 403, 404, etc.) - pass through
     return Promise.reject(error);
   }
 );
