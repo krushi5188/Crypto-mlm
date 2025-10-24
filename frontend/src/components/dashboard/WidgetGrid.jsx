@@ -7,6 +7,7 @@ import NetworkOverviewWidget from '../widgets/NetworkOverviewWidget';
 import RecentEarningsWidget from '../widgets/RecentEarningsWidget';
 import QuickActionsWidget from '../widgets/QuickActionsWidget';
 import ReferralStatsWidget from '../widgets/ReferralStatsWidget';
+import HelpTooltip from '../HelpTooltip';
 import { studentAPI } from '../../services/api';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -148,7 +149,10 @@ const WidgetGrid = ({ dashboardData, onLayoutChange }) => {
       {/* Widget Customizer Bar */}
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
-          <span style={styles.toolbarTitle}>Dashboard Widgets</span>
+          <span style={styles.toolbarTitle}>
+            Dashboard Widgets
+            <HelpTooltip content="Customize your dashboard by dragging widgets to rearrange them, resizing from corners, or hiding widgets you don't need." position="right" maxWidth="250px" />
+          </span>
           <span style={styles.toolbarHint}>Drag to rearrange • Resize corners</span>
         </div>
         <div style={styles.toolbarRight}>
