@@ -80,7 +80,44 @@ export const studentAPI = {
   getEarningsChart: (period) => api.get('/student/analytics/earnings-chart', { params: { period } }),
   getNetworkGrowth: (period) => api.get('/student/analytics/network-growth', { params: { period } }),
   getTopPerformers: (limit) => api.get('/student/analytics/top-performers', { params: { limit } }),
-  getDashboardStats: () => api.get('/student/analytics/dashboard-stats')
+  getDashboardStats: () => api.get('/student/analytics/dashboard-stats'),
+  
+  // Training Resources
+  getResources: (params) => api.get('/student/resources', { params }),
+  getResource: (id) => api.get(`/student/resources/${id}`),
+  logDownload: (id) => api.post(`/student/resources/${id}/download`),
+  getResourceCategories: () => api.get('/student/resources-categories'),
+  getPopularResources: (limit) => api.get('/student/resources-popular', { params: { limit } }),
+  
+  // Team Events
+  getEvents: (params) => api.get('/student/events', { params }),
+  getEvent: (id) => api.get(`/student/events/${id}`),
+  rsvpEvent: (id, data) => api.post(`/student/events/${id}/rsvp`, data),
+  cancelRsvp: (id) => api.delete(`/student/events/${id}/rsvp`),
+  getMyEvents: (params) => api.get('/student/my-events', { params }),
+  
+  // Message Templates
+  getTemplates: (type) => api.get('/student/templates', { params: { type } }),
+  getTemplate: (id) => api.get(`/student/templates/${id}`),
+  renderTemplate: (id, variables) => api.post(`/student/templates/${id}/render`, { variables }),
+  logShare: (platform, templateId) => api.post('/student/templates/share', { platform, template_id: templateId }),
+  getShareStats: () => api.get('/student/share-stats'),
+  getTrendingTemplates: (limit) => api.get('/student/templates-trending', { params: { limit } }),
+  
+  // Webhooks
+  getWebhooks: () => api.get('/student/webhooks'),
+  createWebhook: (data) => api.post('/student/webhooks', data),
+  updateWebhook: (id, data) => api.put(`/student/webhooks/${id}`, data),
+  deleteWebhook: (id) => api.delete(`/student/webhooks/${id}`),
+  getWebhookDeliveries: (id, limit) => api.get(`/student/webhooks/${id}/deliveries`, { params: { limit } }),
+  getWebhookStats: (id) => api.get(`/student/webhooks/${id}/stats`),
+  
+  // API Keys
+  getApiKeys: () => api.get('/student/api-keys'),
+  createApiKey: (data) => api.post('/student/api-keys', data),
+  deleteApiKey: (id) => api.delete(`/student/api-keys/${id}`),
+  getApiKeyStats: (id) => api.get(`/student/api-keys/${id}/stats`),
+  getApiKeyHistory: (id, limit) => api.get(`/student/api-keys/${id}/history`, { params: { limit } })
 };
 
 // Instructor API
