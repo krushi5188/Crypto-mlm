@@ -189,7 +189,15 @@ const Navbar = () => {
                   onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
                   onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                 >
-                  BI Analytics
+                  Business Intelligence
+                </Link>
+                <Link 
+                  to="/instructor/deposits" 
+                  style={linkStyles}
+                  onMouseEnter={(e) => e.target.style.color = linkHoverStyles.color}
+                  onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+                >
+                  Deposits
                 </Link>
               </>
             )}
