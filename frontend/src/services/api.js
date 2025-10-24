@@ -170,7 +170,19 @@ export const instructorAPI = {
   executeCampaign: (id) => api.post(`/instructor/campaigns/${id}/execute`),
   getCampaignStats: (id) => api.get(`/instructor/campaigns/${id}/stats`),
   addDripStep: (id, data) => api.post(`/instructor/campaigns/${id}/drip-step`, data),
-  getCampaignRecipients: (id, params) => api.get(`/instructor/campaigns/${id}/recipients`, { params })
+  getCampaignRecipients: (id, params) => api.get(`/instructor/campaigns/${id}/recipients`, { params }),
+  
+  // A/B Testing
+  getExperiments: (params) => api.get('/instructor/ab-experiments', { params }),
+  getExperiment: (id) => api.get(`/instructor/ab-experiments/${id}`),
+  getExperimentResults: (id) => api.get(`/instructor/ab-experiments/${id}/results`),
+  getExperimentsSummary: () => api.get('/instructor/ab-experiments/summary'),
+  createExperiment: (data) => api.post('/instructor/ab-experiments', data),
+  updateExperiment: (id, data) => api.put(`/instructor/ab-experiments/${id}`, data),
+  updateExperimentStatus: (id, status) => api.put(`/instructor/ab-experiments/${id}/status`, { status }),
+  setExperimentWinner: (id, winnerVariant) => api.post(`/instructor/ab-experiments/${id}/winner`, { winnerVariant }),
+  deleteExperiment: (id) => api.delete(`/instructor/ab-experiments/${id}`),
+  trackExperimentEvent: (id, data) => api.post(`/instructor/ab-experiments/${id}/track`, data)
 };
 
 // System API
