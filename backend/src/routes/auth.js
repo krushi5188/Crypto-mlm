@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const SystemConfig = require('../models/SystemConfig');
+const TwoFactorAuth = require('../models/TwoFactorAuth');
 const CommissionService = require('../services/commissionService');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 const { generateToken } = require('../utils/jwtToken');
@@ -167,6 +168,33 @@ router.post('/login',
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
         });
+      }
+
+      // Check if 2FA is enabled
+      const has2FA = await TwoFactorAuth.isEnabled(user.id);
+      
+      if (has2FA) {
+        const { twoFactorToken } = req.body;
+        
+        if (!twoFactorToken) {
+          // 2FA required but not provided
+          return res.status(200).json({
+            success: false,
+            requires2FA: true,
+            userId: user.id,
+            message: 'Two-factor authentication required'
+          });
+        }
+        
+        // Verify 2FA token
+        const verifyResult = await TwoFactorAuth.verify(user.id, twoFactorToken);
+        
+        if (!verifyResult.success) {
+          return res.status(401).json({
+            error: verifyResult.error || 'Invalid 2FA code',
+            code: 'INVALID_2FA_CODE'
+          });
+        }
       }
 
       // Check approval status (students only)
