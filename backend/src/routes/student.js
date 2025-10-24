@@ -11,6 +11,7 @@ const Event = require('../models/Event');
 const MessageTemplate = require('../models/MessageTemplate');
 const Webhook = require('../models/Webhook');
 const ApiKey = require('../models/ApiKey');
+const UserPreferences = require('../models/UserPreferences');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
 const { authenticate } = require('../middleware/auth');
@@ -1637,6 +1638,98 @@ router.get('/api-keys/:id/history', async (req, res) => {
     console.error('API key history error:', error);
     res.status(500).json({
       error: 'Failed to load API key history',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * USER PREFERENCES ENDPOINTS
+ */
+
+// GET /api/v1/student/preferences - Get user preferences
+router.get('/preferences', async (req, res) => {
+  try {
+    let preferences = await UserPreferences.getByUserId(req.user.id);
+
+    // Create default preferences if not exist
+    if (!preferences) {
+      preferences = await UserPreferences.create(req.user.id);
+    }
+
+    res.json({
+      success: true,
+      data: { preferences }
+    });
+  } catch (error) {
+    console.error('Get preferences error:', error);
+    res.status(500).json({
+      error: 'Failed to load preferences',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/preferences - Create preferences (on first use)
+router.post('/preferences', async (req, res) => {
+  try {
+    const preferences = await UserPreferences.create(req.user.id);
+
+    res.json({
+      success: true,
+      data: { preferences }
+    });
+  } catch (error) {
+    console.error('Create preferences error:', error);
+    res.status(500).json({
+      error: 'Failed to create preferences',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// PUT /api/v1/student/preferences - Update preferences
+router.put('/preferences', async (req, res) => {
+  try {
+    const updates = req.body;
+
+    let preferences = await UserPreferences.update(req.user.id, updates);
+
+    // If no preferences exist, create them first
+    if (!preferences) {
+      await UserPreferences.create(req.user.id);
+      preferences = await UserPreferences.update(req.user.id, updates);
+    }
+
+    res.json({
+      success: true,
+      data: { preferences }
+    });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({
+      error: 'Failed to update preferences',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/preferences/complete-onboarding - Mark onboarding as complete
+router.post('/preferences/complete-onboarding', async (req, res) => {
+  try {
+    const preferences = await UserPreferences.completeOnboarding(req.user.id);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Onboarding completed',
+        preferences
+      }
+    });
+  } catch (error) {
+    console.error('Complete onboarding error:', error);
+    res.status(500).json({
+      error: 'Failed to complete onboarding',
       code: 'DATABASE_ERROR'
     });
   }
