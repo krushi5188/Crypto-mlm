@@ -18,6 +18,8 @@ const { authenticate } = require('../middleware/auth');
 const { requireStudent } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
+const upload = require('../config/multer');
+const path = require('path');
 
 // Apply authentication to all student routes
 router.use(authenticate);
@@ -383,6 +385,46 @@ router.put('/profile', validate('profileUpdate'), async (req, res) => {
     res.status(500).json({
       error: 'Failed to update profile',
       code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/student/profile/avatar
+ * Upload profile avatar
+ */
+router.post('/profile/avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file uploaded',
+        code: 'NO_FILE'
+      });
+    }
+
+    // Generate avatar URL (relative path for serving)
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    // Update user's avatar_url in database
+    await require('../config/database').pool.query(
+      'UPDATE users SET avatar_url = $1 WHERE id = $2',
+      [avatarUrl, userId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Avatar uploaded successfully',
+        avatarUrl
+      }
+    });
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    res.status(500).json({
+      error: 'Failed to upload avatar',
+      code: 'UPLOAD_ERROR'
     });
   }
 });
