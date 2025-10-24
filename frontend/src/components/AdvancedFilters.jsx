@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import HelpTooltip from './HelpTooltip';
 
 const AdvancedFilters = ({ onFilterChange, savedPresets = [], onSavePreset, onDeletePreset }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -263,7 +264,10 @@ const AdvancedFilters = ({ onFilterChange, savedPresets = [], onSavePreset, onDe
           {/* Saved Presets */}
           {savedPresets && savedPresets.length > 0 && (
             <div style={presetListStyle}>
-              <label style={labelStyle}>Saved Presets</label>
+              <label style={labelStyle}>
+                Saved Presets
+                <HelpTooltip content="Save frequently used filter combinations for quick access. Click a preset to apply it instantly." position="right" maxWidth="220px" />
+              </label>
               <div style={{ marginTop: 'var(--space-xs)' }}>
                 {savedPresets.map((preset, index) => (
                   <div
