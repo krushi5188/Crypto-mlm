@@ -7,6 +7,7 @@ const AdminAction = require('../models/AdminAction');
 const AnalyticsService = require('../services/analyticsService');
 const ReferralService = require('../services/referralService');
 const ExportService = require('../services/exportService');
+const predictiveAnalyticsService = require('../services/predictiveAnalyticsService');
 const { authenticate } = require('../middleware/auth');
 const { requireInstructor } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
@@ -32,6 +33,191 @@ router.get('/analytics', async (req, res) => {
     console.error('Analytics error:', error);
     res.status(500).json({
       error: 'Failed to load analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * PREDICTIVE ANALYTICS ENDPOINTS (INSTRUCTOR)
+ */
+
+// GET /api/v1/instructor/analytics/churn-risks - Get users at risk
+router.get('/analytics/churn-risks', async (req, res) => {
+  try {
+    const riskLevel = req.query.riskLevel || 'all';
+    const limit = parseInt(req.query.limit) || 50;
+    
+    const users = await predictiveAnalyticsService.getChurnRiskUsers(riskLevel, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        users: users.map(u => ({
+          userId: u.user_id,
+          email: u.email,
+          username: u.username,
+          balance: parseFloat(u.balance),
+          churnRiskScore: parseFloat(u.churn_risk_score),
+          churnRiskLevel: u.churn_risk_level,
+          daysInactive: parseInt(u.days_inactive),
+          lastActivityDate: u.last_activity_date,
+          avgMonthlyEarnings: parseFloat(u.avg_monthly_earnings),
+          earningsGrowthRate: parseFloat(u.earnings_growth_rate)
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Churn risks error:', error);
+    res.status(500).json({
+      error: 'Failed to load churn risk data',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/analytics/network-forecast - Get network growth forecast
+router.get('/analytics/network-forecast', async (req, res) => {
+  try {
+    const forecastType = req.query.forecastType || 'daily';
+    const limit = parseInt(req.query.limit) || 30;
+    
+    const forecasts = await predictiveAnalyticsService.getNetworkForecasts(forecastType, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        forecasts: forecasts.map(f => ({
+          forecastDate: f.forecast_date,
+          predictedNewUsers: parseInt(f.predicted_new_users),
+          predictedTotalUsers: parseInt(f.predicted_total_users),
+          predictedTotalEarnings: parseFloat(f.predicted_total_earnings),
+          predictedActiveUsers: parseInt(f.predicted_active_users),
+          confidenceLevel: parseFloat(f.confidence_level),
+          lowerBound: parseFloat(f.lower_bound),
+          upperBound: parseFloat(f.upper_bound),
+          createdAt: f.created_at
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Network forecast error:', error);
+    res.status(500).json({
+      error: 'Failed to load network forecast',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/analytics/calculate-forecast - Generate new forecast
+router.post('/analytics/calculate-forecast', async (req, res) => {
+  try {
+    const forecastType = req.body.forecastType || 'daily';
+    const daysAhead = parseInt(req.body.daysAhead) || 30;
+    
+    const forecasts = await predictiveAnalyticsService.calculateNetworkForecast(forecastType, daysAhead);
+    
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'calculate_forecast',
+      details: { forecast_type: forecastType, days_ahead: daysAhead },
+      ip_address: req.ip
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Network forecast calculated successfully',
+        forecastsGenerated: forecasts.length
+      }
+    });
+  } catch (error) {
+    console.error('Calculate forecast error:', error);
+    res.status(500).json({
+      error: 'Failed to calculate forecast',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/instructor/analytics/top-performers - Get top performing users
+router.get('/analytics/top-performers', async (req, res) => {
+  try {
+    const metric = req.query.metric || 'earnings';
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const performers = await predictiveAnalyticsService.getTopPerformers(metric, limit);
+    
+    res.json({
+      success: true,
+      data: {
+        performers: performers.map(p => ({
+          userId: p.user_id,
+          username: p.username,
+          email: p.email,
+          balance: parseFloat(p.balance),
+          avgDailyEarnings: parseFloat(p.avg_daily_earnings),
+          avgWeeklyEarnings: parseFloat(p.avg_weekly_earnings),
+          avgMonthlyEarnings: parseFloat(p.avg_monthly_earnings),
+          earningsGrowthRate: parseFloat(p.earnings_growth_rate),
+          avgWeeklyRecruits: parseFloat(p.avg_weekly_recruits),
+          networkGrowthRate: parseFloat(p.network_growth_rate)
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Top performers error:', error);
+    res.status(500).json({
+      error: 'Failed to load top performers',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/instructor/analytics/bulk-calculate - Calculate analytics for all users
+router.post('/analytics/bulk-calculate', async (req, res) => {
+  try {
+    const userIdsQuery = await pool.query(
+      'SELECT id FROM users WHERE role = $1 ORDER BY id ASC',
+      ['student']
+    );
+    
+    const userIds = userIdsQuery.rows.map(row => row.id);
+    let calculated = 0;
+    let errors = 0;
+    
+    for (const userId of userIds) {
+      try {
+        await predictiveAnalyticsService.calculateUserAnalytics(userId);
+        calculated++;
+      } catch (error) {
+        console.error(`Failed to calculate analytics for user ${userId}:`, error);
+        errors++;
+      }
+    }
+    
+    // Log action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'bulk_calculate_analytics',
+      details: { total_users: userIds.length, calculated, errors },
+      ip_address: req.ip
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Bulk analytics calculation completed',
+        totalUsers: userIds.length,
+        calculated,
+        errors
+      }
+    });
+  } catch (error) {
+    console.error('Bulk calculate error:', error);
+    res.status(500).json({
+      error: 'Failed to bulk calculate analytics',
       code: 'DATABASE_ERROR'
     });
   }
