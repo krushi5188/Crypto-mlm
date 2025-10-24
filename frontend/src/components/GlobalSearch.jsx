@@ -63,14 +63,56 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        // For now, we'll do a simple search
-        // TODO: Replace with actual API call when backend endpoint is ready
-        const mockResults = generateMockResults(query);
-        setResults(mockResults);
+        // Use real API endpoint
+        const response = await studentAPI.search(query, 20);
+        const apiResults = response.data.data.results || [];
+        
+        // Map API results to component format
+        const mappedResults = apiResults.map(result => {
+          const baseResult = {
+            type: result.type,
+            title: result.title,
+            subtitle: result.subtitle
+          };
+
+          switch (result.type) {
+            case 'network_member':
+              return {
+                ...baseResult,
+                icon: '👤',
+                action: () => navigate('/network')
+              };
+            case 'transaction':
+              return {
+                ...baseResult,
+                icon: '💰',
+                action: () => navigate('/earnings')
+              };
+            case 'goal':
+              return {
+                ...baseResult,
+                icon: '🎯',
+                action: () => navigate('/profile')
+              };
+            default:
+              return {
+                ...baseResult,
+                icon: '📄',
+                action: () => {}
+              };
+          }
+        });
+
+        // Add page results based on query
+        const pageResults = generatePageResults(query);
+        
+        setResults([...pageResults, ...mappedResults]);
         setSelectedIndex(0);
       } catch (error) {
         console.error('Search error:', error);
-        setResults([]);
+        // Fallback to page-only search if API fails
+        setResults(generatePageResults(query));
+        setSelectedIndex(0);
       } finally {
         setLoading(false);
       }
@@ -83,7 +125,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     };
   }, [query]);
 
-  const generateMockResults = (searchQuery) => {
+  const generatePageResults = (searchQuery) => {
     const lower = searchQuery.toLowerCase();
     const mockResults = [];
 
