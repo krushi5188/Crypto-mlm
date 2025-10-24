@@ -3,12 +3,15 @@ const router = express.Router();
 const User = require('../models/User');
 const SystemConfig = require('../models/SystemConfig');
 const CommissionService = require('../services/commissionService');
+const TwoFactorService = require('../services/twoFactorService');
+const SecurityService = require('../services/securityService');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 const { generateToken } = require('../utils/jwtToken');
 const { generateReferralCode } = require('../utils/generateReferralCode');
 const { validate } = require('../utils/validation');
 const { registerLimiter, loginLimiter } = require('../middleware/rateLimiter');
 const { checkSimulationActive } = require('../middleware/simulationStatus');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * POST /api/v1/auth/register
@@ -136,12 +139,15 @@ router.post('/login',
   validate('login'),
   async (req, res) => {
     try {
-      const { email, password } = req.validatedBody;
+      const { email, password, twoFactorToken } = req.validatedBody;
 
       // Find user by email
       const user = await User.findByEmail(email);
 
       if (!user) {
+        // Log failed login attempt
+        await SecurityService.logLogin(null, req.ip, req.headers['user-agent'], false, 'invalid_credentials');
+        
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -152,6 +158,9 @@ router.post('/login',
       const isValidPassword = await comparePassword(password, user.password_hash);
 
       if (!isValidPassword) {
+        // Log failed login attempt
+        await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, 'invalid_password');
+        
         return res.status(401).json({
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS'
@@ -174,6 +183,36 @@ router.post('/login',
         }
       }
 
+      // Check if 2FA is enabled
+      const is2FAEnabled = await TwoFactorService.is2FAEnabled(user.id);
+
+      if (is2FAEnabled) {
+        // Require 2FA token
+        if (!twoFactorToken) {
+          return res.status(200).json({
+            success: false,
+            requires2FA: true,
+            message: 'Two-factor authentication required'
+          });
+        }
+
+        // Verify 2FA token
+        const verification = await TwoFactorService.verifyLogin2FA(user.id, twoFactorToken);
+
+        if (!verification.success) {
+          // Log failed 2FA attempt
+          await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], false, '2fa_failed');
+          
+          return res.status(401).json({
+            error: 'Invalid two-factor authentication code',
+            code: 'INVALID_2FA_TOKEN'
+          });
+        }
+      }
+
+      // Log successful login
+      await SecurityService.logLogin(user.id, req.ip, req.headers['user-agent'], true);
+
       // Update last login
       await User.updateLastLogin(user.id);
 
@@ -191,7 +230,8 @@ router.post('/login',
             role: user.role,
             balance: parseFloat(user.balance),
             referralCode: user.referral_code,
-            approvalStatus: user.approval_status || 'approved'
+            approvalStatus: user.approval_status || 'approved',
+            has2FA: is2FAEnabled
           },
           token
         }
@@ -200,6 +240,143 @@ router.post('/login',
       console.error('Login error:', error);
       res.status(500).json({
         error: 'Login failed',
+        code: 'DATABASE_ERROR'
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/v1/auth/2fa/setup
+ * Setup 2FA for user (generates QR code)
+ */
+router.post('/2fa/setup',
+  authenticate,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await User.findById(userId);
+
+      // Generate secret and QR code
+      const { secret, otpauthUrl } = TwoFactorService.generateSecret(user.email);
+      const qrCode = await TwoFactorService.generateQRCode(otpauthUrl);
+
+      // Generate backup codes
+      const backupCodes = TwoFactorService.generateBackupCodes(8);
+
+      // Save to database (not enabled yet)
+      await TwoFactorService.setup2FA(userId, secret, backupCodes);
+
+      res.json({
+        success: true,
+        data: {
+          secret,
+          qrCode,
+          backupCodes,
+          message: 'Scan QR code with your authenticator app, then verify to enable 2FA'
+        }
+      });
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      res.status(500).json({
+        error: 'Failed to setup 2FA',
+        code: 'DATABASE_ERROR'
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/v1/auth/2fa/enable
+ * Enable 2FA after user verifies token
+ */
+router.post('/2fa/enable',
+  authenticate,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          error: 'Token is required',
+          code: 'MISSING_TOKEN'
+        });
+      }
+
+      await TwoFactorService.enable2FA(userId, token);
+
+      res.json({
+        success: true,
+        data: {
+          message: 'Two-factor authentication enabled successfully'
+        }
+      });
+    } catch (error) {
+      console.error('2FA enable error:', error);
+      res.status(400).json({
+        error: error.message || 'Failed to enable 2FA',
+        code: 'ENABLE_2FA_FAILED'
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/v1/auth/2fa/disable
+ * Disable 2FA (requires password confirmation)
+ */
+router.post('/2fa/disable',
+  authenticate,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({
+          error: 'Password is required to disable 2FA',
+          code: 'MISSING_PASSWORD'
+        });
+      }
+
+      await TwoFactorService.disable2FA(userId, password);
+
+      res.json({
+        success: true,
+        data: {
+          message: 'Two-factor authentication disabled successfully'
+        }
+      });
+    } catch (error) {
+      console.error('2FA disable error:', error);
+      res.status(400).json({
+        error: error.message || 'Failed to disable 2FA',
+        code: 'DISABLE_2FA_FAILED'
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/v1/auth/2fa/status
+ * Get 2FA status for current user
+ */
+router.get('/2fa/status',
+  authenticate,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const status = await TwoFactorService.get2FAStatus(userId);
+
+      res.json({
+        success: true,
+        data: status
+      });
+    } catch (error) {
+      console.error('2FA status error:', error);
+      res.status(500).json({
+        error: 'Failed to get 2FA status',
         code: 'DATABASE_ERROR'
       });
     }
