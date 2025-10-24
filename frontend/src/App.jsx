@@ -7,16 +7,16 @@ import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import StudentDashboard from './pages/StudentDashboard';
-import StudentNetwork from './pages/StudentNetwork';
-import StudentEarnings from './pages/StudentEarnings';
-import StudentProfile from './pages/StudentProfile';
-import StudentAchievements from './pages/StudentAchievements';
-import StudentLeaderboard from './pages/StudentLeaderboard';
-import StudentNotifications from './pages/StudentNotifications';
-import StudentSecurity from './pages/StudentSecurity';
-import StudentWithdrawals from './pages/StudentWithdrawals';
-import StudentAnalytics from './pages/StudentAnalytics';
+import MemberDashboard from './pages/MemberDashboard';
+import MemberNetwork from './pages/MemberNetwork';
+import MemberEarnings from './pages/MemberEarnings';
+import MemberProfile from './pages/MemberProfile';
+import MemberAchievements from './pages/MemberAchievements';
+import MemberLeaderboard from './pages/MemberLeaderboard';
+import MemberNotifications from './pages/MemberNotifications';
+import MemberSecurity from './pages/MemberSecurity';
+import MemberWithdrawals from './pages/MemberWithdrawals';
+import MemberAnalytics from './pages/MemberAnalytics';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import InstructorParticipants from './pages/InstructorParticipants';
 import InstructorReferrals from './pages/InstructorReferrals';
@@ -109,83 +109,83 @@ function App() {
               </PublicRoute>
             } />
 
-            {/* Student Routes */}
+            {/* Member Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentDashboard />
+                  <MemberDashboard />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/network" element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentNetwork />
+                  <MemberNetwork />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/earnings" element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentEarnings />
+                  <MemberEarnings />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
             <Route path="/profile" element={
-              <ProtectedRoute allowedRole="student">
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentProfile />
+                  <MemberProfile />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/achievements" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/achievements" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentAchievements />
+                  <MemberAchievements />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/leaderboard" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/leaderboard" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentLeaderboard />
+                  <MemberLeaderboard />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/notifications" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/notifications" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentNotifications />
+                  <MemberNotifications />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/security" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/security" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentSecurity />
+                  <MemberSecurity />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/withdrawals" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/withdrawals" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentWithdrawals />
+                  <MemberWithdrawals />
                 </AppLayout>
               </ProtectedRoute>
             } />
 
-            <Route path="/student/analytics" element={
-              <ProtectedRoute allowedRole="student">
+            <Route path="/member/analytics" element={
+              <ProtectedRoute allowedRole="member">
                 <AppLayout>
-                  <StudentAnalytics />
+                  <MemberAnalytics />
                 </AppLayout>
               </ProtectedRoute>
             } />
