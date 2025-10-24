@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { instructorAPI } from '../services/api';
+import HelpTooltip from '../components/HelpTooltip';
 
 const InstructorFraudDetection = () => {
   const [loading, setLoading] = useState(true);
@@ -124,7 +125,10 @@ const InstructorFraudDetection = () => {
             <div style={styles.statIcon}>🚨</div>
             <div style={styles.statContent}>
               <div style={styles.statValue}>{dashboard.totalFlagged || 0}</div>
-              <div style={styles.statLabel}>Flagged Users</div>
+              <div style={styles.statLabel}>
+                Flagged Users
+                <HelpTooltip content="Users manually flagged by administrators for review due to suspicious activity or policy violations." position="top" />
+              </div>
             </div>
           </div>
 
@@ -132,7 +136,10 @@ const InstructorFraudDetection = () => {
             <div style={styles.statIcon}>⚠️</div>
             <div style={styles.statContent}>
               <div style={styles.statValue}>{dashboard.highRiskCount || 0}</div>
-              <div style={styles.statLabel}>High Risk</div>
+              <div style={styles.statLabel}>
+                High Risk
+                <HelpTooltip content="Users with risk scores above 51/100. System automatically monitors these accounts for suspicious patterns." position="top" />
+              </div>
             </div>
           </div>
 
@@ -140,7 +147,10 @@ const InstructorFraudDetection = () => {
             <div style={styles.statIcon}>🔍</div>
             <div style={styles.statContent}>
               <div style={styles.statValue}>{dashboard.recentAlertsCount || 0}</div>
-              <div style={styles.statLabel}>Recent Alerts</div>
+              <div style={styles.statLabel}>
+                Recent Alerts
+                <HelpTooltip content="Automated alerts triggered by suspicious activity in the last 24 hours." position="top" />
+              </div>
             </div>
           </div>
 
@@ -148,7 +158,10 @@ const InstructorFraudDetection = () => {
             <div style={styles.statIcon}>👥</div>
             <div style={styles.statContent}>
               <div style={styles.statValue}>{dashboard.multiAccountGroups || 0}</div>
-              <div style={styles.statLabel}>Multi-Account Groups</div>
+              <div style={styles.statLabel}>
+                Multi-Account Groups
+                <HelpTooltip content="Groups of accounts sharing the same IP address or device fingerprint, indicating possible multi-accounting." position="top" />
+              </div>
             </div>
           </div>
         </div>
