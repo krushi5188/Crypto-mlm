@@ -2328,4 +2328,115 @@ router.get('/achievements/leaderboard', async (req, res) => {
   }
 });
 
+/**
+ * RANK SYSTEM ENDPOINTS
+ */
+
+// GET /api/v1/student/rank - Get user's current rank
+router.get('/rank', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const rankInfo = await Rank.getUserRank(userId);
+
+    res.json({
+      success: true,
+      data: { rank: rankInfo }
+    });
+  } catch (error) {
+    console.error('Get rank error:', error);
+    res.status(500).json({
+      error: 'Failed to load rank',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/rank/progress - Get rank progression info
+router.get('/rank/progress', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const progress = await Rank.getUserProgress(userId);
+
+    res.json({
+      success: true,
+      data: { progress }
+    });
+  } catch (error) {
+    console.error('Get rank progress error:', error);
+    res.status(500).json({
+      error: 'Failed to load rank progress',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/rank/all - Get all ranks
+router.get('/rank/all', async (req, res) => {
+  try {
+    const ranks = await Rank.getAll();
+
+    res.json({
+      success: true,
+      data: { ranks }
+    });
+  } catch (error) {
+    console.error('Get all ranks error:', error);
+    res.status(500).json({
+      error: 'Failed to load ranks',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// POST /api/v1/student/rank/check - Check and auto-promote if eligible
+router.post('/rank/check', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await Rank.checkAndPromote(userId);
+
+    if (result.promoted) {
+      res.json({
+        success: true,
+        data: {
+          message: `Congratulations! You've been promoted to ${result.newRank.rank_name}!`,
+          newRank: result.newRank
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          message: 'No rank promotion available yet',
+          currentRank: result.currentRank
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Check rank error:', error);
+    res.status(500).json({
+      error: 'Failed to check rank',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// GET /api/v1/student/rank/leaderboard - Get rank leaderboard
+router.get('/rank/leaderboard', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const leaderboard = await Rank.getLeaderboard(limit);
+
+    res.json({
+      success: true,
+      data: { leaderboard }
+    });
+  } catch (error) {
+    console.error('Get rank leaderboard error:', error);
+    res.status(500).json({
+      error: 'Failed to load rank leaderboard',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
 module.exports = router;
