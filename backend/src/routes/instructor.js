@@ -4,9 +4,11 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const SystemConfig = require('../models/SystemConfig');
 const AdminAction = require('../models/AdminAction');
+const FraudAlert = require('../models/FraudAlert');
 const AnalyticsService = require('../services/analyticsService');
 const ReferralService = require('../services/referralService');
 const ExportService = require('../services/exportService');
+const FraudDetection = require('../utils/fraudDetection');
 const { authenticate } = require('../middleware/auth');
 const { requireInstructor } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
@@ -726,6 +728,323 @@ router.put('/config', validate('updateConfig'), async (req, res) => {
     console.error('Config update error:', error);
     res.status(500).json({
       error: 'Failed to update configuration',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+// ============================================
+// FRAUD DETECTION ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/v1/instructor/fraud-detection/dashboard
+ * Get fraud detection dashboard statistics
+ */
+router.get('/fraud-detection/dashboard', async (req, res) => {
+  try {
+    const stats = await FraudDetection.getDashboardStats();
+
+    // Get recent high-risk users
+    const highRiskUsers = await pool.query(
+      `SELECT id, username, email, risk_score, is_flagged, created_at
+       FROM users
+       WHERE role = 'student' AND risk_score >= 51
+       ORDER BY risk_score DESC
+       LIMIT 10`
+    );
+
+    // Get recent security events
+    const recentEvents = await pool.query(
+      `SELECT * FROM security_events
+       WHERE created_at > NOW() - INTERVAL '24 hours'
+       ORDER BY created_at DESC
+       LIMIT 20`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        stats,
+        highRiskUsers: highRiskUsers.rows,
+        recentEvents: recentEvents.rows
+      }
+    });
+  } catch (error) {
+    console.error('Fraud dashboard error:', error);
+    res.status(500).json({
+      error: 'Failed to load fraud detection dashboard',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/flagged-users
+ * Get list of flagged users
+ */
+router.get('/fraud-detection/flagged-users', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+        u.id, u.username, u.email, u.risk_score,
+        u.is_flagged, u.flagged_at, u.flagged_reason,
+        u.created_at, u.last_login,
+        reviewer.username as reviewed_by_name
+       FROM users u
+       LEFT JOIN users reviewer ON u.reviewed_by = reviewer.id
+       WHERE u.is_flagged = true
+       ORDER BY u.flagged_at DESC`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        flaggedUsers: result.rows
+      }
+    });
+  } catch (error) {
+    console.error('Flagged users error:', error);
+    res.status(500).json({
+      error: 'Failed to load flagged users',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/user/:id
+ * Get detailed fraud analysis for specific user
+ */
+router.get('/fraud-detection/user/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    // Get user info
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Recalculate risk score
+    const riskAnalysis = await FraudDetection.calculateRiskScore(userId);
+
+    // Get all IPs used by this user
+    const ips = await pool.query(
+      `SELECT ip_address, first_seen_at, last_seen_at, login_count, is_suspicious
+       FROM ip_addresses
+       WHERE user_id = $1
+       ORDER BY last_seen_at DESC`,
+      [userId]
+    );
+
+    // Get all devices used
+    const devices = await pool.query(
+      `SELECT fingerprint_hash, browser, os, device_type, first_seen_at, last_seen_at, login_count
+       FROM device_fingerprints
+       WHERE user_id = $1
+       ORDER BY last_seen_at DESC`,
+      [userId]
+    );
+
+    // Find related accounts
+    const relatedAccounts = await FraudDetection.findRelatedAccounts(userId);
+
+    // Get fraud alerts for this user
+    const alerts = await FraudAlert.getByUserId(userId);
+
+    // Get login history
+    const loginHistory = await pool.query(
+      `SELECT ip_address, user_agent, success, failure_reason, created_at
+       FROM login_history
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          risk_score: user.risk_score,
+          is_flagged: user.is_flagged,
+          flagged_reason: user.flagged_reason,
+          created_at: user.created_at
+        },
+        riskAnalysis,
+        ipAddresses: ips.rows,
+        devices: devices.rows,
+        relatedAccounts,
+        alerts,
+        loginHistory: loginHistory.rows
+      }
+    });
+  } catch (error) {
+    console.error('User fraud detail error:', error);
+    res.status(500).json({
+      error: 'Failed to load user fraud details',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/fraud-detection/flag/:id
+ * Manually flag a user for review
+ */
+router.post('/fraud-detection/flag/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        error: 'Reason is required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    await FraudDetection.flagUser(userId, reason, req.user.id);
+
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'view_participant',
+      target_user_id: userId,
+      details: { action: 'flagged', reason },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'User flagged successfully'
+      }
+    });
+  } catch (error) {
+    console.error('Flag user error:', error);
+    res.status(500).json({
+      error: 'Failed to flag user',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/fraud-detection/unflag/:id
+ * Unflag a user after review
+ */
+router.post('/fraud-detection/unflag/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { notes } = req.body;
+
+    await FraudDetection.unflagUser(userId, req.user.id, notes);
+
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'view_participant',
+      target_user_id: userId,
+      details: { action: 'unflagged', notes },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'User unflagged successfully'
+      }
+    });
+  } catch (error) {
+    console.error('Unflag user error:', error);
+    res.status(500).json({
+      error: 'Failed to unflag user',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/multi-accounts
+ * Find potential multi-account users
+ */
+router.get('/fraud-detection/multi-accounts', async (req, res) => {
+  try {
+    // Find accounts sharing IPs
+    const sharedIPs = await pool.query(
+      `SELECT
+        ip_address,
+        array_agg(DISTINCT user_id) as user_ids,
+        array_agg(DISTINCT u.username) as usernames,
+        COUNT(DISTINCT user_id) as account_count
+       FROM ip_addresses ip
+       JOIN users u ON ip.user_id = u.id
+       GROUP BY ip_address
+       HAVING COUNT(DISTINCT user_id) > 1
+       ORDER BY account_count DESC`
+    );
+
+    // Find accounts sharing devices
+    const sharedDevices = await pool.query(
+      `SELECT
+        fingerprint_hash,
+        array_agg(DISTINCT user_id) as user_ids,
+        array_agg(DISTINCT u.username) as usernames,
+        COUNT(DISTINCT user_id) as account_count
+       FROM device_fingerprints df
+       JOIN users u ON df.user_id = u.id
+       GROUP BY fingerprint_hash
+       HAVING COUNT(DISTINCT user_id) > 1
+       ORDER BY account_count DESC`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        sharedIPs: sharedIPs.rows,
+        sharedDevices: sharedDevices.rows
+      }
+    });
+  } catch (error) {
+    console.error('Multi-accounts error:', error);
+    res.status(500).json({
+      error: 'Failed to detect multi-accounts',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/instructor/fraud-detection/alerts
+ * Get fraud alerts with filters
+ */
+router.get('/fraud-detection/alerts', async (req, res) => {
+  try {
+    const { status, severity, limit, offset } = req.query;
+
+    const alerts = await FraudAlert.getAll({
+      status,
+      severity,
+      limit: parseInt(limit) || 50,
+      offset: parseInt(offset) || 0
+    });
+
+    res.json({
+      success: true,
+      data: {
+        alerts
+      }
+    });
+  } catch (error) {
+    console.error('Fraud alerts error:', error);
+    res.status(500).json({
+      error: 'Failed to load fraud alerts',
       code: 'DATABASE_ERROR'
     });
   }
