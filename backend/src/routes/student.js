@@ -16,6 +16,7 @@ const Notification = require('../models/Notification');
 const TwoFactorAuth = require('../models/TwoFactorAuth');
 const Achievement = require('../models/Achievement');
 const Rank = require('../models/Rank');
+const Deposit = require('../models/Deposit');
 const ReferralService = require('../services/referralService');
 const cacheService = require('../services/cacheService');
 const { authenticate } = require('../middleware/auth');
