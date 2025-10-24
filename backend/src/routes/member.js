@@ -16,13 +16,13 @@ const cacheService = require('../services/cacheService');
 const predictiveAnalyticsService = require('../services/predictiveAnalyticsService');
 const campaignService = require('../services/campaignService');
 const { authenticate } = require('../middleware/auth');
-const { requireStudent } = require('../middleware/roleAuth');
+const { requireMember } = require('../middleware/roleAuth');
 const { validate } = require('../utils/validation');
 const { hashPassword, comparePassword } = require('../utils/passwordHash');
 
 // Apply authentication to all member routes
 router.use(authenticate);
-router.use(requireStudent);
+router.use(requireMember);
 
 /**
  * GET /api/v1/member/dashboard
