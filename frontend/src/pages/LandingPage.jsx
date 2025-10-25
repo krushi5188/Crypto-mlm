@@ -30,8 +30,8 @@ const LandingPage = () => {
     },
     {
       icon: <TrendingUp className="w-8 h-8" />,
-      title: 'Proven 5-Level System',
-      description: 'Maximize earnings with our battle-tested structure: 10%, 7%, 5%, 3%, 2%. Mathematically optimized for sustainable growth.'
+      title: 'Unlimited Depth Earnings',
+      description: 'Earn from your entire network with no depth limits. Our dynamic weighted distribution system ensures fair earnings across unlimited levels of your downline.'
     },
     {
       icon: <Shield className="w-8 h-8" />,
@@ -42,7 +42,7 @@ const LandingPage = () => {
 
   const stats = [
     { label: 'USDT Payouts', value: 'Real-Time', gradient: true },
-    { label: 'Income Structure', value: '5 Levels', gradient: true },
+    { label: 'Network Depth', value: 'Unlimited', gradient: true },
     { label: 'Verified', value: 'Blockchain', gradient: true }
   ];
 
@@ -127,7 +127,7 @@ const LandingPage = () => {
               variants={itemVariants}
               className="text-xl md:text-2xl text-text-muted mb-12 max-w-3xl mx-auto leading-relaxed"
             >
-              Join a revolutionary platform where you earn USDT through a transparent 5-level commission structure
+              Join a revolutionary platform where you earn USDT through unlimited depth commission structure
             </motion.p>
 
             <motion.div
