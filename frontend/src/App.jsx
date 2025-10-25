@@ -9,6 +9,7 @@ import Watermark from './components/common/Watermark';
 import GlobalSearch, { useGlobalSearch } from './components/GlobalSearch';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ErrorPage from './pages/ErrorPage';
 import MemberDashboard from './pages/MemberDashboard';
 import MemberNetwork from './pages/MemberNetwork';
 import MemberEarnings from './pages/MemberEarnings';
@@ -120,6 +121,13 @@ function App() {
                   <LoginPage />
                 </AppLayout>
               </PublicRoute>
+            } />
+
+            {/* Error Page Route */}
+            <Route path="/error" element={
+              <AppLayout>
+                <ErrorPage />
+              </AppLayout>
             } />
 
             {/* Member Routes */}
