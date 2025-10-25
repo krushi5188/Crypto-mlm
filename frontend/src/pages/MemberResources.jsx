@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  BookOpen, FileText, Video, Image, Link as LinkIcon, FileCheck,
+  Download, Eye, AlertCircle, Search, Filter, X
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 
 const MemberResources = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +33,7 @@ const MemberResources = () => {
     search: ''
   });
   const [selectedResource, setSelectedResource] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -29,9 +49,11 @@ const MemberResources = () => {
       setResources(resourcesRes.data.data.resources);
       setCategories(categoriesRes.data.data.categories);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load resources:', error);
-      setError(error.response?.data?.error || 'Failed to load resources');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load resources';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load resources:', err);
     } finally {
       setLoading(false);
     }
@@ -39,10 +61,11 @@ const MemberResources = () => {
 
   const handleViewResource = async (resource) => {
     setSelectedResource(resource);
+    setShowModal(true);
     try {
       await memberAPI.getResource(resource.id);
-    } catch (error) {
-      console.error('Failed to log resource view:', error);
+    } catch (err) {
+      console.error('Failed to log resource view:', err);
     }
   };
 
@@ -50,142 +73,147 @@ const MemberResources = () => {
     try {
       await memberAPI.logDownload(resourceId);
       window.open(fileUrl, '_blank');
-    } catch (error) {
-      console.error('Failed to log download:', error);
+      showSuccess('Download started');
+    } catch (err) {
+      showError('Failed to download resource');
+      console.error('Failed to log download:', err);
     }
   };
 
-  const getResourceIcon = (type) => {
-    const icons = {
-      document: '📄',
-      video: '🎥',
-      image: '🖼️',
-      link: '🔗',
-      template: '📋'
+  const getResourceConfig = (type) => {
+    const configs = {
+      document: { icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', label: 'Document' },
+      video: { icon: Video, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', label: 'Video' },
+      image: { icon: Image, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/30', label: 'Image' },
+      link: { icon: LinkIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', label: 'Link' },
+      template: { icon: FileCheck, color: 'text-gold-400', bg: 'bg-gold-400/10', border: 'border-gold-400/30', label: 'Template' }
     };
-    return icons[type] || '📦';
+    return configs[type] || { icon: FileText, color: 'text-text-muted', bg: 'bg-glass-medium', border: 'border-glass-border', label: 'Resource' };
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      type: null,
+      category: null,
+      search: ''
+    });
   };
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 'var(--space-md)'
-      }}>
-        <div className="spin" style={{ fontSize: '4rem' }}>⏳</div>
-        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading resources...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <LoadingSkeleton variant="card" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <LoadingSkeleton variant="card" count={6} />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-md)'
-      }}>
-        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
-          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
-            Unable to Load Resources
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
-            {error}
-          </p>
-          <Button onClick={loadData} size="lg">
-            Retry
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Resources</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadData} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
+  const hasActiveFilters = filters.type || filters.category || filters.search;
+
   return (
-    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
       {/* Header */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <div className="fade-in" style={{ maxWidth: '800px' }}>
-          <h1 style={{
-            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-            marginBottom: 'var(--space-md)',
-            fontWeight: '700',
-            letterSpacing: '-0.02em'
-          }}>
-            Training Resources
-          </h1>
-          <p style={{
-            fontSize: 'var(--text-xl)',
-            color: 'var(--text-muted)',
-            lineHeight: '1.6'
-          }}>
-            Access training materials, marketing templates, and valuable resources to grow your business
-          </p>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+          >
+            <BookOpen className="w-8 h-8 text-blue-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Training Resources</h1>
+            <p className="text-lg text-text-muted">Access materials to grow your business</p>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <div className="container" style={{ marginBottom: 'var(--space-2xl)' }}>
-        <Card className="fade-in-up delay-100">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-            {/* Search */}
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: 'var(--space-sm)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: '500',
-                color: 'var(--text-muted)'
-              }}>
-                Search Resources
-              </label>
-              <input
-                type="text"
-                placeholder="Search by title or description..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-md)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--text-primary)',
-                  fontSize: 'var(--text-base)'
-                }}
-              />
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="xl">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-semibold">Filters</h3>
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  onClick={clearFilters}
+                  variant="ghost"
+                  size="sm"
+                  icon={<X className="w-4 h-4" />}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
 
-            {/* Type and Category Filters */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
+            <Input
+              type="text"
+              placeholder="Search by title or description..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              icon={<Search className="w-5 h-5" />}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: '500',
-                  color: 'var(--text-muted)'
-                }}>
-                  Type
-                </label>
+                <label className="block text-sm font-medium mb-2">Resource Type</label>
                 <select
                   value={filters.type || ''}
                   onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value || null }))}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-md)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-base)'
-                  }}
+                  className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors"
                 >
                   <option value="">All Types</option>
                   <option value="document">Documents</option>
@@ -197,27 +225,11 @@ const MemberResources = () => {
               </div>
 
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: '500',
-                  color: 'var(--text-muted)'
-                }}>
-                  Category
-                </label>
+                <label className="block text-sm font-medium mb-2">Category</label>
                 <select
                   value={filters.category || ''}
                   onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value || null }))}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-md)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-base)'
-                  }}
+                  className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors"
                 >
                   <option value="">All Categories</option>
                   {categories.map(cat => (
@@ -230,224 +242,198 @@ const MemberResources = () => {
             </div>
           </div>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Resources Grid */}
-      <div className="container">
-        {resources.length === 0 ? (
-          <div className="fade-in-up" style={{
-            textAlign: 'center',
-            padding: 'var(--space-3xl)',
-            background: 'rgba(255, 255, 255, 0.02)',
-            borderRadius: 'var(--radius-xl)',
-            border: '1px solid rgba(255, 255, 255, 0.05)'
-          }}>
-            <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>📚</div>
-            <p style={{
-              color: 'var(--text-muted)',
-              fontSize: 'var(--text-lg)',
-              lineHeight: '1.6'
-            }}>
-              No resources found. Try adjusting your filters.
-            </p>
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: 'var(--space-xl)'
-          }}>
-            {resources.map((resource, index) => (
-              <div
-                key={resource.id}
-                className={`fade-in-up delay-${Math.min(index * 100, 500)}`}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                  padding: 'var(--space-lg)',
-                  transition: 'all var(--transition-base)',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-                onClick={() => handleViewResource(resource)}
-              >
-                <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>
-                  {getResourceIcon(resource.resource_type)}
-                </div>
+      {resources.length === 0 ? (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
+        >
+          <EmptyState
+            icon={BookOpen}
+            title="No Resources Found"
+            description={hasActiveFilters ? "No resources match your filters. Try adjusting them." : "No resources available at the moment."}
+            actionLabel={hasActiveFilters ? "Clear Filters" : "Refresh"}
+            onAction={hasActiveFilters ? clearFilters : loadData}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {resources.map((resource, index) => {
+            const config = getResourceConfig(resource.resource_type);
+            const IconComponent = config.icon;
 
-                <h3 style={{
-                  fontSize: 'var(--text-xl)',
-                  fontWeight: '600',
-                  marginBottom: 'var(--space-sm)',
-                  color: 'var(--text-primary)'
-                }}>
-                  {resource.title}
-                </h3>
-
-                {resource.description && (
-                  <p style={{
-                    color: 'var(--text-muted)',
-                    fontSize: 'var(--text-sm)',
-                    marginBottom: 'var(--space-md)',
-                    lineHeight: '1.5',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {resource.description}
-                  </p>
-                )}
-
-                {resource.category && (
-                  <div style={{
-                    display: 'inline-block',
-                    padding: 'var(--space-xs) var(--space-sm)',
-                    background: 'rgba(var(--primary-gold-rgb), 0.1)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--primary-gold)',
-                    marginBottom: 'var(--space-md)'
-                  }}>
-                    {resource.category}
-                  </div>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: 'var(--space-md)',
-                  paddingTop: 'var(--space-md)',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-dimmed)'
-                }}>
-                  <span>👁️ {resource.view_count} views</span>
-                  <span>⬇️ {resource.download_count} downloads</span>
-                </div>
-
-                {resource.file_url && (
-                  <div style={{ marginTop: 'var(--space-md)' }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(resource.id, resource.file_url);
-                      }}
+            return (
+              <motion.div key={resource.id} variants={itemVariants}>
+                <Card
+                  variant="glass"
+                  padding="lg"
+                  interactive
+                  className="cursor-pointer h-full flex flex-col"
+                  onClick={() => handleViewResource(resource)}
+                >
+                  <div className="flex-1 space-y-4">
+                    <motion.div
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      className={`w-16 h-16 ${config.bg} border ${config.border} rounded-2xl flex items-center justify-center`}
                     >
-                      Download
-                    </Button>
+                      <IconComponent className={`w-8 h-8 ${config.color}`} />
+                    </motion.div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2 line-clamp-2">{resource.title}</h3>
+                      {resource.description && (
+                        <p className="text-sm text-text-muted line-clamp-3 mb-3">
+                          {resource.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {resource.category && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gold-400/10 text-gold-400 border border-gold-400/30">
+                        {resource.category}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+                  <div className="pt-4 border-t border-glass-border mt-4">
+                    <div className="flex items-center justify-between text-xs text-text-dimmed mb-3">
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        <AnimatedNumber value={resource.view_count || 0} />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Download className="w-3 h-3" />
+                        <AnimatedNumber value={resource.download_count || 0} />
+                      </div>
+                    </div>
+
+                    {resource.file_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        fullWidth
+                        icon={<Download className="w-4 h-4" />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(resource.id, resource.file_url);
+                        }}
+                      >
+                        Download
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
 
       {/* Resource Detail Modal */}
       {selectedResource && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-md)',
-            zIndex: 1000
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedResource(null);
           }}
-          onClick={() => setSelectedResource(null)}
+          title={selectedResource.title}
+          size="lg"
         >
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-2xl)',
-              maxWidth: '600px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflow: 'auto'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>
-              {getResourceIcon(selectedResource.resource_type)}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className={`w-16 h-16 ${getResourceConfig(selectedResource.resource_type).bg} border ${getResourceConfig(selectedResource.resource_type).border} rounded-2xl flex items-center justify-center`}>
+                {React.createElement(getResourceConfig(selectedResource.resource_type).icon, {
+                  className: `w-8 h-8 ${getResourceConfig(selectedResource.resource_type).color}`
+                })}
+              </div>
+              <div>
+                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${getResourceConfig(selectedResource.resource_type).bg} ${getResourceConfig(selectedResource.resource_type).color} border ${getResourceConfig(selectedResource.resource_type).border}`}>
+                  {getResourceConfig(selectedResource.resource_type).label}
+                </span>
+                {selectedResource.category && (
+                  <div className="mt-2">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gold-400/10 text-gold-400 border border-gold-400/30">
+                      {selectedResource.category}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <h2 style={{
-              fontSize: 'var(--text-3xl)',
-              fontWeight: '600',
-              marginBottom: 'var(--space-md)',
-              color: 'var(--text-primary)'
-            }}>
-              {selectedResource.title}
-            </h2>
-
             {selectedResource.description && (
-              <p style={{
-                color: 'var(--text-muted)',
-                fontSize: 'var(--text-base)',
-                lineHeight: '1.6',
-                marginBottom: 'var(--space-lg)'
-              }}>
+              <p className="text-base text-text-muted leading-relaxed">
                 {selectedResource.description}
               </p>
             )}
 
             {selectedResource.content && (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: 'var(--space-lg)',
-                whiteSpace: 'pre-wrap',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-secondary)'
-              }}>
-                {selectedResource.content}
-              </div>
+              <Card variant="glass-medium" padding="lg">
+                <p className="text-sm text-text-muted whitespace-pre-wrap leading-relaxed">
+                  {selectedResource.content}
+                </p>
+              </Card>
             )}
 
-            <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)' }}>
+            <Card variant="glass-medium" padding="lg">
+              <div className="flex items-center justify-around">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Eye className="w-4 h-4 text-blue-400" />
+                    <span className="text-2xl font-bold text-blue-400">
+                      <AnimatedNumber value={selectedResource.view_count || 0} />
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-dimmed">Views</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Download className="w-4 h-4 text-green-400" />
+                    <span className="text-2xl font-bold text-green-400">
+                      <AnimatedNumber value={selectedResource.download_count || 0} />
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-dimmed">Downloads</p>
+                </div>
+              </div>
+            </Card>
+
+            <div className="flex gap-3">
               {selectedResource.file_url && (
                 <Button
                   variant="primary"
                   onClick={() => handleDownload(selectedResource.id, selectedResource.file_url)}
-                  style={{ flex: 1 }}
+                  fullWidth
+                  icon={<Download className="w-5 h-5" />}
                 >
-                  Download
+                  Download Resource
                 </Button>
               )}
               <Button
-                variant="secondary"
-                onClick={() => setSelectedResource(null)}
-                style={{ flex: 1 }}
+                variant="outline"
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedResource(null);
+                }}
+                fullWidth
+                icon={<X className="w-5 h-5" />}
               >
                 Close
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
-    </div>
+    </motion.div>
   );
 };
 
