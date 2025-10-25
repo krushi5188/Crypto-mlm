@@ -173,29 +173,13 @@ const LoginPage = () => {
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-zinc-900 text-gray-400">
-                  New to Atlas Network?
-                </span>
-              </div>
-            </div>
-
-            {/* Register Link */}
-            <div className="text-center">
-              <Link to="/register">
-                <Button
-                  variant="outline"
-                  fullWidth
-                  size="lg"
-                >
-                  Create an Account
-                </Button>
-              </Link>
+            {/* Invite-Only Notice */}
+            <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10">
+              <p className="text-sm text-gray-400 text-center">
+                <span className="text-gold-400 font-medium">Atlas Network is invite-only.</span>
+                <br />
+                New members can only join through a referral link.
+              </p>
             </div>
           </div>
 
