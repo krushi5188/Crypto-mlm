@@ -35,16 +35,7 @@ router.post('/register',
         });
       }
 
-      // Check if participant limit reached
-      const participantCount = await User.countMembers();
-      const maxParticipants = await SystemConfig.get('max_participants');
-
-      if (participantCount >= maxParticipants) {
-        return res.status(403).json({
-          error: 'Participant limit reached',
-          code: 'PARTICIPANT_LIMIT_REACHED'
-        });
-      }
+      // Participant limit check removed - platform now supports unlimited members
 
       // Check if email already exists
       const existingEmail = await User.findByEmail(email);
