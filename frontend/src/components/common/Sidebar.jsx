@@ -66,9 +66,9 @@ const Sidebar = () => {
   }
 
   const SidebarContent = () => (
-    <>
+    <div className="flex flex-col h-full bg-black">
       {/* Logo/Brand */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 bg-black">
         <Link
           to={isMember() ? '/dashboard' : '/instructor/analytics'}
           className="flex items-center gap-3"
@@ -88,7 +88,7 @@ const Sidebar = () => {
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 bg-black">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-white font-bold flex-shrink-0">
             {user?.username?.charAt(0).toUpperCase()}
@@ -112,7 +112,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2 bg-black">
         <div className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -120,22 +120,20 @@ const Sidebar = () => {
 
             return (
               <Link key={item.path} to={item.path}>
-                <motion.div
+                <div
                   className={`
                     flex items-center gap-3 px-3 py-2.5 rounded-lg
                     font-medium text-sm transition-all
                     ${active
                       ? 'bg-white text-black'
-                      : 'text-white hover:text-white hover:bg-white/10'
+                      : 'text-white hover:bg-white/10'
                     }
                     ${isCollapsed ? 'justify-center' : ''}
                   `}
-                  whileHover={{ x: 2 }}
-                  whileTap={{ scale: 0.98 }}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </motion.div>
+                </div>
               </Link>
             );
           })}
@@ -143,37 +141,30 @@ const Sidebar = () => {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-2 border-t border-white/10 space-y-1">
+      <div className="p-2 border-t border-white/10 space-y-1 bg-black">
         <Link to="/profile">
-          <motion.div
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:text-white hover:bg-white/10 transition-all"
-            whileHover={{ x: 2 }}
-          >
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-all">
             <User className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span>Profile</span>}
-          </motion.div>
+          </div>
         </Link>
 
         {isMember() && (
           <Link to="/security">
-            <motion.div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:text-white hover:bg-white/10 transition-all"
-              whileHover={{ x: 2 }}
-            >
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-all">
               <Shield className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span>Security</span>}
-            </motion.div>
+            </div>
           </Link>
         )}
 
-        <motion.button
+        <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
-          whileHover={{ x: 2 }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && <span>Logout</span>}
-        </motion.button>
+        </button>
 
         {/* Collapse Toggle - Desktop Only */}
         <button
@@ -190,7 +181,7 @@ const Sidebar = () => {
           )}
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -207,32 +198,26 @@ const Sidebar = () => {
       <AnimatePresence>
         {isMobileOpen && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={() => setIsMobileOpen(false)}
             />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
+            <div
               className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-black border-r border-white/10 z-50 flex flex-col"
             >
               <SidebarContent />
-            </motion.aside>
+            </div>
           </>
         )}
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <motion.aside
-        animate={{ width: isCollapsed ? 80 : 280 }}
-        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-black border-r border-white/10 flex-col z-40"
+      <aside
+        style={{ width: isCollapsed ? '80px' : '280px' }}
+        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-black border-r border-white/10 flex-col z-40 transition-all duration-300"
       >
         <SidebarContent />
-      </motion.aside>
+      </aside>
     </>
   );
 };
