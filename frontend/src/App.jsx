@@ -7,7 +7,7 @@ import { ToastProvider } from './context/ToastContext';
 import ToastContainer from './components/common/ToastContainer';
 import './i18n/config'; // Initialize i18n
 import { checkVersion } from './utils/versionCheck';
-import Navbar from './components/common/Navbar';
+import Sidebar from './components/common/Sidebar';
 import Watermark from './components/common/Watermark';
 import GlobalSearch, { useGlobalSearch } from './components/GlobalSearch';
 import LandingPage from './pages/LandingPage';
@@ -89,11 +89,22 @@ const PublicRoute = ({ children }) => {
 // Main App Layout
 const AppLayout = ({ children }) => {
   const { isOpen, close } = useGlobalSearch();
+  const { isAuthenticated } = useAuth();
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: '3rem' }}>
-      <Navbar />
-      <main style={{ paddingTop: '5rem' }}>{children}</main>
+    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
+      {isAuthenticated() && <Sidebar />}
+      <main 
+        style={{ 
+          marginLeft: isAuthenticated() ? '280px' : '0',
+          minHeight: '100vh',
+          padding: '2rem',
+          transition: 'margin-left 0.3s ease'
+        }}
+        className="md:ml-[280px] ml-0"
+      >
+        {children}
+      </main>
       <Watermark />
       <GlobalSearch isOpen={isOpen} onClose={close} />
       <ToastContainer />
