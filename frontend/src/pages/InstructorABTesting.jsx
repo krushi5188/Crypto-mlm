@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FlaskConical, Play, Pause, Trophy, Trash2, ChevronDown, 
+  ChevronUp, BarChart3, Target, Users, Calendar, Plus, X
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatDateTime } from '../utils/formatters';
 
 const InstructorABTesting = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedExperiment, setSelectedExperiment] = useState(null);
   const [experimentResults, setExperimentResults] = useState({});
   const [formData, setFormData] = useState({
@@ -28,10 +47,10 @@ const InstructorABTesting = () => {
     end_date: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [winnerTarget, setWinnerTarget] = useState(null);
   const [summary, setSummary] = useState({ draft: 0, running: 0, paused: 0, completed: 0, total: 0 });
 
   useEffect(() => {
@@ -40,6 +59,7 @@ const InstructorABTesting = () => {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const [experimentsRes, summaryRes] = await Promise.all([
         instructorAPI.getExperiments({ limit: 100 }),
         instructorAPI.getExperimentsSummary()
@@ -51,6 +71,7 @@ const InstructorABTesting = () => {
     } catch (error) {
       console.error('Failed to load experiments:', error);
       setError('Failed to load experiments');
+      showError('Failed to load experiments');
     } finally {
       setLoading(false);
     }
@@ -74,18 +95,16 @@ const InstructorABTesting = () => {
     // Validate traffic allocation
     const totalTraffic = parseInt(formData.traffic_a) + parseInt(formData.traffic_b) + parseInt(formData.traffic_c || 0);
     if (totalTraffic !== 100) {
-      setFormError(`Traffic allocation must sum to 100% (currently ${totalTraffic}%)`);
+      showError(`Traffic allocation must sum to 100% (currently ${totalTraffic}%)`);
       return;
     }
 
     if (!formData.name || !formData.primary_metric) {
-      setFormError('Please fill in all required fields');
+      showError('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
-    setFormError('');
-    setFormSuccess('');
 
     try {
       await instructorAPI.createExperiment(formData);
@@ -105,12 +124,11 @@ const InstructorABTesting = () => {
         start_date: '',
         end_date: ''
       });
-      setShowCreateForm(false);
-      setFormSuccess(`✓ Experiment "${formData.name}" created successfully!`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      setShowCreateModal(false);
+      showSuccess(`Experiment "${formData.name}" created successfully!`);
     } catch (error) {
       console.error('Create experiment error:', error);
-      setFormError(error.response?.data?.error || 'Failed to create experiment');
+      showError(error.response?.data?.error || 'Failed to create experiment');
     } finally {
       setSubmitting(false);
     }
@@ -120,29 +138,25 @@ const InstructorABTesting = () => {
     try {
       await instructorAPI.updateExperimentStatus(experimentId, newStatus);
       await loadData();
-      setFormSuccess(`✓ Experiment status updated to ${newStatus}`);
-      setTimeout(() => setFormSuccess(''), 3000);
+      showSuccess(`Experiment status updated to ${newStatus}`);
     } catch (error) {
       console.error('Update status error:', error);
-      setFormError(error.response?.data?.error || 'Failed to update experiment status');
-      setTimeout(() => setFormError(''), 5000);
+      showError(error.response?.data?.error || 'Failed to update experiment status');
     }
   };
 
-  const handleSetWinner = async (experimentId, winnerVariant) => {
-    if (!window.confirm(`Set variant ${winnerVariant.toUpperCase()} as the winner and complete this experiment?`)) {
-      return;
-    }
+  const handleSetWinner = async (variant) => {
+    if (!winnerTarget) return;
 
     try {
-      await instructorAPI.setExperimentWinner(experimentId, winnerVariant);
+      await instructorAPI.setExperimentWinner(winnerTarget.id, variant);
       await loadData();
-      setFormSuccess(`✓ Winner set to variant ${winnerVariant.toUpperCase()}`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      setShowWinnerModal(false);
+      setWinnerTarget(null);
+      showSuccess(`Winner set to variant ${variant.toUpperCase()}`);
     } catch (error) {
       console.error('Set winner error:', error);
-      setFormError(error.response?.data?.error || 'Failed to set winner');
-      setTimeout(() => setFormError(''), 5000);
+      showError(error.response?.data?.error || 'Failed to set winner');
     }
   };
 
@@ -152,15 +166,13 @@ const InstructorABTesting = () => {
     try {
       await instructorAPI.deleteExperiment(deleteTarget.id);
       await loadData();
-      setShowDeleteConfirm(false);
+      setShowDeleteModal(false);
       setDeleteTarget(null);
-      setFormSuccess(`✓ Experiment "${deleteTarget.name}" deleted successfully`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      showSuccess(`Experiment "${deleteTarget.name}" deleted successfully`);
     } catch (error) {
       console.error('Delete experiment error:', error);
-      setFormError(error.response?.data?.error || 'Failed to delete experiment');
-      setTimeout(() => setFormError(''), 5000);
-      setShowDeleteConfirm(false);
+      showError(error.response?.data?.error || 'Failed to delete experiment');
+      setShowDeleteModal(false);
       setDeleteTarget(null);
     }
   };
@@ -176,719 +188,638 @@ const InstructorABTesting = () => {
     }
   };
 
+  const getStatusConfig = (status) => {
+    const configs = {
+      draft: { icon: FlaskConical, color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', label: 'Draft' },
+      running: { icon: Play, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', label: 'Running' },
+      paused: { icon: Pause, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Paused' },
+      completed: { icon: Trophy, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', label: 'Completed' }
+    };
+    return configs[status] || configs.draft;
+  };
+
   const filteredExperiments = experiments.filter(e => {
     return statusFilter === 'all' || e.status === statusFilter;
   });
 
+  const tabs = [
+    { id: 'all', label: 'All Experiments', count: experiments.length },
+    { id: 'draft', label: 'Draft', count: summary.draft },
+    { id: 'running', label: 'Running', count: summary.running },
+    { id: 'paused', label: 'Paused', count: summary.paused },
+    { id: 'completed', label: 'Completed', count: summary.completed }
+  ];
+
+  const totalTraffic = parseInt(formData.traffic_a) + parseInt(formData.traffic_b) + parseInt(formData.traffic_c || 0);
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading experiments...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <LoadingSkeleton variant="card" count={3} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Error Loading Experiments</h2>
-            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
-          </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <EmptyState
+            icon={FlaskConical}
+            title="Error Loading Experiments"
+            description={error}
+            actionLabel="Try Again"
+            onAction={loadData}
+          />
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
-
-  const statsStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem'
-  };
-
-  const filterButtonStyle = (isActive) => ({
-    padding: '0.5rem 1rem',
-    background: isActive ? '#fbbf24' : 'rgba(255, 255, 255, 0.1)',
-    color: isActive ? '#1a1a1a' : '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    transition: 'all 0.2s'
-  });
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      draft: { bg: 'rgba(163, 163, 163, 0.2)', color: '#a3a3a3', text: '📝 Draft' },
-      running: { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981', text: '▶️ Running' },
-      paused: { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', text: '⏸ Paused' },
-      completed: { bg: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', text: '✓ Completed' }
-    };
-
-    const style = styles[status] || styles.draft;
-
-    return (
-      <span style={{
-        padding: '0.25rem 0.75rem',
-        borderRadius: '12px',
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        background: style.bg,
-        color: style.color
-      }}>
-        {style.text}
-      </span>
-    );
-  };
-
   return (
-    <div style={containerStyles}>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="p-3 rounded-2xl bg-gradient-to-br from-green-500/20 to-blue-500/20"
+            >
+              <FlaskConical className="w-8 h-8 text-green-400" />
+            </motion.div>
+            <div>
+              <h1 className="text-4xl font-display font-bold">A/B Testing</h1>
+              <p className="text-lg text-text-muted">Create and manage experiments to optimize user experience</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            variant="success"
+            icon={<Plus className="w-5 h-5" />}
+          >
+            Create Experiment
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Statistics Cards */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+      >
+        {[
+          { label: 'Draft', value: summary.draft, color: 'text-gray-400', bg: 'bg-gray-500/10', icon: FlaskConical },
+          { label: 'Running', value: summary.running, color: 'text-green-400', bg: 'bg-green-500/10', icon: Play },
+          { label: 'Paused', value: summary.paused, color: 'text-yellow-400', bg: 'bg-yellow-500/10', icon: Pause },
+          { label: 'Completed', value: summary.completed, color: 'text-blue-400', bg: 'bg-blue-500/10', icon: Trophy }
+        ].map((stat, index) => (
+          <motion.div key={stat.label} variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">{stat.label}</p>
+                  <p className={`text-5xl font-display font-bold ${stat.color}`}>
+                    <AnimatedNumber value={stat.value} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className={`p-4 rounded-2xl ${stat.bg}`}
+                >
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                </motion.div>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Filter Tabs */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="none">
+          <div className="flex gap-2 p-2 relative">
+            {tabs.map((tab) => (
+              <motion.button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-colors relative z-10 ${
+                  statusFilter === tab.id
+                    ? 'text-green-400'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {tab.label}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                  statusFilter === tab.id
+                    ? 'bg-green-400/20 text-green-400'
+                    : 'bg-glass-medium text-text-dimmed'
+                }`}>
+                  {tab.count}
+                </span>
+                {statusFilter === tab.id && (
+                  <motion.div
+                    layoutId="activeExperimentTab"
+                    className="absolute inset-0 bg-green-400/10 border border-green-400/30 rounded-xl"
+                    style={{ zIndex: -1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Experiments List */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.3 }}
+        className="space-y-4"
+      >
+        {filteredExperiments.length === 0 ? (
+          <EmptyState
+            icon={FlaskConical}
+            title="No Experiments Found"
+            description={
+              experiments.length === 0
+                ? "Create your first A/B test to start optimizing"
+                : "No experiments match your current filter"
+            }
+            actionLabel="Create Experiment"
+            onAction={() => setShowCreateModal(true)}
+          />
+        ) : (
+          filteredExperiments.map((experiment, index) => {
+            const statusConfig = getStatusConfig(experiment.status);
+            const StatusIcon = statusConfig.icon;
+            const isExpanded = selectedExperiment?.id === experiment.id;
+            const results = experimentResults[experiment.id];
+
+            return (
+              <motion.div
+                key={experiment.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card variant="glass-strong" padding="xl" interactive>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-xl ${statusConfig.bg}`}>
+                          <StatusIcon className={`w-5 h-5 ${statusConfig.color}`} />
+                        </div>
+                        <h3 className="text-2xl font-semibold">{experiment.name}</h3>
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          {statusConfig.label}
+                        </span>
+                      </div>
+
+                      {experiment.description && (
+                        <p className="text-text-muted mb-3">{experiment.description}</p>
+                      )}
+
+                      <div className="flex items-center gap-4 text-sm text-text-dimmed">
+                        <div className="flex items-center gap-1">
+                          <Target className="w-4 h-4" />
+                          <span className="capitalize">{experiment.experiment_type.replace('_', ' ')}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <BarChart3 className="w-4 h-4" />
+                          <span className="capitalize">{experiment.primary_metric.replace('_', ' ')}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDateTime(experiment.created_at)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {experiment.status === 'draft' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(experiment.id, 'running')}
+                          variant="success"
+                          size="sm"
+                          icon={<Play className="w-4 h-4" />}
+                        >
+                          Start
+                        </Button>
+                      )}
+
+                      {experiment.status === 'running' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(experiment.id, 'paused')}
+                          variant="outline"
+                          size="sm"
+                          icon={<Pause className="w-4 h-4" />}
+                          className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
+                        >
+                          Pause
+                        </Button>
+                      )}
+
+                      {experiment.status === 'paused' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(experiment.id, 'running')}
+                          variant="success"
+                          size="sm"
+                          icon={<Play className="w-4 h-4" />}
+                        >
+                          Resume
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={() => toggleExperimentDetails(experiment)}
+                        variant="ghost"
+                        size="sm"
+                        icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      >
+                        {isExpanded ? 'Hide' : 'View'} Results
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          setDeleteTarget(experiment);
+                          setShowDeleteModal(true);
+                        }}
+                        variant="danger"
+                        size="sm"
+                        icon={<Trash2 className="w-4 h-4" />}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Experiment Results */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-6 pt-6 border-t border-glass-border"
+                      >
+                        {results ? (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <BarChart3 className="w-5 h-5 text-blue-400" />
+                              <h4 className="text-xl font-semibold">Experiment Results</h4>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {Object.entries(results.variants).map(([variantKey, variantData]) => (
+                                <Card
+                                  key={variantKey}
+                                  variant="glass-medium"
+                                  padding="lg"
+                                  className={results.winner === variantKey ? 'border-2 border-green-500/50' : ''}
+                                >
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center gap-2 mb-3">
+                                      <span className="text-sm font-semibold text-text-dimmed">
+                                        Variant {variantKey.toUpperCase()}
+                                      </span>
+                                      {results.winner === variantKey && (
+                                        <Trophy className="w-4 h-4 text-green-400" />
+                                      )}
+                                    </div>
+                                    <div className="text-4xl font-display font-bold text-green-400 mb-2">
+                                      {variantData.conversionRate}%
+                                    </div>
+                                    <div className="text-xs text-text-dimmed">
+                                      <div>{variantData.users} users</div>
+                                      <div>{variantData.conversions} conversions</div>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+
+                            {results.statisticalSignificance && (
+                              <Card
+                                variant="glass-medium"
+                                padding="lg"
+                                className={results.isSignificant ? 'border border-green-500/30' : 'border border-yellow-500/30'}
+                              >
+                                <div className={`text-sm ${results.isSignificant ? 'text-green-400' : 'text-yellow-400'}`}>
+                                  {results.isSignificant
+                                    ? `✓ Statistically significant (${results.confidenceLevel}% confidence, p=${results.statisticalSignificance})`
+                                    : '⚠️ Not statistically significant yet - continue running'}
+                                </div>
+                              </Card>
+                            )}
+
+                            {experiment.status === 'running' && results.isSignificant && !experiment.winner_variant && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => {
+                                    setWinnerTarget(experiment);
+                                    setShowWinnerModal(true);
+                                  }}
+                                  variant="success"
+                                  icon={<Trophy className="w-5 h-5" />}
+                                >
+                                  Declare Winner
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-text-muted">
+                            Loading results...
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              </motion.div>
+            );
+          })
+        )}
+      </motion.div>
+
+      {/* Create Experiment Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setFormData({
+            name: '',
+            description: '',
+            experiment_type: 'ui_variant',
+            variant_a: { description: '' },
+            variant_b: { description: '' },
+            variant_c: null,
+            traffic_a: 50,
+            traffic_b: 50,
+            traffic_c: 0,
+            target_role: 'all',
+            primary_metric: 'conversion_rate',
+            start_date: '',
+            end_date: ''
+          });
+        }}
+        title="Create New A/B Test"
+        size="lg"
+      >
+        <form onSubmit={handleCreateExperiment} className="space-y-6">
+          <Card variant="glass-medium" padding="lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="text"
+                label="Experiment Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Button Color Test"
+                required
+                icon={<FlaskConical className="w-5 h-5" />}
+              />
+
+              <Input
+                type="select"
+                label="Experiment Type"
+                value={formData.experiment_type}
+                onChange={(e) => setFormData({ ...formData, experiment_type: e.target.value })}
+                required
+                icon={<Target className="w-5 h-5" />}
+              >
+                <option value="ui_variant">UI Variant</option>
+                <option value="commission_rate">Commission Rate</option>
+                <option value="message_template">Message Template</option>
+                <option value="feature_toggle">Feature Toggle</option>
+              </Input>
+            </div>
+
+            <div className="mt-4">
+              <Input
+                type="textarea"
+                label="Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe what you're testing and why..."
+                rows={3}
+              />
+            </div>
+          </Card>
+
+          <Card variant="glass-medium" padding="lg">
+            <h4 className="text-lg font-semibold mb-4">Traffic Allocation</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <Input
+                type="number"
+                label="Variant A (Control) %"
+                value={formData.traffic_a}
+                onChange={(e) => setFormData({ ...formData, traffic_a: parseInt(e.target.value) || 0 })}
+                min="0"
+                max="100"
+              />
+              <Input
+                type="number"
+                label="Variant B (Treatment) %"
+                value={formData.traffic_b}
+                onChange={(e) => setFormData({ ...formData, traffic_b: parseInt(e.target.value) || 0 })}
+                min="0"
+                max="100"
+              />
+              <Input
+                type="number"
+                label="Variant C (Optional) %"
+                value={formData.traffic_c}
+                onChange={(e) => setFormData({ ...formData, traffic_c: parseInt(e.target.value) || 0 })}
+                min="0"
+                max="100"
+              />
+            </div>
+            <div className={`mt-2 text-sm font-semibold ${totalTraffic === 100 ? 'text-green-400' : 'text-red-400'}`}>
+              Total: {totalTraffic}% (must equal 100%)
+            </div>
+          </Card>
+
+          <Card variant="glass-medium" padding="lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="select"
+                label="Primary Metric"
+                value={formData.primary_metric}
+                onChange={(e) => setFormData({ ...formData, primary_metric: e.target.value })}
+                required
+                icon={<BarChart3 className="w-5 h-5" />}
+              >
+                <option value="conversion_rate">Conversion Rate</option>
+                <option value="click_through_rate">Click-Through Rate</option>
+                <option value="earnings">Earnings</option>
+                <option value="retention">Retention</option>
+                <option value="engagement">Engagement</option>
+              </Input>
+
+              <Input
+                type="select"
+                label="Target Role"
+                value={formData.target_role}
+                onChange={(e) => setFormData({ ...formData, target_role: e.target.value })}
+                required
+                icon={<Users className="w-5 h-5" />}
+              >
+                <option value="all">All Users</option>
+                <option value="member">Members Only</option>
+                <option value="instructor">Instructors Only</option>
+              </Input>
+            </div>
+          </Card>
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              variant="outline"
+              fullWidth
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || totalTraffic !== 100}
+              variant="success"
+              fullWidth
+              icon={<Plus className="w-5 h-5" />}
+            >
+              {submitting ? 'Creating...' : 'Create Experiment'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-xl)',
-            maxWidth: '500px',
-            width: '100%',
-            border: '2px solid #ef4444',
-            boxShadow: 'var(--shadow-2xl)'
-          }}>
-            <h3 style={{
-              fontSize: 'var(--text-2xl)',
-              marginBottom: 'var(--space-md)',
-              color: '#ef4444'
-            }}>
-              Delete Experiment
-            </h3>
-            <p style={{
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-xl)',
-              lineHeight: '1.6'
-            }}>
-              Are you sure you want to delete "{deleteTarget?.name}"? This will also delete all assignments and event data.
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        title="Delete Experiment"
+        size="md"
+      >
+        {deleteTarget && (
+          <div className="space-y-6">
+            <Card variant="glass-medium" padding="lg" className="border border-red-500/30">
+              <p className="text-text-muted leading-relaxed">
+                Are you sure you want to delete "<strong>{deleteTarget.name}</strong>"? 
+                This will also delete all assignments and event data. This action cannot be undone.
+              </p>
+            </Card>
+
+            <div className="flex gap-3">
               <Button
                 onClick={() => {
-                  setShowDeleteConfirm(false);
+                  setShowDeleteModal(false);
                   setDeleteTarget(null);
                 }}
                 variant="outline"
+                fullWidth
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleDeleteExperiment}
                 variant="danger"
+                fullWidth
+                icon={<Trash2 className="w-5 h-5" />}
               >
                 Delete Experiment
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>A/B Testing</h1>
-          <p style={{ color: '#a0aec0' }}>Create and manage experiments to optimize user experience</p>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: showCreateForm ? '#ef4444' : '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            transition: 'all 0.2s'
-          }}
-        >
-          {showCreateForm ? '✗ Cancel' : '+ Create Experiment'}
-        </button>
-      </div>
-
-      {/* Success Message */}
-      {formSuccess && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(16, 185, 129, 0.2)',
-          border: '1px solid #10b981',
-          borderRadius: '8px',
-          color: '#10b981',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{formSuccess}</span>
-          <button onClick={() => setFormSuccess('')} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {formError && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(239, 68, 68, 0.2)',
-          border: '1px solid #ef4444',
-          borderRadius: '8px',
-          color: '#ef4444',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{formError}</span>
-          <button onClick={() => setFormError('')} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
-        </div>
-      )}
-
-      {/* Create Experiment Form */}
-      {showCreateForm && (
-        <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New A/B Test</h3>
-          <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Configure your experiment to test different variants and measure results.
-          </p>
-
-          <form onSubmit={handleCreateExperiment}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Experiment Name <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="e.g., Button Color Test"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Experiment Type <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.experiment_type}
-                  onChange={(e) => setFormData({ ...formData, experiment_type: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                >
-                  <option value="ui_variant">UI Variant</option>
-                  <option value="commission_rate">Commission Rate</option>
-                  <option value="message_template">Message Template</option>
-                  <option value="feature_toggle">Feature Toggle</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Primary Metric <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.primary_metric}
-                  onChange={(e) => setFormData({ ...formData, primary_metric: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                >
-                  <option value="conversion_rate">Conversion Rate</option>
-                  <option value="click_through_rate">Click-Through Rate</option>
-                  <option value="earnings">Earnings</option>
-                  <option value="retention">Retention</option>
-                  <option value="engagement">Engagement</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe what you're testing and why..."
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '0.95rem',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ marginBottom: '1rem', color: '#fbbf24' }}>Traffic Allocation</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                    Variant A (Control) %
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.traffic_a}
-                    onChange={(e) => setFormData({ ...formData, traffic_a: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                    Variant B (Treatment) %
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.traffic_b}
-                    onChange={(e) => setFormData({ ...formData, traffic_b: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                    Variant C (Optional) %
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.traffic_c}
-                    onChange={(e) => setFormData({ ...formData, traffic_c: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-              </div>
-              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: formData.traffic_a + formData.traffic_b + formData.traffic_c === 100 ? '#10b981' : '#ef4444' }}>
-                Total: {formData.traffic_a + formData.traffic_b + formData.traffic_c}% (must equal 100%)
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Start Date
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  End Date
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-            </div>
-
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Experiment'}
-            </Button>
-          </form>
-        </Card>
-      )}
-
-      {/* Stats */}
-      <div style={statsStyles}>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#a3a3a3' }}>{summary.draft}</div>
-          <div style={{ color: '#a0aec0' }}>Draft</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#10b981' }}>{summary.running}</div>
-          <div style={{ color: '#a0aec0' }}>Running</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fbbf24' }}>{summary.paused}</div>
-          <div style={{ color: '#a0aec0' }}>Paused</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#3b82f6' }}>{summary.completed}</div>
-          <div style={{ color: '#a0aec0' }}>Completed</div>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={() => setStatusFilter('all')} style={filterButtonStyle(statusFilter === 'all')}>
-            All
-          </button>
-          <button onClick={() => setStatusFilter('draft')} style={filterButtonStyle(statusFilter === 'draft')}>
-            Draft
-          </button>
-          <button onClick={() => setStatusFilter('running')} style={filterButtonStyle(statusFilter === 'running')}>
-            Running
-          </button>
-          <button onClick={() => setStatusFilter('paused')} style={filterButtonStyle(statusFilter === 'paused')}>
-            Paused
-          </button>
-          <button onClick={() => setStatusFilter('completed')} style={filterButtonStyle(statusFilter === 'completed')}>
-            Completed
-          </button>
-        </div>
-      </Card>
-
-      {/* Experiments List */}
-      <div style={{ display: 'grid', gap: '1.5rem' }}>
-        {filteredExperiments.length === 0 ? (
-          <Card style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🧪</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No experiments found</h3>
-            <p style={{ color: '#a0aec0' }}>
-              {experiments.length === 0
-                ? 'Create your first A/B test to start optimizing'
-                : 'No experiments match your current filter'}
-            </p>
-          </Card>
-        ) : (
-          filteredExperiments.map((experiment) => (
-            <Card key={experiment.id} style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>🧪</span>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>{experiment.name}</h3>
-                    {getStatusBadge(experiment.status)}
-                  </div>
-                  {experiment.description && (
-                    <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                      {experiment.description}
-                    </p>
-                  )}
-                  <div style={{ color: '#a0aec0', fontSize: '0.875rem' }}>
-                    <strong>Type:</strong> {experiment.experiment_type.replace('_', ' ')} •
-                    <strong> Metric:</strong> {experiment.primary_metric.replace('_', ' ')} •
-                    <strong> Created:</strong> {formatDateTime(experiment.created_at)}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {experiment.status === 'draft' && (
-                    <button
-                      onClick={() => handleUpdateStatus(experiment.id, 'running')}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: '#10b981',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Start
-                    </button>
-                  )}
-
-                  {experiment.status === 'running' && (
-                    <button
-                      onClick={() => handleUpdateStatus(experiment.id, 'paused')}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: '#fbbf24',
-                        color: '#1a1a1a',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Pause
-                    </button>
-                  )}
-
-                  {experiment.status === 'paused' && (
-                    <button
-                      onClick={() => handleUpdateStatus(experiment.id, 'running')}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: '#10b981',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Resume
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => toggleExperimentDetails(experiment)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {selectedExperiment?.id === experiment.id ? '▲ Hide Results' : '▼ View Results'}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setDeleteTarget(experiment);
-                      setShowDeleteConfirm(true);
-                    }}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-
-              {/* Experiment Results */}
-              {selectedExperiment?.id === experiment.id && (
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1.5rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  {experimentResults[experiment.id] ? (
-                    <>
-                      <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#fbbf24' }}>Experiment Results</h4>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                        {Object.entries(experimentResults[experiment.id].variants).map(([variantKey, variantData]) => (
-                          <div key={variantKey} style={{
-                            padding: '1rem',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '8px',
-                            border: experimentResults[experiment.id].winner === variantKey ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)'
-                          }}>
-                            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-                              Variant {variantKey.toUpperCase()}
-                              {experimentResults[experiment.id].winner === variantKey && ' 🏆'}
-                            </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', marginBottom: '0.5rem' }}>
-                              {variantData.conversionRate}%
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: '#a0aec0' }}>
-                              {variantData.users} users • {variantData.conversions} conversions
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {experimentResults[experiment.id].statisticalSignificance && (
-                        <div style={{ marginBottom: '1rem', padding: '1rem', background: experimentResults[experiment.id].isSignificant ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '0.875rem', color: experimentResults[experiment.id].isSignificant ? '#10b981' : '#fbbf24' }}>
-                            {experimentResults[experiment.id].isSignificant
-                              ? `✓ Statistically significant (${experimentResults[experiment.id].confidenceLevel}% confidence, p=${experimentResults[experiment.id].statisticalSignificance})`
-                              : '⚠️ Not statistically significant yet - continue running'}
-                          </div>
-                        </div>
-                      )}
-
-                      {experiment.status === 'running' && experimentResults[experiment.id].isSignificant && !experiment.winner_variant && (
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                          <button
-                            onClick={() => handleSetWinner(experiment.id, 'a')}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: '600',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            Set A as Winner
-                          </button>
-                          <button
-                            onClick={() => handleSetWinner(experiment.id, 'b')}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: '600',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            Set B as Winner
-                          </button>
-                          {experimentResults[experiment.id].variants.c && (
-                            <button
-                              onClick={() => handleSetWinner(experiment.id, 'c')}
-                              style={{
-                                padding: '0.5rem 1rem',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                fontSize: '0.875rem'
-                              }}
-                            >
-                              Set C as Winner
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleSetWinner(experiment.id, 'inconclusive')}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: '600',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            Mark Inconclusive
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
-                      Loading results...
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          ))
         )}
-      </div>
-    </div>
+      </Modal>
+
+      {/* Winner Selection Modal */}
+      <Modal
+        isOpen={showWinnerModal}
+        onClose={() => {
+          setShowWinnerModal(false);
+          setWinnerTarget(null);
+        }}
+        title="Declare Winner"
+        size="md"
+      >
+        {winnerTarget && experimentResults[winnerTarget.id] && (
+          <div className="space-y-6">
+            <Card variant="glass-medium" padding="lg" glow="green">
+              <p className="text-text-muted mb-4">
+                Select the winning variant for "<strong>{winnerTarget.name}</strong>". 
+                This will complete the experiment and mark the selected variant as the winner.
+              </p>
+
+              <div className="space-y-2">
+                {Object.entries(experimentResults[winnerTarget.id].variants).map(([variantKey, variantData]) => (
+                  <Button
+                    key={variantKey}
+                    onClick={() => handleSetWinner(variantKey)}
+                    variant="outline"
+                    fullWidth
+                    className="justify-between border-green-500/30 hover:border-green-500/50 hover:bg-green-500/10"
+                  >
+                    <span>Variant {variantKey.toUpperCase()}</span>
+                    <span className="text-green-400 font-bold">{variantData.conversionRate}%</span>
+                  </Button>
+                ))}
+                <Button
+                  onClick={() => handleSetWinner('inconclusive')}
+                  variant="outline"
+                  fullWidth
+                  className="border-yellow-500/30 hover:border-yellow-500/50 hover:bg-yellow-500/10 text-yellow-400"
+                >
+                  Mark Inconclusive
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+      </Modal>
+    </motion.div>
   );
 };
 
