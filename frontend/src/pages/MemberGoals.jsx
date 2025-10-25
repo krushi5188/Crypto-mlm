@@ -1,47 +1,68 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Target, TrendingUp, Users, DollarSign, Calendar, CheckCircle,
+  AlertCircle, Trash2, Plus, Sparkles, Award, Trophy, X
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency } from '../utils/formatters';
 
 const MemberGoals = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [goals, setGoals] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     goal_type: 'earnings',
     target_value: '',
     target_date: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    loadGoals();
-    loadRecommendations();
+    loadData();
   }, []);
 
-  const loadGoals = async () => {
+  const loadData = async () => {
     try {
-      const response = await memberAPI.getGoals();
-      setGoals(response.data.data.goals || []);
-    } catch (error) {
-      console.error('Failed to load goals:', error);
+      setLoading(true);
+      const [goalsRes, recsRes] = await Promise.all([
+        memberAPI.getGoals(),
+        memberAPI.getGoalRecommendations()
+      ]);
+      setGoals(goalsRes.data.data.goals || []);
+      setRecommendations(recsRes.data.data.recommendations || []);
+      setError(null);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load goals';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load goals:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadRecommendations = async () => {
-    try {
-      const response = await memberAPI.getGoalRecommendations();
-      setRecommendations(response.data.data.recommendations || []);
-    } catch (error) {
-      console.error('Failed to load recommendations:', error);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
 
     try {
       await memberAPI.createGoal({
@@ -50,22 +71,24 @@ const MemberGoals = () => {
         target_date: formData.target_date || null
       });
 
-      setShowForm(false);
+      showSuccess('Goal created successfully!');
+      setShowModal(false);
       setFormData({ goal_type: 'earnings', target_value: '', target_date: '' });
-      await loadGoals();
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to create goal');
+      await loadData();
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to create goal');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this goal?')) return;
-
     try {
       await memberAPI.deleteGoal(id);
-      await loadGoals();
-    } catch (error) {
-      alert('Failed to delete goal');
+      showSuccess('Goal deleted successfully');
+      await loadData();
+    } catch (err) {
+      showError('Failed to delete goal');
     }
   };
 
@@ -75,7 +98,7 @@ const MemberGoals = () => {
       target_value: rec.target_value.toString(),
       target_date: ''
     });
-    setShowForm(true);
+    setShowModal(true);
   };
 
   const getProgressPercentage = (goal) => {
@@ -83,13 +106,13 @@ const MemberGoals = () => {
     return Math.min(progress, 100);
   };
 
-  const getGoalTypeLabel = (type) => {
-    const labels = {
-      'earnings': 'Total Earnings',
-      'recruits': 'Direct Recruits',
-      'network_size': 'Network Size'
+  const getGoalConfig = (type) => {
+    const configs = {
+      earnings: { icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', label: 'Total Earnings' },
+      recruits: { icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', label: 'Direct Recruits' },
+      network_size: { icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', label: 'Network Size' }
     };
-    return labels[type] || type;
+    return configs[type] || { icon: Target, color: 'text-text-muted', bg: 'bg-glass-medium', border: 'border-glass-border', label: type };
   };
 
   const formatGoalValue = (value, type) => {
@@ -99,315 +122,421 @@ const MemberGoals = () => {
     return value;
   };
 
+  const getProgressColor = (progress) => {
+    if (progress >= 100) return 'from-green-500 to-emerald-500';
+    if (progress >= 75) return 'from-blue-500 to-cyan-500';
+    if (progress >= 50) return 'from-yellow-500 to-orange-500';
+    return 'from-red-500 to-pink-500';
+  };
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading goals...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
+        <LoadingSkeleton variant="card" />
+        <div className="space-y-4">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Goals</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadData} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
   const activeGoals = goals.filter(g => !g.is_completed);
   const completedGoals = goals.filter(g => g.is_completed);
+  const successRate = goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>My Goals</h1>
-        <p style={{ color: '#a0aec0' }}>Set and track your performance goals</p>
-      </div>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-gold-400/20 to-green-500/20"
+          >
+            <Target className="w-8 h-8 text-gold-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">My Goals</h1>
+            <p className="text-lg text-text-muted">Set and track your performance goals</p>
+          </div>
+        </div>
+
+        <Button
+          onClick={() => setShowModal(true)}
+          variant="primary"
+          icon={<Plus className="w-5 h-5" />}
+        >
+          Create New Goal
+        </Button>
+      </motion.div>
 
       {/* Summary Stats */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>
-            {activeGoals.length}
-          </div>
-          <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
-            Active Goals
-          </div>
-        </Card>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-6"
+      >
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="green">
+            <div className="text-center">
+              <p className="text-sm text-text-dimmed mb-2">Active Goals</p>
+              <p className="text-5xl font-display font-bold text-green-400">
+                <AnimatedNumber value={activeGoals.length} />
+              </p>
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#3b82f6' }}>
-            {completedGoals.length}
-          </div>
-          <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
-            Completed Goals
-          </div>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="blue">
+            <div className="text-center">
+              <p className="text-sm text-text-dimmed mb-2">Completed Goals</p>
+              <p className="text-5xl font-display font-bold text-blue-400">
+                <AnimatedNumber value={completedGoals.length} />
+              </p>
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700' }}>
-            {goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0}%
-          </div>
-          <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
-            Success Rate
-          </div>
-        </Card>
-      </div>
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="gold">
+            <div className="text-center">
+              <p className="text-sm text-text-dimmed mb-2">Success Rate</p>
+              <p className="text-5xl font-display font-bold text-gold-400">
+                <AnimatedNumber value={successRate} />%
+              </p>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Recommended Goals</h3>
-          <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            Based on your current progress
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recommendations.map((rec, index) => (
-              <div
-                key={index}
-                style={{
-                  padding: '1rem',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                    {rec.reason}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
-                    {getGoalTypeLabel(rec.goal_type)}: {formatGoalValue(rec.target_value, rec.goal_type)}
-                  </div>
-                </div>
-                <button
-                  onClick={() => useRecommendation(rec)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    background: '#10b981',
-                    border: 'none',
-                    color: '#fff',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '0.875rem'
-                  }}
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.2 }}
+        >
+          <Card variant="glass-strong" padding="xl" glow="purple">
+            <div className="flex items-center gap-3 mb-4">
+              <Sparkles className="w-6 h-6 text-purple-400" />
+              <h2 className="text-2xl font-semibold">Recommended Goals</h2>
+            </div>
+            <p className="text-sm text-text-dimmed mb-6">Based on your current progress</p>
+
+            <div className="space-y-3">
+              {recommendations.map((rec, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
                 >
-                  Set Goal
-                </button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Create Goal Button */}
-      {!showForm && (
-        <div style={{ marginBottom: '2rem' }}>
-          <Button onClick={() => setShowForm(true)} size="lg">
-            + Create New Goal
-          </Button>
-        </div>
-      )}
-
-      {/* Goal Form */}
-      {showForm && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Create New Goal</h3>
-
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Goal Type
-              </label>
-              <select
-                value={formData.goal_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, goal_type: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="earnings">Total Earnings (USDT)</option>
-                <option value="recruits">Direct Recruits</option>
-                <option value="network_size">Network Size</option>
-              </select>
+                  <Card variant="glass-medium" padding="lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-semibold mb-1">{rec.reason}</h4>
+                        <p className="text-sm text-text-dimmed">
+                          {getGoalConfig(rec.goal_type).label}: {formatGoalValue(rec.target_value, rec.goal_type)}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => useRecommendation(rec)}
+                        variant="success"
+                        size="sm"
+                        icon={<Plus className="w-4 h-4" />}
+                      >
+                        Set Goal
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Target Value
-              </label>
-              <input
-                type="number"
-                step={formData.goal_type === 'earnings' ? '0.01' : '1'}
-                value={formData.target_value}
-                onChange={(e) => setFormData(prev => ({ ...prev, target_value: e.target.value }))}
-                placeholder="Enter target value..."
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Target Date (Optional)
-              </label>
-              <input
-                type="date"
-                value={formData.target_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, target_date: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <Button type="submit">Create Goal</Button>
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Card>
+          </Card>
+        </motion.div>
       )}
 
       {/* Active Goals */}
       {activeGoals.length > 0 && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Active Goals</h3>
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {activeGoals.map((goal) => {
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Target className="w-6 h-6 text-green-400" />
+            <h2 className="text-2xl font-semibold">Active Goals</h2>
+          </div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="space-y-4"
+          >
+            {activeGoals.map((goal, index) => {
               const progress = getProgressPercentage(goal);
+              const config = getGoalConfig(goal.goal_type);
+              const IconComponent = config.icon;
+
               return (
-                <Card key={goal.id}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                      <div>
-                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.25rem' }}>
-                          {getGoalTypeLabel(goal.goal_type)}
-                        </h4>
-                        <p style={{ color: '#a0aec0', fontSize: '0.875rem' }}>
-                          Target: {formatGoalValue(goal.target_value, goal.goal_type)}
-                          {goal.target_date && ` by ${new Date(goal.target_date).toLocaleDateString()}`}
-                        </p>
+                <motion.div key={goal.id} variants={itemVariants}>
+                  <Card variant="glass-strong" padding="lg" interactive>
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1">
+                          <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            className={`flex-shrink-0 w-12 h-12 ${config.bg} border ${config.border} rounded-xl flex items-center justify-center`}
+                          >
+                            <IconComponent className={`w-6 h-6 ${config.color}`} />
+                          </motion.div>
+
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-semibold mb-1">{config.label}</h3>
+                            <p className="text-sm text-text-dimmed">
+                              Target: {formatGoalValue(goal.target_value, goal.goal_type)}
+                              {goal.target_date && (
+                                <span className="flex items-center gap-1 mt-1">
+                                  <Calendar className="w-3 h-3" />
+                                  by {new Date(goal.target_date).toLocaleDateString()}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => handleDelete(goal.id)}
+                          variant="danger"
+                          size="sm"
+                          icon={<Trash2 className="w-4 h-4" />}
+                        >
+                          Delete
+                        </Button>
                       </div>
-                      <button
-                        onClick={() => handleDelete(goal.id)}
-                        style={{
-                          padding: '0.5rem',
-                          background: 'transparent',
-                          border: '1px solid rgba(239, 68, 68, 0.5)',
-                          color: '#ef4444',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
 
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.5rem',
-                      fontSize: '0.875rem'
-                    }}>
-                      <span style={{ color: '#a0aec0' }}>
-                        Current: {formatGoalValue(goal.current_value, goal.goal_type)}
-                      </span>
-                      <span style={{ fontWeight: '600', color: '#10b981' }}>
-                        {progress.toFixed(1)}%
-                      </span>
-                    </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-2 text-sm">
+                          <span className="text-text-dimmed">
+                            Current: {formatGoalValue(goal.current_value, goal.goal_type)}
+                          </span>
+                          <span className={`font-semibold ${progress >= 100 ? 'text-green-400' : 'text-gold-400'}`}>
+                            {progress.toFixed(1)}%
+                          </span>
+                        </div>
 
-                    <div style={{
-                      width: '100%',
-                      height: '8px',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        width: `${progress}%`,
-                        height: '100%',
-                        background: progress >= 100
-                          ? '#10b981'
-                          : progress >= 75
-                          ? '#3b82f6'
-                          : progress >= 50
-                          ? '#f59e0b'
-                          : '#ef4444',
-                        transition: 'width 0.3s ease'
-                      }} />
+                        <div className="w-full h-3 bg-glass-medium border border-glass-border rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 1, delay: index * 0.1 }}
+                            className={`h-full bg-gradient-to-r ${getProgressColor(progress)}`}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </motion.div>
               );
             })}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Completed Goals */}
       {completedGoals.length > 0 && (
-        <div>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Completed Goals 🎉</h3>
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {completedGoals.map((goal) => (
-              <Card key={goal.id} style={{ opacity: 0.7 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h4 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.25rem' }}>
-                      {getGoalTypeLabel(goal.goal_type)}
-                    </h4>
-                    <p style={{ color: '#a0aec0', fontSize: '0.875rem' }}>
-                      Achieved: {formatGoalValue(goal.current_value, goal.goal_type)}
-                      {goal.completed_at && ` on ${new Date(goal.completed_at).toLocaleDateString()}`}
-                    </p>
-                  </div>
-                  <div style={{ fontSize: '2rem' }}>✅</div>
-                </div>
-              </Card>
-            ))}
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.4 }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Trophy className="w-6 h-6 text-gold-400" />
+            <h2 className="text-2xl font-semibold">Completed Goals</h2>
           </div>
-        </div>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="space-y-4"
+          >
+            {completedGoals.map((goal) => {
+              const config = getGoalConfig(goal.goal_type);
+              const IconComponent = config.icon;
+
+              return (
+                <motion.div key={goal.id} variants={itemVariants}>
+                  <Card variant="glass" padding="lg">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className={`flex-shrink-0 w-12 h-12 ${config.bg} border ${config.border} rounded-xl flex items-center justify-center opacity-50`}>
+                          <IconComponent className={`w-6 h-6 ${config.color}`} />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold mb-1 opacity-70">{config.label}</h3>
+                          <p className="text-sm text-text-dimmed">
+                            Achieved: {formatGoalValue(goal.current_value, goal.goal_type)}
+                            {goal.completed_at && ` on ${new Date(goal.completed_at).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+                      >
+                        <Award className="w-8 h-8 text-gold-400" />
+                      </motion.div>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </motion.div>
       )}
 
-      {goals.length === 0 && !showForm && (
-        <Card style={{ textAlign: 'center', padding: '3rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎯</div>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No Goals Yet</h3>
-          <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
-            Set your first goal to start tracking your progress!
-          </p>
-          <Button onClick={() => setShowForm(true)}>Create Your First Goal</Button>
-        </Card>
+      {/* Empty State */}
+      {goals.length === 0 && (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.2 }}
+        >
+          <EmptyState
+            icon={Target}
+            title="No Goals Yet"
+            description="Set your first goal to start tracking your progress and achieve milestones!"
+            actionLabel="Create Your First Goal"
+            onAction={() => setShowModal(true)}
+          />
+        </motion.div>
       )}
-    </div>
+
+      {/* Create Goal Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setFormData({ goal_type: 'earnings', target_value: '', target_date: '' });
+        }}
+        title="Create New Goal"
+        size="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">Goal Type</label>
+            <select
+              value={formData.goal_type}
+              onChange={(e) => setFormData(prev => ({ ...prev, goal_type: e.target.value }))}
+              className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors"
+            >
+              <option value="earnings">Total Earnings (USDT)</option>
+              <option value="recruits">Direct Recruits</option>
+              <option value="network_size">Network Size</option>
+            </select>
+          </div>
+
+          <Input
+            type="number"
+            step={formData.goal_type === 'earnings' ? '0.01' : '1'}
+            label="Target Value"
+            placeholder="Enter target value..."
+            value={formData.target_value}
+            onChange={(e) => setFormData(prev => ({ ...prev, target_value: e.target.value }))}
+            required
+          />
+
+          <Input
+            type="date"
+            label="Target Date (Optional)"
+            value={formData.target_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, target_date: e.target.value }))}
+            helperText="Set a deadline to stay motivated"
+          />
+
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={submitting}
+              fullWidth
+              variant="primary"
+              icon={<CheckCircle className="w-5 h-5" />}
+            >
+              Create Goal
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowModal(false);
+                setFormData({ goal_type: 'earnings', target_value: '', target_date: '' });
+              }}
+              fullWidth
+              variant="outline"
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </motion.div>
   );
 };
 
