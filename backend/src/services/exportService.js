@@ -99,7 +99,7 @@ class ExportService {
     const topEarners = await User.getTopEarners(10);
 
     return [{
-      totalMembers: distStats.total_students,
+      totalMembers: distStats.total_members,
       zeroBalance: distStats.zero_balance,
       brokeEven: distStats.broke_even,
       profited: distStats.profited,

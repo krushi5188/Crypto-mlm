@@ -186,7 +186,7 @@ class User {
   static async getDistributionStats() {
     const result = await pool.query(
       `SELECT
-        COUNT(*) as total_students,
+        COUNT(*) as total_members,
         SUM(CASE WHEN balance = 0 THEN 1 ELSE 0 END) as zero_balance,
         SUM(CASE WHEN total_earned >= 100 AND total_earned <= 100 THEN 1 ELSE 0 END) as broke_even,
         SUM(CASE WHEN total_earned > 100 THEN 1 ELSE 0 END) as profited,

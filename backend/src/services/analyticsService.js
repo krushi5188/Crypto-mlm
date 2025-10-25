@@ -30,7 +30,7 @@ class AnalyticsService {
 
     // Get distribution stats
     const distStats = await User.getDistributionStats();
-    const totalMembers = distStats.total_students || 1; // Avoid division by zero
+    const totalMembers = distStats.total_members || 1; // Avoid division by zero
 
     const distribution = {
       zeroBalance: distStats.zero_balance || 0,
