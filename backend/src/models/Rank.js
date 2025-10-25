@@ -205,7 +205,7 @@ class Rank {
         r.rank_name, r.badge_icon, r.badge_color, r.rank_order
        FROM users u
        LEFT JOIN user_ranks r ON u.current_rank_id = r.id
-       WHERE u.role = 'student'
+       WHERE u.role = 'member'
        ORDER BY r.rank_order DESC NULLS LAST, u.total_earned DESC, u.direct_recruits DESC
        LIMIT $1`,
       [limit]

@@ -219,7 +219,7 @@ class Achievement {
         id, username, achievement_points,
         (SELECT COUNT(*) FROM user_achievements WHERE user_id = users.id) as achievements_count
        FROM users
-       WHERE role = 'student' AND achievement_points > 0
+       WHERE role = 'member' AND achievement_points > 0
        ORDER BY achievement_points DESC, achievements_count DESC
        LIMIT $1`,
       [limit]
