@@ -309,16 +309,7 @@ router.post('/add-member', validate('instructorAddMember'), async (req, res) => 
   try {
     const { email, username, password } = req.validatedBody;
 
-    // Check participant limit
-    const participantCount = await User.countMembers();
-    const maxParticipants = await SystemConfig.get('max_participants');
-
-    if (participantCount >= maxParticipants) {
-      return res.status(403).json({
-        error: 'Participant limit reached',
-        code: 'PARTICIPANT_LIMIT_REACHED'
-      });
-    }
+    // Participant limit check removed - platform now supports unlimited members
 
     // Check if email already exists
     const existingEmail = await User.findByEmail(email);
@@ -567,94 +558,17 @@ router.post('/resume', async (req, res) => {
 
 /**
  * POST /api/v1/instructor/reset
- * Reset system (full or soft)
+ * Reset system (full or soft) - DISABLED
  */
-router.post('/reset', validate('reset'), async (req, res) => {
-  const connection = await pool.getConnection();
-
-  try {
-    const { type, confirm } = req.validatedBody;
-
-    if (!confirm) {
-      return res.status(400).json({
-        error: 'Reset must be confirmed',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    await connection.beginTransaction();
-
-    let participantsAffected = 0;
-
-    if (type === 'full') {
-      // Full reset: Delete all members
-      const [countResult] = await connection.query(
-        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
-      );
-      participantsAffected = countResult[0].count;
-
-      // Delete members (CASCADE will delete referrals, transactions, admin_actions)
-      await connection.query("DELETE FROM users WHERE role = 'member'");
-
-      // Reset system totals
-      await connection.query(
-        `UPDATE system_config SET config_value = '0'
-         WHERE config_key IN ('total_coins_distributed', 'total_recruitment_fees')`
-      );
-    } else if (type === 'soft') {
-      // Soft reset: Reset balances but keep accounts
-      const [countResult] = await connection.query(
-        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
-      );
-      participantsAffected = countResult[0].count;
-
-      // Reset user balances and stats
-      await connection.query(
-        `UPDATE users SET
-         balance = 0,
-         total_earned = 0,
-         direct_recruits = 0,
-         network_size = 0
-         WHERE role = 'member'`
-      );
-
-      // Delete transactions and referrals
-      await connection.query("DELETE FROM transactions");
-      await connection.query("DELETE FROM referrals");
-
-      // Reset system totals
-      await connection.query(
-        `UPDATE system_config SET config_value = '0'
-         WHERE config_key IN ('total_coins_distributed', 'total_recruitment_fees')`
-      );
-    }
-
-    // Log admin action
-    await connection.query(
-      `INSERT INTO admin_actions (admin_id, action_type, details, ip_address)
-       VALUES (?, 'reset', ?, ?)`,
-      [req.user.id, JSON.stringify({ type, participants_affected: participantsAffected }), req.ip]
-    );
-
-    await connection.commit();
-
-    res.json({
-      success: true,
-      data: {
-        message: `${type === 'full' ? 'Full' : 'Soft'} reset completed`,
-        participantsAffected
-      }
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Reset error:', error);
-    res.status(500).json({
-      error: 'Failed to reset system',
-      code: 'DATABASE_ERROR'
-    });
-  } finally {
-    connection.release();
-  }
+router.post('/reset', async (req, res) => {
+  // Reset functionality has been permanently disabled for production
+  // This is a production MLM platform with permanent data storage
+  res.status(403).json({
+    success: false,
+    error: 'Reset functionality has been permanently disabled',
+    message: 'Member data cannot be reset. This is a production platform with permanent data storage.',
+    code: 'FEATURE_DISABLED'
+  });
 });
 
 /**
@@ -1427,14 +1341,14 @@ router.get('/fraud-detection/flagged-users', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
-        u.id, u.username, u.email, u.risk_score,
-        u.is_flagged, u.flagged_at, u.flagged_reason,
-        u.created_at, u.last_login,
+        id, username, email, risk_score,
+        is_flagged, flagged_at, flagged_reason,
+        created_at, last_login,
         reviewer.username as reviewed_by_name
-       FROM users u
-       LEFT JOIN users reviewer ON u.reviewed_by = reviewer.id
-       WHERE u.is_flagged = true
-       ORDER BY u.flagged_at DESC`
+       FROM users
+       LEFT JOIN users reviewer ON users.reviewed_by = reviewer.id
+       WHERE is_flagged = true
+       ORDER BY flagged_at DESC`
     );
 
     res.json({
