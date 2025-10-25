@@ -68,12 +68,12 @@ const Sidebar = () => {
   const SidebarContent = () => (
     <>
       {/* Logo/Brand */}
-      <div className="p-4 border-b border-glass-border">
+      <div className="p-4 border-b border-white/10">
         <Link
           to={isMember() ? '/dashboard' : '/instructor/analytics'}
           className="flex items-center gap-3"
         >
-          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
             <span className="text-black font-bold text-xl">A</span>
           </div>
           {!isCollapsed && (
@@ -81,14 +81,14 @@ const Sidebar = () => {
               <h2 className="text-white font-display font-bold text-lg leading-tight">
                 Atlas Network
               </h2>
-              <p className="text-text-muted text-xs">MLM Platform</p>
+              <p className="text-gray-400 text-xs">MLM Platform</p>
             </div>
           )}
         </Link>
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b border-glass-border">
+      <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-white font-bold flex-shrink-0">
             {user?.username?.charAt(0).toUpperCase()}
@@ -98,7 +98,7 @@ const Sidebar = () => {
               <p className="text-white font-medium text-sm truncate">
                 {user?.username}
               </p>
-              <p className="text-text-muted text-xs truncate">
+              <p className="text-gray-400 text-xs truncate">
                 {user?.email}
               </p>
             </div>
@@ -126,7 +126,7 @@ const Sidebar = () => {
                     font-medium text-sm transition-all
                     ${active
                       ? 'bg-white text-black'
-                      : 'text-text-secondary hover:text-white hover:bg-glass-medium'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
                     }
                     ${isCollapsed ? 'justify-center' : ''}
                   `}
@@ -143,10 +143,10 @@ const Sidebar = () => {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-2 border-t border-glass-border space-y-1">
+      <div className="p-2 border-t border-white/10 space-y-1">
         <Link to="/profile">
           <motion.div
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-glass-medium transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all"
             whileHover={{ x: 2 }}
           >
             <User className="w-5 h-5 flex-shrink-0" />
@@ -157,7 +157,7 @@ const Sidebar = () => {
         {isMember() && (
           <Link to="/security">
             <motion.div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-glass-medium transition-all"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all"
               whileHover={{ x: 2 }}
             >
               <Shield className="w-5 h-5 flex-shrink-0" />
@@ -168,7 +168,7 @@ const Sidebar = () => {
 
         <motion.button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-error hover:bg-error/10 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
           whileHover={{ x: 2 }}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -178,7 +178,7 @@ const Sidebar = () => {
         {/* Collapse Toggle - Desktop Only */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden md:flex w-full items-center justify-center px-3 py-2 rounded-lg text-text-muted hover:text-white hover:bg-glass-medium transition-all"
+          className="hidden md:flex w-full items-center justify-center px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -198,7 +198,7 @@ const Sidebar = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-bg-elevated border border-glass-border text-white"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-black border border-white/20 text-white"
       >
         {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -218,7 +218,7 @@ const Sidebar = () => {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-bg-primary border-r border-glass-border z-50 flex flex-col"
+              className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-black border-r border-white/10 z-50 flex flex-col"
             >
               <SidebarContent />
             </motion.aside>
@@ -229,11 +229,7 @@ const Sidebar = () => {
       {/* Desktop Sidebar */}
       <motion.aside
         animate={{ width: isCollapsed ? 80 : 280 }}
-        className={`
-          hidden md:flex fixed left-0 top-0 bottom-0
-          bg-bg-primary border-r border-glass-border
-          flex-col z-40
-        `}
+        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-black border-r border-white/10 flex-col z-40"
       >
         <SidebarContent />
       </motion.aside>
