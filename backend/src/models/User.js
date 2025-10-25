@@ -117,7 +117,7 @@ class User {
     return parseInt(result.rows[0].count);
   }
 
-  // Get all students with pagination
+  // Get all members with pagination
   static async getAllStudents(page = 1, limit = 50, sortBy = 'created_at', sortOrder = 'DESC', search = '') {
     const offset = (page - 1) * limit;
     let query = `SELECT id, email, username, balance, total_earned, direct_recruits,
