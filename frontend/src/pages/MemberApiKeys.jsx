@@ -1,13 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Key, Copy, Trash2, AlertCircle, Plus, BarChart3, 
+  Calendar, Activity, CheckCircle, Info, Eye, EyeOff, Shield
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 
 const MemberApiKeys = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [apiKeys, setApiKeys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreatedModal, setShowCreatedModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const [newKeyData, setNewKeyData] = useState({
     key_name: '',
     rate_limit_per_hour: 1000,
@@ -17,6 +38,8 @@ const MemberApiKeys = () => {
   const [createdKey, setCreatedKey] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null);
   const [keyStats, setKeyStats] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [visibleKeys, setVisibleKeys] = useState({});
 
   useEffect(() => {
     loadApiKeys();
@@ -28,9 +51,11 @@ const MemberApiKeys = () => {
       const response = await memberAPI.getApiKeys();
       setApiKeys(response.data.data.keys);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load API keys:', error);
-      setError(error.response?.data?.error || 'Failed to load API keys');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load API keys';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load API keys:', err);
     } finally {
       setLoading(false);
     }
@@ -38,50 +63,64 @@ const MemberApiKeys = () => {
 
   const handleCreateKey = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+
     try {
       const response = await memberAPI.createApiKey(newKeyData);
       setCreatedKey(response.data.data.apiKey);
-      setShowCreateForm(false);
+      showSuccess('API key created successfully!');
+      setShowCreateModal(false);
+      setShowCreatedModal(true);
       setNewKeyData({
         key_name: '',
         rate_limit_per_hour: 1000,
         expires_at: '',
         permissions: []
       });
-      loadApiKeys();
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to create API key');
+      await loadApiKeys();
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to create API key');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDeleteKey = async (keyId) => {
-    if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return;
-
     try {
       await memberAPI.deleteApiKey(keyId);
-      alert('API key deleted successfully');
-      loadApiKeys();
+      showSuccess('API key deleted successfully');
+      await loadApiKeys();
       if (selectedKey?.id === keyId) {
         setSelectedKey(null);
+        setShowStatsModal(false);
       }
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to delete API key');
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to delete API key');
     }
   };
 
   const handleViewStats = async (key) => {
     setSelectedKey(key);
+    setShowStatsModal(true);
     try {
       const response = await memberAPI.getApiKeyStats(key.id);
       setKeyStats(response.data.data.stats);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
+    } catch (err) {
+      showError('Failed to load stats');
+      console.error('Failed to load stats:', err);
     }
   };
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (text, message = 'Copied to clipboard!') => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    showSuccess(message);
+  };
+
+  const toggleKeyVisibility = (keyId) => {
+    setVisibleKeys(prev => ({
+      ...prev,
+      [keyId]: !prev[keyId]
+    }));
   };
 
   const formatDate = (dateString) => {
@@ -95,607 +134,449 @@ const MemberApiKeys = () => {
     });
   };
 
+  const maskKey = (key) => {
+    if (!key) return '';
+    return `${key.substring(0, 8)}${'*'.repeat(24)}${key.substring(key.length - 8)}`;
+  };
+
   if (loading) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 'var(--space-md)'
-      }}>
-        <div className="spin" style={{ fontSize: '4rem' }}>⏳</div>
-        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading API keys...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <LoadingSkeleton variant="card" />
+        <div className="space-y-4">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-md)'
-      }}>
-        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
-          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
-            Unable to Load API Keys
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
-            {error}
-          </p>
-          <Button onClick={loadApiKeys} size="lg">
-            Retry
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load API Keys</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadApiKeys} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
       {/* Header */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <div className="fade-in" style={{ maxWidth: '800px', marginBottom: 'var(--space-xl)' }}>
-          <h1 style={{
-            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-            marginBottom: 'var(--space-md)',
-            fontWeight: '700',
-            letterSpacing: '-0.02em'
-          }}>
-            API Keys
-          </h1>
-          <p style={{
-            fontSize: 'var(--text-xl)',
-            color: 'var(--text-muted)',
-            lineHeight: '1.6'
-          }}>
-            Manage API keys for external integrations and programmatic access
-          </p>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20"
+          >
+            <Key className="w-8 h-8 text-cyan-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">API Keys</h1>
+            <p className="text-lg text-text-muted">Manage API keys for external integrations</p>
+          </div>
         </div>
 
-        <Button onClick={() => setShowCreateForm(true)} size="lg">
-          + Create New API Key
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          variant="primary"
+          icon={<Plus className="w-5 h-5" />}
+        >
+          Create New API Key
         </Button>
-      </div>
+      </motion.div>
 
       {/* Info Card */}
-      <div className="container-narrow" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <Card className="fade-in-up delay-100" style={{
-          background: 'rgba(var(--accent-blue-rgb), 0.1)',
-          borderColor: 'rgba(var(--accent-blue-rgb), 0.2)'
-        }}>
-          <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
-            <div style={{ fontSize: '2rem' }}>ℹ️</div>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="lg" glow="cyan">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: '600', marginBottom: 'var(--space-sm)' }}>
-                API Key Security
-              </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', lineHeight: '1.6' }}>
-                API keys provide full access to your account. Keep them secure and never share them publicly.
-                The API secret is only shown once after creation.
-              </p>
+              <h4 className="text-lg font-semibold mb-3 text-cyan-400">API Key Security</h4>
+              <ul className="space-y-2 text-sm text-text-muted">
+                <li>• API keys provide full access to your account - keep them secure</li>
+                <li>• Never share your API secret or commit it to version control</li>
+                <li>• The API secret is only shown once after creation</li>
+                <li>• You can delete keys at any time to revoke access</li>
+              </ul>
             </div>
           </div>
         </Card>
-      </div>
+      </motion.div>
 
       {/* API Keys List */}
-      <div className="container-narrow">
-        {apiKeys.length === 0 ? (
-          <div className="fade-in-up" style={{
-            textAlign: 'center',
-            padding: 'var(--space-3xl)',
-            background: 'rgba(255, 255, 255, 0.02)',
-            borderRadius: 'var(--radius-xl)',
-            border: '1px solid rgba(255, 255, 255, 0.05)'
-          }}>
-            <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>🔑</div>
-            <p style={{
-              color: 'var(--text-muted)',
-              fontSize: 'var(--text-lg)',
-              lineHeight: '1.6'
-            }}>
-              No API keys yet. Create one to get started.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-            {apiKeys.map((key, index) => (
-              <div
-                key={key.id}
-                className={`fade-in-up delay-${Math.min(index * 100, 500)}`}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                  padding: 'var(--space-xl)',
-                  transition: 'all var(--transition-base)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
-                  <div>
-                    <h3 style={{
-                      fontSize: 'var(--text-xl)',
-                      fontWeight: '600',
-                      marginBottom: 'var(--space-sm)',
-                      color: 'var(--text-primary)'
-                    }}>
-                      {key.key_name}
-                    </h3>
-                    <div style={{
-                      display: 'inline-block',
-                      padding: 'var(--space-xs) var(--space-sm)',
-                      background: key.is_active ? 'rgba(var(--accent-green-rgb), 0.1)' : 'rgba(255, 0, 0, 0.1)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 'var(--text-xs)',
-                      color: key.is_active ? 'var(--accent-green)' : '#ff4444'
-                    }}>
-                      {key.is_active ? 'Active' : 'Inactive'}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleViewStats(key)}
-                    >
-                      View Stats
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => handleDeleteKey(key.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  padding: 'var(--space-md)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: 'var(--space-md)'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 'var(--space-xs)'
-                  }}>
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>API Key:</span>
-                    <button
-                      onClick={() => copyToClipboard(key.api_key)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--primary-gold)',
-                        fontSize: 'var(--text-sm)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <div style={{
-                    fontFamily: 'monospace',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--text-secondary)',
-                    wordBreak: 'break-all'
-                  }}>
-                    {key.api_key}
-                  </div>
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                  gap: 'var(--space-md)',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-muted)'
-                }}>
-                  <div>
-                    <div style={{ marginBottom: 'var(--space-xs)' }}>Rate Limit:</div>
-                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                      {key.rate_limit_per_hour}/hour
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ marginBottom: 'var(--space-xs)' }}>Last Used:</div>
-                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                      {formatDate(key.last_used_at)}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ marginBottom: 'var(--space-xs)' }}>Expires:</div>
-                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                      {key.expires_at ? formatDate(key.expires_at) : 'Never'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ marginBottom: 'var(--space-xs)' }}>Created:</div>
-                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                      {formatDate(key.created_at)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Create Form Modal */}
-      {showCreateForm && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-md)',
-            zIndex: 1000
-          }}
-          onClick={() => setShowCreateForm(false)}
+      {apiKeys.length === 0 ? (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
         >
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-2xl)',
-              maxWidth: '600px',
-              width: '100%'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{
-              fontSize: 'var(--text-2xl)',
-              fontWeight: '600',
-              marginBottom: 'var(--space-xl)',
-              color: 'var(--text-primary)'
-            }}>
-              Create New API Key
-            </h2>
+          <EmptyState
+            icon={Key}
+            title="No API Keys"
+            description="Create your first API key to enable programmatic access to your account."
+            actionLabel="Create API Key"
+            onAction={() => setShowCreateModal(true)}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="space-y-6"
+        >
+          {apiKeys.map((key, index) => (
+            <motion.div key={key.id} variants={itemVariants}>
+              <Card variant="glass-strong" padding="lg" interactive>
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="flex-shrink-0 w-12 h-12 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-center justify-center"
+                      >
+                        <Key className="w-6 h-6 text-cyan-400" />
+                      </motion.div>
 
-            <form onSubmit={handleCreateKey} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: '500',
-                  color: 'var(--text-muted)'
-                }}>
-                  Key Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newKeyData.key_name}
-                  onChange={(e) => setNewKeyData(prev => ({ ...prev, key_name: e.target.value }))}
-                  placeholder="My API Key"
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-md)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-base)'
-                  }}
-                />
-              </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold">{key.key_name}</h3>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            key.is_active 
+                              ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                          }`}>
+                            {key.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: '500',
-                  color: 'var(--text-muted)'
-                }}>
-                  Rate Limit (requests/hour)
-                </label>
-                <input
-                  type="number"
-                  value={newKeyData.rate_limit_per_hour}
-                  onChange={(e) => setNewKeyData(prev => ({ ...prev, rate_limit_per_hour: parseInt(e.target.value) }))}
-                  min="100"
-                  max="10000"
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-md)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-base)'
-                  }}
-                />
-              </div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <code className="text-sm text-text-muted font-mono">
+                            {visibleKeys[key.id] ? key.api_key : maskKey(key.api_key)}
+                          </code>
+                          <button
+                            onClick={() => toggleKeyVisibility(key.id)}
+                            className="p-1 hover:bg-glass-light rounded transition-colors"
+                          >
+                            {visibleKeys[key.id] ? (
+                              <EyeOff className="w-4 h-4 text-text-dimmed" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-text-dimmed" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => copyToClipboard(key.api_key, 'API key copied!')}
+                            className="p-1 hover:bg-glass-light rounded transition-colors"
+                          >
+                            <Copy className="w-4 h-4 text-text-dimmed" />
+                          </button>
+                        </div>
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: '500',
-                  color: 'var(--text-muted)'
-                }}>
-                  Expiration Date (optional)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={newKeyData.expires_at}
-                  onChange={(e) => setNewKeyData(prev => ({ ...prev, expires_at: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-md)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-base)'
-                  }}
-                />
-              </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div>
+                            <p className="text-text-dimmed mb-1">Rate Limit</p>
+                            <p className="font-medium">{key.rate_limit_per_hour}/hour</p>
+                          </div>
+                          <div>
+                            <p className="text-text-dimmed mb-1">Last Used</p>
+                            <p className="font-medium">{formatDate(key.last_used_at)}</p>
+                          </div>
+                          <div>
+                            <p className="text-text-dimmed mb-1">Expires</p>
+                            <p className="font-medium">{key.expires_at ? formatDate(key.expires_at) : 'Never'}</p>
+                          </div>
+                          <div>
+                            <p className="text-text-dimmed mb-1">Created</p>
+                            <p className="font-medium">{formatDate(key.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-lg)' }}>
-                <Button type="submit" variant="primary" style={{ flex: 1 }}>
-                  Create API Key
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)} style={{ flex: 1 }}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        onClick={() => handleViewStats(key)}
+                        variant="outline"
+                        size="sm"
+                        icon={<BarChart3 className="w-4 h-4" />}
+                      >
+                        Stats
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteKey(key.id)}
+                        variant="danger"
+                        size="sm"
+                        icon={<Trash2 className="w-4 h-4" />}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
       )}
 
-      {/* Created Key Modal */}
+      {/* Create Key Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setNewKeyData({
+            key_name: '',
+            rate_limit_per_hour: 1000,
+            expires_at: '',
+            permissions: []
+          });
+        }}
+        title="Create New API Key"
+        size="md"
+      >
+        <form onSubmit={handleCreateKey} className="space-y-6">
+          <Input
+            type="text"
+            label="Key Name"
+            placeholder="My API Key"
+            value={newKeyData.key_name}
+            onChange={(e) => setNewKeyData(prev => ({ ...prev, key_name: e.target.value }))}
+            required
+            helperText="A descriptive name for this API key"
+          />
+
+          <Input
+            type="number"
+            label="Rate Limit (requests/hour)"
+            value={newKeyData.rate_limit_per_hour}
+            onChange={(e) => setNewKeyData(prev => ({ ...prev, rate_limit_per_hour: parseInt(e.target.value) }))}
+            min="100"
+            max="10000"
+            helperText="Maximum requests per hour (100-10,000)"
+          />
+
+          <Input
+            type="datetime-local"
+            label="Expiration Date (Optional)"
+            value={newKeyData.expires_at}
+            onChange={(e) => setNewKeyData(prev => ({ ...prev, expires_at: e.target.value }))}
+            helperText="Leave empty for no expiration"
+          />
+
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={submitting}
+              fullWidth
+              variant="primary"
+              icon={<CheckCircle className="w-5 h-5" />}
+            >
+              Create API Key
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              fullWidth
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Created Key Success Modal */}
       {createdKey && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-md)',
-            zIndex: 1000
+        <Modal
+          isOpen={showCreatedModal}
+          onClose={() => {
+            setShowCreatedModal(false);
+            setCreatedKey(null);
           }}
-          onClick={() => setCreatedKey(null)}
+          title="API Key Created!"
+          size="lg"
         >
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-2xl)',
-              maxWidth: '700px',
-              width: '100%'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
-              <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>🎉</div>
-              <h2 style={{
-                fontSize: 'var(--text-3xl)',
-                fontWeight: '600',
-                marginBottom: 'var(--space-sm)',
-                color: 'var(--text-primary)'
-              }}>
-                API Key Created!
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-base)' }}>
-                Save your API secret now - it won't be shown again!
+          <div className="space-y-6">
+            <Card variant="glass-strong" padding="lg" glow="gold">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6 text-gold-400" />
+                <h4 className="font-semibold text-gold-400">Save Your Credentials</h4>
+              </div>
+              <p className="text-sm text-text-dimmed">
+                Make sure to copy your API secret now. You won't be able to see it again!
               </p>
-            </div>
+            </Card>
 
-            <div style={{ marginBottom: 'var(--space-lg)' }}>
-              <div style={{
-                background: 'rgba(255, 215, 0, 0.1)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(255, 215, 0, 0.2)',
-                marginBottom: 'var(--space-md)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 'var(--space-sm)'
-                }}>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: '500' }}>API Key:</span>
-                  <button
-                    onClick={() => copyToClipboard(createdKey.api_key)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--primary-gold)',
-                      fontSize: 'var(--text-sm)',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">API Key</label>
+                  <Button
+                    onClick={() => copyToClipboard(createdKey.api_key, 'API key copied!')}
+                    variant="ghost"
+                    size="sm"
+                    icon={<Copy className="w-4 h-4" />}
                   >
                     Copy
-                  </button>
+                  </Button>
                 </div>
-                <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-primary)',
-                  wordBreak: 'break-all',
-                  padding: 'var(--space-md)',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: 'var(--radius-sm)'
-                }}>
-                  {createdKey.api_key}
-                </div>
+                <Card variant="glass-medium" padding="md">
+                  <code className="text-sm text-text-primary font-mono break-all">
+                    {createdKey.api_key}
+                  </code>
+                </Card>
               </div>
 
-              <div style={{
-                background: 'rgba(255, 0, 0, 0.1)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(255, 0, 0, 0.2)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 'var(--space-sm)'
-                }}>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: '500' }}>API Secret:</span>
-                  <button
-                    onClick={() => copyToClipboard(createdKey.api_secret)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--primary-gold)',
-                      fontSize: 'var(--text-sm)',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-error">API Secret (Save Now!)</label>
+                  <Button
+                    onClick={() => copyToClipboard(createdKey.api_secret, 'API secret copied!')}
+                    variant="ghost"
+                    size="sm"
+                    icon={<Copy className="w-4 h-4" />}
                   >
                     Copy
-                  </button>
+                  </Button>
                 </div>
-                <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-primary)',
-                  wordBreak: 'break-all',
-                  padding: 'var(--space-md)',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: 'var(--radius-sm)'
-                }}>
-                  {createdKey.api_secret}
-                </div>
+                <Card variant="glass-medium" padding="md" className="border-error/30">
+                  <code className="text-sm text-error font-mono break-all">
+                    {createdKey.api_secret}
+                  </code>
+                </Card>
               </div>
             </div>
 
-            <Button onClick={() => setCreatedKey(null)} variant="primary" fullWidth>
+            <Button
+              onClick={() => {
+                setShowCreatedModal(false);
+                setCreatedKey(null);
+              }}
+              variant="primary"
+              fullWidth
+              icon={<CheckCircle className="w-5 h-5" />}
+            >
               I've Saved the Secret
             </Button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Stats Modal */}
-      {selectedKey && keyStats && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-md)',
-            zIndex: 1000
+      {selectedKey && (
+        <Modal
+          isOpen={showStatsModal}
+          onClose={() => {
+            setShowStatsModal(false);
+            setSelectedKey(null);
+            setKeyStats(null);
           }}
-          onClick={() => { setSelectedKey(null); setKeyStats(null); }}
+          title={`${selectedKey.key_name} - Statistics`}
+          size="lg"
         >
-          <div
-            style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-2xl)',
-              maxWidth: '600px',
-              width: '100%'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{
-              fontSize: 'var(--text-2xl)',
-              fontWeight: '600',
-              marginBottom: 'var(--space-xl)',
-              color: 'var(--text-primary)'
-            }}>
-              {selectedKey.key_name} - Statistics
-            </h2>
+          {keyStats ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <Card variant="glass-strong" padding="xl" glow="blue">
+                  <div className="text-center">
+                    <p className="text-sm text-text-dimmed mb-2">Total Requests</p>
+                    <p className="text-5xl font-display font-bold text-blue-400">
+                      <AnimatedNumber value={keyStats.total_requests || 0} />
+                    </p>
+                  </div>
+                </Card>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 'var(--space-lg)',
-              marginBottom: 'var(--space-xl)'
-            }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: 'var(--text-4xl)', fontWeight: '700', marginBottom: 'var(--space-xs)' }}>
-                  {keyStats.total_requests || 0}
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Total Requests</div>
+                <Card variant="glass-strong" padding="xl" glow="green">
+                  <div className="text-center">
+                    <p className="text-sm text-text-dimmed mb-2">Successful</p>
+                    <p className="text-5xl font-display font-bold text-green-400">
+                      <AnimatedNumber value={keyStats.successful_requests || 0} />
+                    </p>
+                  </div>
+                </Card>
+
+                <Card variant="glass-strong" padding="xl" glow="red">
+                  <div className="text-center">
+                    <p className="text-sm text-text-dimmed mb-2">Failed</p>
+                    <p className="text-5xl font-display font-bold text-red-400">
+                      <AnimatedNumber value={keyStats.failed_requests || 0} />
+                    </p>
+                  </div>
+                </Card>
+
+                <Card variant="glass-strong" padding="xl" glow="purple">
+                  <div className="text-center">
+                    <p className="text-sm text-text-dimmed mb-2">Avg Response</p>
+                    <p className="text-5xl font-display font-bold text-purple-400">
+                      <AnimatedNumber value={parseFloat(keyStats.avg_response_time || 0).toFixed(0)} />
+                      <span className="text-2xl">ms</span>
+                    </p>
+                  </div>
+                </Card>
               </div>
 
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: 'var(--text-4xl)', fontWeight: '700', marginBottom: 'var(--space-xs)' }}>
-                  {keyStats.successful_requests || 0}
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Successful</div>
-              </div>
-
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: 'var(--text-4xl)', fontWeight: '700', marginBottom: 'var(--space-xs)' }}>
-                  {keyStats.failed_requests || 0}
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Failed</div>
-              </div>
-
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: 'var(--space-lg)',
-                borderRadius: 'var(--radius-md)',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: 'var(--text-4xl)', fontWeight: '700', marginBottom: 'var(--space-xs)' }}>
-                  {parseFloat(keyStats.avg_response_time || 0).toFixed(0)}ms
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Avg Response Time</div>
-              </div>
+              <Button
+                onClick={() => {
+                  setShowStatsModal(false);
+                  setSelectedKey(null);
+                  setKeyStats(null);
+                }}
+                variant="outline"
+                fullWidth
+              >
+                Close
+              </Button>
             </div>
-
-            <Button onClick={() => { setSelectedKey(null); setKeyStats(null); }} variant="secondary" fullWidth>
-              Close
-            </Button>
-          </div>
-        </div>
+          ) : (
+            <div className="text-center py-12">
+              <Activity className="w-12 h-12 text-text-dimmed mx-auto mb-4 animate-pulse" />
+              <p className="text-text-muted">Loading statistics...</p>
+            </div>
+          )}
+        </Modal>
       )}
-    </div>
+    </motion.div>
   );
 };
 
