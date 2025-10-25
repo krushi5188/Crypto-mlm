@@ -4,7 +4,7 @@
  */
 
 // Update this version on each deployment (or use build timestamp)
-export const APP_VERSION = '1.0.1'; // Increment on each deployment
+export const APP_VERSION = '2.0.0'; // INCREMENTED - Forces logout
 
 /**
  * Check if app version has changed
@@ -15,21 +15,24 @@ export const checkVersion = () => {
   const storedVersion = localStorage.getItem('APP_VERSION');
 
   if (storedVersion && storedVersion !== APP_VERSION) {
-    console.log(`Version changed from ${storedVersion} to ${APP_VERSION}. Clearing cache...`);
+    console.log(`Version changed from ${storedVersion} to ${APP_VERSION}. Logging out all users...`);
 
-    // Clear all localStorage
+    // Clear all localStorage (logs out user)
     localStorage.clear();
 
     // Store new version
     localStorage.setItem('APP_VERSION', APP_VERSION);
+    
+    // Add message for user
+    localStorage.setItem('authMessage', 'New version deployed. Please login again.');
 
-    // Reload page to get fresh state
-    window.location.reload();
+    // Force reload to get fresh state
+    window.location.href = '/login';
 
     return true; // Version changed
   }
 
-  // Store version if not present
+  // Store version if not present (force logout on first visit after deployment)
   if (!storedVersion) {
     localStorage.setItem('APP_VERSION', APP_VERSION);
   }
