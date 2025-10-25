@@ -29,6 +29,17 @@ const RegisterPage = () => {
   const { success: showSuccess, error: showError } = useToast();
   const navigate = useNavigate();
 
+  // Redirect if no referral code - invite-only system
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (!ref) {
+      showError('Registration requires an invitation. Please use a referral link.');
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    }
+  }, [searchParams, navigate, showError]);
+
   useEffect(() => {
     systemAPI.getStatus().then(res => {
       setSystemStatus(res.data.data);
@@ -143,35 +154,6 @@ const RegisterPage = () => {
     );
   }
 
-  if (systemStatus && systemStatus.spotsRemaining === 0) {
-    return (
-      <motion.div
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="min-h-screen flex items-center justify-center py-12 px-4"
-      >
-        <motion.div variants={scaleIn} className="max-w-2xl w-full text-center">
-          <Card variant="glass-strong" padding="xl">
-            <div className="text-6xl mb-6">🚫</div>
-            <h2 className="text-4xl font-display font-bold mb-4">
-              Registrations Full
-            </h2>
-            <p className="text-lg text-text-muted mb-8">
-              The maximum number of participants ({systemStatus.maxParticipants}) has been reached.
-            </p>
-            <Link to="/">
-              <Button variant="outline" size="lg">
-                Back to Home
-              </Button>
-            </Link>
-          </Card>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
       variants={pageVariants}
@@ -222,23 +204,9 @@ const RegisterPage = () => {
             <h1 className="text-5xl font-display font-bold mb-3 tracking-tight text-white">
               Start Your Journey
             </h1>
-            <p className="text-lg text-gray-400 mb-4">
+            <p className="text-lg text-gray-400">
               Create your account and begin earning
             </p>
-
-            {/* Spots Remaining Counter */}
-            {systemStatus && systemStatus.spotsRemaining > 0 && (
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gold-400/10 border border-gold-400/30"
-              >
-                <Users className="w-4 h-4 text-gold-400" />
-                <span className="text-sm font-semibold text-gold-400">
-                  {systemStatus.spotsRemaining} spots remaining
-                </span>
-              </motion.div>
-            )}
           </div>
 
           {/* Registration Card */}
@@ -257,6 +225,21 @@ const RegisterPage = () => {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Invite-Only Notice */}
+            {searchParams.get('ref') && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 rounded-xl bg-gold-400/10 border border-gold-400/30 flex items-start gap-3"
+              >
+                <CheckCircle className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-gold-400">You've been invited!</p>
+                  <p className="text-xs text-gray-400 mt-1">Complete the form below to join Atlas Network</p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -336,13 +319,13 @@ const RegisterPage = () => {
               <Input
                 type="text"
                 name="referralCode"
-                label="Referral Code (Optional)"
+                label="Referral Code"
                 value={formData.referralCode}
                 onChange={handleChange}
                 placeholder="ATN-ABC123"
                 icon={<Link2 className="w-5 h-5" />}
-                helperText="Enter your referrer's code if you have one"
-                clearable
+                disabled
+                helperText="Provided by your referrer"
               />
 
               <div className="pt-4">
