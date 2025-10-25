@@ -72,7 +72,7 @@ const LoginPage = () => {
         >
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-white hover:text-gold-400 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
