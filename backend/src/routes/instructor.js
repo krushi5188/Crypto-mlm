@@ -351,7 +351,8 @@ router.post('/add-member', validate('instructorAddMember'), async (req, res) => 
       password_hash,
       role: 'member',
       referral_code: newReferralCode,
-      referred_by_id: referrerId
+      referred_by_id: referrerId,
+      approval_status: 'approved'
     });
 
     // Distribute commissions immediately to instructor
