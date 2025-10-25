@@ -1,22 +1,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  DollarSign, Users, TrendingUp, ChevronDown, ChevronUp, 
+  Filter, X, Calendar, Award, AlertCircle, Search
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp,
+  scaleIn 
+} from '../utils/animations';
 import { formatCurrency, formatDateTime, redactEmail } from '../utils/formatters';
 
 const MemberEarnings = () => {
+  const { error: showError } = useToast();
   const [earnings, setEarnings] = useState([]);
   const [invites, setInvites] = useState([]);
   const [expandedInvite, setExpandedInvite] = useState(null);
   const [inviteTransactions, setInviteTransactions] = useState({});
   const [loading, setLoading] = useState(true);
   const [totalEarned, setTotalEarned] = useState(0);
+  const [error, setError] = useState(null);
   
   // Search/Filter states
   const [searchEmail, setSearchEmail] = useState('');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -25,6 +44,7 @@ const MemberEarnings = () => {
 
   const loadEarnings = async () => {
     try {
+      setLoading(true);
       const [earningsResponse, invitesResponse] = await Promise.all([
         memberAPI.getEarnings(),
         memberAPI.getDirectInvites()
@@ -36,11 +56,14 @@ const MemberEarnings = () => {
       const invitesData = invitesResponse.data.data.invites || [];
       setInvites(invitesData);
 
-      // Calculate total from all earnings
       const total = earningsData.reduce((sum, e) => sum + e.amount, 0);
       setTotalEarned(total);
-    } catch (error) {
-      console.error('Failed to load earnings:', error);
+      setError(null);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to load earnings';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load earnings:', err);
     } finally {
       setLoading(false);
     }
@@ -48,7 +71,6 @@ const MemberEarnings = () => {
 
   const loadInviteTransactions = async (inviteUserId) => {
     if (inviteTransactions[inviteUserId]) {
-      // Already loaded
       return;
     }
 
@@ -60,6 +82,7 @@ const MemberEarnings = () => {
       }));
     } catch (error) {
       console.error('Failed to load invite transactions:', error);
+      showError('Failed to load transaction details');
     }
   };
 
@@ -72,15 +95,12 @@ const MemberEarnings = () => {
     }
   };
 
-  // Filter invites based on search criteria
   const filteredInvites = useMemo(() => {
     return invites.filter(invite => {
-      // Email search
       if (searchEmail && !invite.email.toLowerCase().includes(searchEmail.toLowerCase())) {
         return false;
       }
       
-      // Amount filters
       if (minAmount && invite.totalEarned < parseFloat(minAmount)) {
         return false;
       }
@@ -93,288 +113,341 @@ const MemberEarnings = () => {
     });
   }, [invites, searchEmail, minAmount, maxAmount]);
 
+  const clearFilters = () => {
+    setSearchEmail('');
+    setMinAmount('');
+    setMaxAmount('');
+  };
+
+  const hasActiveFilters = searchEmail || minAmount || maxAmount;
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading earnings...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <LoadingSkeleton variant="card" />
+        <Card variant="glass" padding="xl">
+          <LoadingSkeleton variant="text" count={8} />
+        </Card>
       </div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
+  if (error) {
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Earnings</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadEarnings} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
 
   return (
-    <div style={containerStyles}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>My Earnings</h1>
-        <p style={{ color: '#a0aec0' }}>Your commission history from direct invites</p>
-      </div>
-
-      {/* Total Earned */}
-      <Card style={{
-        marginBottom: '2rem',
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))',
-        border: '2px solid #10b981'
-      }}>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Total Earned
-          </div>
-          <div style={{ fontSize: '3rem', fontWeight: '700', color: '#10b981' }}>
-            {formatCurrency(totalEarned)} USDT
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-green-500/20 to-gold-400/20"
+          >
+            <TrendingUp className="w-8 h-8 text-green-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">My Earnings</h1>
+            <p className="text-lg text-text-muted">Commission history from your network</p>
           </div>
         </div>
-      </Card>
+      </motion.div>
 
-      {/* People You Invited */}
-      <Card>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.25rem' }}>People You Invited</h3>
-              <p style={{ color: '#a0aec0', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                {invites.length} {invites.length === 1 ? 'invite' : 'invites'} 
-                {invites.length !== invites.length && ` (filtered from ${invites.length})`}
+      {/* Total Earned Card */}
+      <motion.div
+        variants={scaleIn}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="xl" glow="green">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Award className="w-5 h-5 text-green-400" />
+              <p className="text-sm text-text-dimmed uppercase tracking-wider font-semibold">
+                Total Earned
               </p>
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              🔍 {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
+            <div className="text-6xl font-display font-bold text-green-400 mb-2">
+              $<AnimatedNumber value={totalEarned} decimals={2} />
+            </div>
+            <p className="text-lg text-text-muted">USDT</p>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* People You Invited */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.3 }}
+        className="space-y-4"
+      >
+        <Card variant="glass" padding="none">
+          {/* Header with Filter Toggle */}
+          <div className="p-6 border-b border-glass-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-display font-semibold mb-1">People You Invited</h3>
+                <p className="text-sm text-text-dimmed">
+                  {filteredInvites.length} {filteredInvites.length === 1 ? 'invite' : 'invites'}
+                  {hasActiveFilters && invites.length !== filteredInvites.length && 
+                    ` (filtered from ${invites.length})`}
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                variant={showFilters ? 'primary' : 'outline'}
+                icon={<Filter className="w-4 h-4" />}
+                size="sm"
+              >
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+            </div>
+
+            {/* Filter Panel */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-6 p-4 bg-glass-medium border border-glass-border rounded-xl space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Input
+                        type="text"
+                        label="Search Email"
+                        placeholder="Filter by email..."
+                        value={searchEmail}
+                        onChange={(e) => setSearchEmail(e.target.value)}
+                        icon={<Search className="w-5 h-5" />}
+                        clearable
+                      />
+                      <Input
+                        type="number"
+                        label="Min Amount (USDT)"
+                        placeholder="0"
+                        value={minAmount}
+                        onChange={(e) => setMinAmount(e.target.value)}
+                        icon={<DollarSign className="w-5 h-5" />}
+                        clearable
+                      />
+                      <Input
+                        type="number"
+                        label="Max Amount (USDT)"
+                        placeholder="Unlimited"
+                        value={maxAmount}
+                        onChange={(e) => setMaxAmount(e.target.value)}
+                        icon={<DollarSign className="w-5 h-5" />}
+                        clearable
+                      />
+                    </div>
+                    {hasActiveFilters && (
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={clearFilters}
+                          variant="ghost"
+                          size="sm"
+                          icon={<X className="w-4 h-4" />}
+                        >
+                          Clear Filters
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Filter Panel */}
-          {showFilters && (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginTop: '1rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem'
-            }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-                  Search Email
-                </label>
-                <input
-                  type="text"
-                  placeholder="Filter by email..."
-                  value={searchEmail}
-                  onChange={(e) => setSearchEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '0.875rem'
-                  }}
+          {/* Invites List */}
+          <div className="divide-y divide-glass-border">
+            {filteredInvites.length === 0 ? (
+              <div className="p-12">
+                <EmptyState
+                  icon={Users}
+                  title={invites.length === 0 ? "No Direct Invites Yet" : "No Matching Invites"}
+                  description={
+                    invites.length === 0
+                      ? "Share your referral link to start earning commissions from direct invites!"
+                      : "No invites match your current filters. Try adjusting your search criteria."
+                  }
+                  actionLabel={invites.length === 0 ? "View Dashboard" : "Clear Filters"}
+                  onAction={invites.length === 0 ? () => window.location.href = '/dashboard' : clearFilters}
                 />
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-                  Min Amount (USDT)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>
-                  Max Amount (USDT)
-                </label>
-                <input
-                  type="number"
-                  placeholder="Unlimited"
-                  value={maxAmount}
-                  onChange={(e) => setMaxAmount(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
-                <button
-                  onClick={() => {
-                    setSearchEmail('');
-                    setMinAmount('');
-                    setMaxAmount('');
-                    setStartDate('');
-                    setEndDate('');
-                  }}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500'
-                  }}
+            ) : (
+              filteredInvites.map((invite, index) => (
+                <motion.div
+                  key={invite.userId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  Clear All
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Invited User</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Total Earned</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Transactions</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvites.length === 0 ? (
-                <tr>
-                  <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
-                    {invites.length === 0 
-                      ? 'No direct invites yet. Share your referral link to start earning!'
-                      : 'No invites match your filters. Try adjusting your search criteria.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredInvites.map((invite) => (
-                  <React.Fragment key={invite.userId}>
-                    {/* Main row */}
-                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <td style={{ padding: '1rem', fontWeight: '600' }}>
-                        {redactEmail(invite.email)}
-                      </td>
-                      <td style={{ padding: '1rem', textAlign: 'right', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}>
-                        {formatCurrency(invite.totalEarned)} USDT
-                      </td>
-                      <td style={{ padding: '1rem', textAlign: 'center', color: '#a0aec0' }}>
-                        {invite.transactionCount} {invite.transactionCount === 1 ? 'transaction' : 'transactions'}
-                      </td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => toggleExpand(invite.userId)}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            border: 'none',
-                            color: '#fff',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontWeight: '600'
-                          }}
+                  {/* Main Invite Row */}
+                  <div
+                    className="p-6 hover:bg-glass-light transition-colors cursor-pointer"
+                    onClick={() => toggleExpand(invite.userId)}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <motion.div
+                          className="w-12 h-12 rounded-full bg-gradient-to-br from-gold-400 to-green-500 flex items-center justify-center text-black text-xl font-bold flex-shrink-0"
+                          whileHover={{ scale: 1.1, rotate: 5 }}
                         >
-                          {expandedInvite === invite.userId ? '▲ Hide' : '▼ Show'}
-                        </button>
-                      </td>
-                    </tr>
+                          {invite.email.charAt(0).toUpperCase()}
+                        </motion.div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-text-primary truncate">
+                            {redactEmail(invite.email)}
+                          </p>
+                          <p className="text-sm text-text-dimmed">
+                            {invite.transactionCount} {invite.transactionCount === 1 ? 'transaction' : 'transactions'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-2xl font-display font-bold text-green-400">
+                            $<AnimatedNumber value={invite.totalEarned} decimals={2} />
+                          </p>
+                          <p className="text-xs text-text-dimmed">USDT</p>
+                        </div>
+                        <motion.div
+                          animate={{ rotate: expandedInvite === invite.userId ? 180 : 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <ChevronDown className="w-5 h-5 text-text-dimmed" />
+                        </motion.div>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Expanded row with transactions */}
+                  {/* Expanded Transactions */}
+                  <AnimatePresence>
                     {expandedInvite === invite.userId && (
-                      <tr>
-                        <td colSpan="4" style={{ padding: '0', background: 'rgba(255, 255, 255, 0.05)' }}>
-                          {!inviteTransactions[invite.userId] ? (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
-                              Loading transactions...
-                            </div>
-                          ) : inviteTransactions[invite.userId].length === 0 ? (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
-                              No transactions yet
-                            </div>
-                          ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden bg-glass-medium"
+                      >
+                        {!inviteTransactions[invite.userId] ? (
+                          <div className="p-8 text-center">
+                            <LoadingSkeleton variant="text" count={3} />
+                          </div>
+                        ) : inviteTransactions[invite.userId].length === 0 ? (
+                          <div className="p-8 text-center text-text-dimmed">
+                            No transactions yet
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
                               <thead>
-                                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Date</th>
-                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Type</th>
-                                  <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#a0aec0' }}>Amount</th>
-                                  <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#a0aec0' }}>Description</th>
+                                <tr className="border-b border-glass-border">
+                                  <th className="px-6 py-3 text-left text-xs font-semibold text-text-dimmed uppercase">
+                                    Date
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-semibold text-text-dimmed uppercase">
+                                    Type
+                                  </th>
+                                  <th className="px-6 py-3 text-right text-xs font-semibold text-text-dimmed uppercase">
+                                    Amount
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-semibold text-text-dimmed uppercase">
+                                    Description
+                                  </th>
                                 </tr>
                               </thead>
-                              <tbody>
+                              <tbody className="divide-y divide-glass-border/50">
                                 {inviteTransactions[invite.userId].map((transaction, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#a0aec0' }}>
-                                      {formatDateTime(transaction.createdAt)}
+                                  <motion.tr
+                                    key={idx}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    className="hover:bg-glass-light/50 transition-colors"
+                                  >
+                                    <td className="px-6 py-3 text-sm text-text-dimmed">
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4" />
+                                        {formatDateTime(transaction.createdAt)}
+                                      </div>
                                     </td>
-                                    <td style={{ padding: '0.75rem' }}>
-                                      <span style={{
-                                        padding: '0.25rem 0.5rem',
-                                        borderRadius: '12px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: '700',
-                                        background: 'rgba(16, 185, 129, 0.2)',
-                                        color: '#10b981'
-                                      }}>
+                                    <td className="px-6 py-3">
+                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-400 border border-green-500/30">
                                         {transaction.type === 'referral_bonus' ? 'REFERRAL' : transaction.type.toUpperCase()}
                                       </span>
                                     </td>
-                                    <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: '600', color: '#10b981' }}>
-                                      +{formatCurrency(transaction.amount)} USDT
+                                    <td className="px-6 py-3 text-right">
+                                      <span className="text-lg font-semibold text-green-400">
+                                        +$<AnimatedNumber value={transaction.amount} decimals={2} />
+                                      </span>
                                     </td>
-                                    <td style={{ padding: '0.75rem', fontSize: '0.875rem' }}>
+                                    <td className="px-6 py-3 text-sm text-text-muted">
                                       {transaction.description || '-'}
                                     </td>
-                                  </tr>
+                                  </motion.tr>
                                 ))}
                               </tbody>
                             </table>
-                          )}
-                        </td>
-                      </tr>
+                          </div>
+                        )}
+                      </motion.div>
                     )}
-                  </React.Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+                  </AnimatePresence>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
 
