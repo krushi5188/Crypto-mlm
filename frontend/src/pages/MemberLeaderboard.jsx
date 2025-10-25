@@ -1,16 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Trophy, Crown, Zap, Users, TrendingUp, DollarSign, 
+  Award, AlertCircle, Medal, Star
+} from 'lucide-react';
 import { gamificationAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import RankBadge from '../components/RankBadge';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency } from '../utils/formatters';
 
 const MemberLeaderboard = () => {
+  const { error: showError } = useToast();
   const [leaderboard, setLeaderboard] = useState(null);
   const [userPosition, setUserPosition] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('earners'); // earners, recruiters, fastest
-  const [period, setPeriod] = useState('all_time'); // all_time, weekly, monthly
+  const [activeTab, setActiveTab] = useState('earners');
+  const [period, setPeriod] = useState('all_time');
 
   useEffect(() => {
     loadLeaderboard();
@@ -35,7 +53,6 @@ const MemberLeaderboard = () => {
 
       setLeaderboard(data);
 
-      // Get user position
       const posRes = await gamificationAPI.getUserPosition({
         type: activeTab,
         period
@@ -43,234 +60,296 @@ const MemberLeaderboard = () => {
       setUserPosition(posRes.data.data);
 
       setError(null);
-    } catch (error) {
-      console.error('Failed to load leaderboard:', error);
-      setError('Failed to load leaderboard');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to load leaderboard';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load leaderboard:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRankMedal = (rank) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `#${rank}`;
+  const getRankIcon = (rank) => {
+    if (rank === 1) return { emoji: '🥇', icon: Crown, color: 'text-gold-400' };
+    if (rank === 2) return { emoji: '🥈', icon: Medal, color: 'text-gray-300' };
+    if (rank === 3) return { emoji: '🥉', icon: Award, color: 'text-orange-400' };
+    return { emoji: `#${rank}`, icon: null, color: 'text-text-muted' };
   };
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-md)'
-      }}>
-        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
-          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
-            Unable to Load Leaderboard
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
-            {error}
-          </p>
-          <Button onClick={loadLeaderboard} size="lg">
-            Retry
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Leaderboard</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadLeaderboard} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
-      <div className="container">
-        {/* Header */}
-        <div style={{ marginBottom: 'var(--space-2xl)' }}>
-          <h1 style={{ fontSize: 'var(--text-5xl)', fontWeight: '700', marginBottom: 'var(--space-md)' }}>
-            🏅 Leaderboard
-          </h1>
-          <p style={{ fontSize: 'var(--text-xl)', color: 'var(--text-muted)' }}>
-            See how you rank against other members
-          </p>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-gold-400/20 to-purple-500/20"
+          >
+            <Trophy className="w-8 h-8 text-gold-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Leaderboard</h1>
+            <p className="text-lg text-text-muted">See how you rank against other members</p>
+          </div>
         </div>
+      </motion.div>
 
-        {/* User Position Card */}
-        {userPosition && (
-          <Card style={{ marginBottom: 'var(--space-2xl)', background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%)' }}>
-            <div style={{ padding: 'var(--space-lg)', color: 'white' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 'var(--text-sm)', opacity: 0.9, marginBottom: 'var(--space-xs)' }}>
-                    Your Position
-                  </div>
-                  <div style={{ fontSize: 'var(--text-4xl)', fontWeight: '700' }}>
-                    {getRankMedal(userPosition.position)}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 'var(--text-sm)', opacity: 0.9, marginBottom: 'var(--space-xs)' }}>
-                    Your {activeTab === 'earners' ? 'Earnings' : activeTab === 'recruiters' ? 'Recruits' : 'Growth'}
-                  </div>
-                  <div style={{ fontSize: 'var(--text-3xl)', fontWeight: '700' }}>
-                    {activeTab === 'earners' ? formatCurrency(userPosition.value) : userPosition.value}
+      {/* User Position Card */}
+      {userPosition && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card variant="glass-strong" padding="xl" glow="gold">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Your Position</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-5xl font-display font-bold text-gold-400">
+                    {getRankIcon(userPosition.position).emoji}
+                  </span>
+                  <div>
+                    <p className="text-3xl font-display font-bold">
+                      Rank #{userPosition.position}
+                    </p>
                   </div>
                 </div>
               </div>
+              <div className="text-right">
+                <p className="text-sm text-text-dimmed mb-2">
+                  Your {activeTab === 'earners' ? 'Earnings' : activeTab === 'recruiters' ? 'Recruits' : 'Growth'}
+                </p>
+                <p className="text-3xl font-display font-bold text-green-400">
+                  {activeTab === 'earners' ? (
+                    <>$<AnimatedNumber value={userPosition.value} decimals={2} /></>
+                  ) : (
+                    <AnimatedNumber value={userPosition.value} />
+                  )}
+                </p>
+              </div>
             </div>
           </Card>
-        )}
+        </motion.div>
+      )}
 
-        {/* Tab Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: 'var(--space-md)',
-          marginBottom: 'var(--space-lg)',
-          flexWrap: 'wrap'
-        }}>
-          <Button
-            variant={activeTab === 'earners' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('earners')}
-          >
-            💰 Top Earners
-          </Button>
-          <Button
-            variant={activeTab === 'recruiters' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('recruiters')}
-          >
-            👥 Top Recruiters
-          </Button>
-          <Button
-            variant={activeTab === 'fastest' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('fastest')}
-            disabled={period === 'all_time'}
-          >
-            🚀 Fastest Growing
-          </Button>
+      {/* Tab Buttons */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.3 }}
+        className="flex gap-3 flex-wrap"
+      >
+        <Button
+          variant={activeTab === 'earners' ? 'primary' : 'outline'}
+          onClick={() => setActiveTab('earners')}
+          icon={<DollarSign className="w-4 h-4" />}
+        >
+          Top Earners
+        </Button>
+        <Button
+          variant={activeTab === 'recruiters' ? 'primary' : 'outline'}
+          onClick={() => setActiveTab('recruiters')}
+          icon={<Users className="w-4 h-4" />}
+        >
+          Top Recruiters
+        </Button>
+        <Button
+          variant={activeTab === 'fastest' ? 'primary' : 'outline'}
+          onClick={() => setActiveTab('fastest')}
+          icon={<Zap className="w-4 h-4" />}
+          disabled={period === 'all_time'}
+        >
+          Fastest Growing
+        </Button>
+      </motion.div>
+
+      {/* Period Filter */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.4 }}
+        className="flex gap-3 flex-wrap"
+      >
+        <Button
+          variant={period === 'all_time' ? 'success' : 'outline'}
+          onClick={() => setPeriod('all_time')}
+          size="sm"
+        >
+          All Time
+        </Button>
+        <Button
+          variant={period === 'monthly' ? 'success' : 'outline'}
+          onClick={() => setPeriod('monthly')}
+          size="sm"
+        >
+          Monthly
+        </Button>
+        <Button
+          variant={period === 'weekly' ? 'success' : 'outline'}
+          onClick={() => setPeriod('weekly')}
+          size="sm"
+        >
+          Weekly
+        </Button>
+      </motion.div>
+
+      {/* Leaderboard Table */}
+      {loading ? (
+        <div className="space-y-4">
+          <LoadingSkeleton variant="card" count={10} />
         </div>
-
-        {/* Period Filter */}
-        <div style={{
-          display: 'flex',
-          gap: 'var(--space-md)',
-          marginBottom: 'var(--space-xl)',
-          flexWrap: 'wrap'
-        }}>
-          <Button
-            variant={period === 'all_time' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('all_time')}
+      ) : leaderboard && leaderboard.length === 0 ? (
+        <EmptyState
+          icon={Trophy}
+          title="No Leaderboard Entries"
+          description="No members have qualified for this leaderboard yet. Be the first to make the list!"
+          actionLabel="Refresh"
+          onAction={loadLeaderboard}
+        />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${activeTab}-${period}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
           >
-            All Time
-          </Button>
-          <Button
-            variant={period === 'monthly' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('monthly')}
-          >
-            Monthly
-          </Button>
-          <Button
-            variant={period === 'weekly' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('weekly')}
-          >
-            Weekly
-          </Button>
-        </div>
-
-        {/* Leaderboard Table */}
-        {loading ? (
-          <div style={{
-            textAlign: 'center',
-            padding: 'var(--space-3xl)',
-            color: 'var(--text-muted)'
-          }}>
-            <div className="spin" style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>⏳</div>
-            <p>Loading leaderboard...</p>
-          </div>
-        ) : (
-          <Card>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: 'var(--text-sm)'
-              }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                    <th style={{ padding: 'var(--space-md)', textAlign: 'left', fontWeight: '600' }}>Rank</th>
-                    <th style={{ padding: 'var(--space-md)', textAlign: 'left', fontWeight: '600' }}>User</th>
-                    <th style={{ padding: 'var(--space-md)', textAlign: 'left', fontWeight: '600' }}>Badge</th>
-                    <th style={{ padding: 'var(--space-md)', textAlign: 'right', fontWeight: '600' }}>
-                      {activeTab === 'earners' ? 'Earnings' : activeTab === 'recruiters' ? 'Recruits' : 'New Members'}
-                    </th>
-                    <th style={{ padding: 'var(--space-md)', textAlign: 'right', fontWeight: '600' }}>Network</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard && leaderboard.map((entry) => (
-                    <tr key={entry.userId} style={{
-                      borderBottom: '1px solid var(--border)',
-                      transition: 'background-color 0.2s'
-                    }}>
-                      <td style={{ padding: 'var(--space-md)', fontWeight: '600', fontSize: 'var(--text-lg)' }}>
-                        {getRankMedal(entry.rank)}
-                      </td>
-                      <td style={{ padding: 'var(--space-md)' }}>
-                        <div style={{ fontWeight: '500' }}>{entry.username}</div>
-                      </td>
-                      <td style={{ padding: 'var(--space-md)' }}>
-                        {entry.currentRank && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-xs)',
-                            padding: 'var(--space-xs) var(--space-sm)',
-                            borderRadius: 'var(--radius-md)',
-                            backgroundColor: entry.currentRank.color + '20',
-                            color: entry.currentRank.color,
-                            fontSize: 'var(--text-xs)',
-                            fontWeight: '600'
-                          }}>
-                            {entry.currentRank.icon} {entry.currentRank.name}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: 'var(--space-md)', textAlign: 'right', fontWeight: '600' }}>
-                        {activeTab === 'earners'
-                          ? formatCurrency(entry.earnings)
-                          : activeTab === 'recruiters'
-                          ? entry.recruitCount
-                          : entry.newMembers
-                        }
-                      </td>
-                      <td style={{ padding: 'var(--space-md)', textAlign: 'right', color: 'var(--text-muted)' }}>
-                        {entry.networkSize || entry.totalNetworkSize}
-                      </td>
+            <Card variant="glass" padding="none">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-glass-border">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Rank</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">User</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Badge</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">
+                        {activeTab === 'earners' ? 'Earnings' : activeTab === 'recruiters' ? 'Recruits' : 'New Members'}
+                      </th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Network</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-
-        {leaderboard && leaderboard.length === 0 && (
-          <Card>
-            <div style={{
-              textAlign: 'center',
-              padding: 'var(--space-3xl)',
-              color: 'var(--text-muted)'
-            }}>
-              <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>🏅</div>
-              <p>No entries yet for this leaderboard</p>
-            </div>
-          </Card>
-        )}
-      </div>
-    </div>
+                  </thead>
+                  <tbody className="divide-y divide-glass-border">
+                    {leaderboard && leaderboard.map((entry, index) => {
+                      const rankInfo = getRankIcon(entry.rank);
+                      return (
+                        <motion.tr
+                          key={entry.userId}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                          className="transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              {rankInfo.icon && (
+                                <motion.div
+                                  initial={{ scale: 0, rotate: -180 }}
+                                  animate={{ scale: 1, rotate: 0 }}
+                                  transition={{ type: 'spring', delay: index * 0.05 }}
+                                >
+                                  <rankInfo.icon className={`w-6 h-6 ${rankInfo.color}`} />
+                                </motion.div>
+                              )}
+                              <span className={`text-xl font-display font-bold ${rankInfo.color}`}>
+                                {rankInfo.emoji}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <motion.div
+                                className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-green-500 flex items-center justify-center text-black font-semibold"
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                              >
+                                {entry.username?.charAt(0).toUpperCase() || 'U'}
+                              </motion.div>
+                              <span className="font-semibold">{entry.username}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {entry.currentRank && (
+                              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
+                                style={{
+                                  backgroundColor: `${entry.currentRank.color}20`,
+                                  color: entry.currentRank.color,
+                                  border: `1px solid ${entry.currentRank.color}40`
+                                }}
+                              >
+                                <span>{entry.currentRank.icon}</span>
+                                <span>{entry.currentRank.name}</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-lg font-semibold text-green-400">
+                              {activeTab === 'earners' ? (
+                                <>$<AnimatedNumber value={entry.earnings} decimals={2} /></>
+                              ) : activeTab === 'recruiters' ? (
+                                <AnimatedNumber value={entry.recruitCount} />
+                              ) : (
+                                <AnimatedNumber value={entry.newMembers} />
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right text-text-dimmed">
+                            <AnimatedNumber value={entry.networkSize || entry.totalNetworkSize || 0} />
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </motion.div>
   );
 };
 
