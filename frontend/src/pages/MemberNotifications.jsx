@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Bell, Check, Trash2, CheckCheck, X, DollarSign, 
+  Trophy, Users, Shield, TrendingUp, AlertCircle, Filter
+} from 'lucide-react';
 import { gamificationAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatTimeAgo } from '../utils/formatters';
 
 const MemberNotifications = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, unread, read
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     loadNotifications();
@@ -27,7 +44,6 @@ const MemberNotifications = () => {
 
       let data = notifRes.data.data.notifications;
 
-      // Apply filter
       if (filter === 'read') {
         data = data.filter(n => n.isRead);
       } else if (filter === 'unread') {
@@ -37,9 +53,11 @@ const MemberNotifications = () => {
       setNotifications(data);
       setSummary(summaryRes.data.data);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load notifications:', error);
-      setError('Failed to load notifications');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to load notifications';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load notifications:', err);
     } finally {
       setLoading(false);
     }
@@ -54,7 +72,9 @@ const MemberNotifications = () => {
       if (summary) {
         setSummary({ ...summary, unread: Math.max(0, summary.unread - 1), read: summary.read + 1 });
       }
+      showSuccess('Marked as read');
     } catch (error) {
+      showError('Failed to mark as read');
       console.error('Failed to mark as read:', error);
     }
   };
@@ -62,8 +82,10 @@ const MemberNotifications = () => {
   const handleMarkAllAsRead = async () => {
     try {
       await gamificationAPI.markAllAsRead();
+      showSuccess('All notifications marked as read');
       await loadNotifications();
     } catch (error) {
+      showError('Failed to mark all as read');
       console.error('Failed to mark all as read:', error);
     }
   };
@@ -72,7 +94,9 @@ const MemberNotifications = () => {
     try {
       await gamificationAPI.deleteNotification(id);
       setNotifications(notifications.filter(n => n.id !== id));
+      showSuccess('Notification deleted');
     } catch (error) {
+      showError('Failed to delete notification');
       console.error('Failed to delete notification:', error);
     }
   };
@@ -80,252 +104,305 @@ const MemberNotifications = () => {
   const handleDeleteAllRead = async () => {
     try {
       await gamificationAPI.deleteAllRead();
+      showSuccess('All read notifications deleted');
       await loadNotifications();
     } catch (error) {
+      showError('Failed to delete notifications');
       console.error('Failed to delete read notifications:', error);
     }
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'commission_earned': return '💰';
-      case 'rank_up': return '🎖️';
-      case 'achievement_unlocked': return '🏆';
-      case 'security_alert': return '🔒';
-      case 'new_recruit': return '👥';
-      case 'withdrawal_status': return '💸';
-      default: return '📢';
-    }
+    const iconMap = {
+      commission_earned: { icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/10' },
+      rank_up: { icon: Trophy, color: 'text-gold-400', bg: 'bg-gold-400/10' },
+      achievement_unlocked: { icon: Trophy, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+      security_alert: { icon: Shield, color: 'text-red-400', bg: 'bg-red-500/10' },
+      new_recruit: { icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+      withdrawal_status: { icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
+    };
+    return iconMap[type] || { icon: Bell, color: 'text-text-muted', bg: 'bg-glass-medium' };
   };
 
   if (loading && !notifications.length) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 'var(--space-md)'
-      }}>
-        <div className="spin" style={{ fontSize: '4rem' }}>⏳</div>
-        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading notifications...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
+        <div className="space-y-4">
+          <LoadingSkeleton variant="card" count={6} />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-md)'
-      }}>
-        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>⚠️</div>
-          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
-            Unable to Load Notifications
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
-            {error}
-          </p>
-          <Button onClick={loadNotifications} size="lg">
-            Retry
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Notifications</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadNotifications} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
-      <div className="container">
-        {/* Header */}
-        <div style={{ marginBottom: 'var(--space-2xl)' }}>
-          <h1 style={{ fontSize: 'var(--text-5xl)', fontWeight: '700', marginBottom: 'var(--space-md)' }}>
-            🔔 Notifications
-          </h1>
-          <p style={{ fontSize: 'var(--text-xl)', color: 'var(--text-muted)' }}>
-            Stay updated with your activity
-          </p>
-        </div>
-
-        {/* Summary Stats */}
-        {summary && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 'var(--space-lg)',
-            marginBottom: 'var(--space-2xl)'
-          }}>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 'var(--text-5xl)', marginBottom: 'var(--space-sm)' }}>
-                  {summary.total}
-                </div>
-                <div style={{ color: 'var(--text-muted)' }}>Total</div>
-              </div>
-            </Card>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 'var(--text-5xl)', marginBottom: 'var(--space-sm)', color: 'var(--primary)' }}>
-                  {summary.unread}
-                </div>
-                <div style={{ color: 'var(--text-muted)' }}>Unread</div>
-              </div>
-            </Card>
-            <Card>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 'var(--text-5xl)', marginBottom: 'var(--space-sm)' }}>
-                  {summary.read}
-                </div>
-                <div style={{ color: 'var(--text-muted)' }}>Read</div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: 'var(--space-md)',
-          marginBottom: 'var(--space-lg)',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
-            <Button
-              variant={filter === 'all' ? 'primary' : 'secondary'}
-              onClick={() => setFilter('all')}
-            >
-              All
-            </Button>
-            <Button
-              variant={filter === 'unread' ? 'primary' : 'secondary'}
-              onClick={() => setFilter('unread')}
-            >
-              Unread
-            </Button>
-            <Button
-              variant={filter === 'read' ? 'primary' : 'secondary'}
-              onClick={() => setFilter('read')}
-            >
-              Read
-            </Button>
-          </div>
-
-          <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 relative"
+          >
+            <Bell className="w-8 h-8 text-blue-400" />
             {summary && summary.unread > 0 && (
-              <Button variant="secondary" size="sm" onClick={handleMarkAllAsRead}>
-                Mark all as read
-              </Button>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 w-6 h-6 bg-gold-400 rounded-full flex items-center justify-center text-black text-xs font-bold"
+              >
+                {summary.unread > 99 ? '99+' : summary.unread}
+              </motion.div>
             )}
-            {summary && summary.read > 0 && (
-              <Button variant="danger" size="sm" onClick={handleDeleteAllRead}>
-                Delete all read
-              </Button>
-            )}
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Notifications</h1>
+            <p className="text-lg text-text-muted">Stay updated with your activity</p>
           </div>
         </div>
+      </motion.div>
 
-        {/* Notifications List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          {notifications.map((notification) => (
-            <Card key={notification.id} style={{
-              backgroundColor: notification.isRead ? 'var(--bg)' : 'var(--primary-light)',
-              borderLeft: notification.isRead ? '4px solid var(--border)' : '4px solid var(--primary)'
-            }}>
-              <div style={{ padding: 'var(--space-md)', display: 'flex', gap: 'var(--space-md)' }}>
-                {/* Icon */}
-                <div style={{ fontSize: '2rem', flexShrink: 0 }}>
-                  {getNotificationIcon(notification.type)}
-                </div>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'start',
-                    marginBottom: 'var(--space-xs)',
-                    gap: 'var(--space-md)'
-                  }}>
-                    <h3 style={{ fontWeight: '600', fontSize: 'var(--text-lg)' }}>
-                      {notification.title}
-                    </h3>
-                    {!notification.isRead && (
-                      <span style={{
-                        display: 'inline-block',
-                        width: '8px',
-                        height: '8px',
-                        backgroundColor: 'var(--primary)',
-                        borderRadius: '50%',
-                        flexShrink: 0
-                      }} />
-                    )}
-                  </div>
-
-                  <p style={{
-                    color: 'var(--text-muted)',
-                    marginBottom: 'var(--space-sm)',
-                    fontSize: 'var(--text-base)'
-                  }}>
-                    {notification.message}
-                  </p>
-
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 'var(--space-md)',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                      {formatTimeAgo(notification.createdAt)}
-                    </span>
-
-                    <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-                      {!notification.isRead && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleMarkAsRead(notification.id)}
-                        >
-                          Mark as read
-                        </Button>
-                      )}
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteNotification(notification.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+      {/* Summary Stats */}
+      {summary && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-6"
+        >
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive>
+              <div className="text-center">
+                <p className="text-sm text-text-dimmed mb-2">Total</p>
+                <p className="text-4xl font-display font-bold">
+                  <AnimatedNumber value={summary.total} />
+                </p>
               </div>
             </Card>
-          ))}
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive glow="gold">
+              <div className="text-center">
+                <p className="text-sm text-text-dimmed mb-2">Unread</p>
+                <p className="text-4xl font-display font-bold text-gold-400">
+                  <AnimatedNumber value={summary.unread} />
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive>
+              <div className="text-center">
+                <p className="text-sm text-text-dimmed mb-2">Read</p>
+                <p className="text-4xl font-display font-bold">
+                  <AnimatedNumber value={summary.read} />
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Action Buttons */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+        className="flex flex-col sm:flex-row gap-4 justify-between"
+      >
+        <div className="flex gap-3 flex-wrap">
+          <Button
+            variant={filter === 'all' ? 'primary' : 'outline'}
+            onClick={() => setFilter('all')}
+            icon={<Filter className="w-4 h-4" />}
+            size="sm"
+          >
+            All
+          </Button>
+          <Button
+            variant={filter === 'unread' ? 'warning' : 'outline'}
+            onClick={() => setFilter('unread')}
+            icon={<Bell className="w-4 h-4" />}
+            size="sm"
+          >
+            Unread
+          </Button>
+          <Button
+            variant={filter === 'read' ? 'success' : 'outline'}
+            onClick={() => setFilter('read')}
+            icon={<Check className="w-4 h-4" />}
+            size="sm"
+          >
+            Read
+          </Button>
         </div>
 
-        {notifications.length === 0 && (
-          <Card>
-            <div style={{
-              textAlign: 'center',
-              padding: 'var(--space-3xl)',
-              color: 'var(--text-muted)'
-            }}>
-              <div style={{ fontSize: '4rem', marginBottom: 'var(--space-md)' }}>🔔</div>
-              <p>No notifications found</p>
-            </div>
-          </Card>
+        <div className="flex gap-3 flex-wrap">
+          {summary && summary.unread > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMarkAllAsRead}
+              icon={<CheckCheck className="w-4 h-4" />}
+            >
+              Mark all as read
+            </Button>
+          )}
+          {summary && summary.read > 0 && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDeleteAllRead}
+              icon={<Trash2 className="w-4 h-4" />}
+            >
+              Delete all read
+            </Button>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Notifications List */}
+      <AnimatePresence mode="popLayout">
+        {notifications.length === 0 ? (
+          <motion.div
+            key="empty"
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <EmptyState
+              icon={Bell}
+              title="No Notifications"
+              description="You're all caught up! No notifications to show."
+              actionLabel="Refresh"
+              onAction={loadNotifications}
+            />
+          </motion.div>
+        ) : (
+          <div className="space-y-4">
+            {notifications.map((notification, index) => {
+              const iconInfo = getNotificationIcon(notification.type);
+              const IconComponent = iconInfo.icon;
+              
+              return (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: index * 0.05 }}
+                  layout
+                >
+                  <Card
+                    variant={notification.isRead ? 'glass' : 'glass-strong'}
+                    padding="none"
+                    className={`${!notification.isRead ? 'border-l-4 border-gold-400' : ''}`}
+                  >
+                    <div className="p-6 flex gap-4">
+                      <motion.div
+                        className={`flex-shrink-0 w-12 h-12 rounded-xl ${iconInfo.bg} flex items-center justify-center`}
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                      >
+                        <IconComponent className={`w-6 h-6 ${iconInfo.color}`} />
+                      </motion.div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <h3 className="text-lg font-semibold">{notification.title}</h3>
+                          {!notification.isRead && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="flex-shrink-0 w-2 h-2 bg-gold-400 rounded-full"
+                            />
+                          )}
+                        </div>
+
+                        <p className="text-text-muted mb-3">{notification.message}</p>
+
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <span className="text-sm text-text-dimmed">
+                            {formatTimeAgo(notification.createdAt)}
+                          </span>
+
+                          <div className="flex gap-2">
+                            {!notification.isRead && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                icon={<Check className="w-4 h-4" />}
+                              >
+                                Mark as read
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteNotification(notification.id)}
+                              icon={<Trash2 className="w-4 h-4" />}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         )}
-      </div>
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 };
 
