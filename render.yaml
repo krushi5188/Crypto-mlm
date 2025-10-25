@@ -15,7 +15,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 999999999
       - key: DB_HOST
         fromDatabase:
           name: atlas-network-db
@@ -49,7 +49,7 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Set this manually in Render dashboard
       - key: MAX_PARTICIPANTS
-        value: 10000
+        value: 999999999
       - key: PLATFORM_DURATION_DAYS
         value: 365
       - key: RECRUITMENT_FEE
