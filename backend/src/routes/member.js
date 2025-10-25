@@ -397,7 +397,7 @@ router.put('/profile', validate('profileUpdate'), async (req, res) => {
 });
 
 /**
- * POST /api/v1/student/profile/avatar
+ * POST /api/v1/member/profile/avatar
  * Upload profile avatar
  */
 router.post('/profile/avatar', upload.single('avatar'), async (req, res) => {
