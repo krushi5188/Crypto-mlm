@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import apiService from '../services/apiService';
+import apiService from '../services/api';
 
 const StudentSecurity = () => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
