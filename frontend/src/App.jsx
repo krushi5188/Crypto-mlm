@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import './i18n/config'; // Initialize i18n
+import { checkVersion } from './utils/versionCheck';
 import Navbar from './components/common/Navbar';
 import Watermark from './components/common/Watermark';
 import GlobalSearch, { useGlobalSearch } from './components/GlobalSearch';
@@ -102,6 +103,11 @@ const HomePage = () => {
 };
 
 function App() {
+  // Check version on app mount - force logout if version changed
+  React.useEffect(() => {
+    checkVersion();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
