@@ -7,14 +7,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Monochrome Premium Colors - Fixed for readability
-        primary: '#000000',      // Black primary
-        secondary: '#ffffff',    // White secondary
+        // Monochrome base
+        primary: '#000000',
+        secondary: '#ffffff',
         accent: '#404040',
         
         // Base colors
         black: '#000000',
         white: '#ffffff',
+        
+        // BRIGHT Gold colors (highly visible on black)
+        gold: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',  // BRIGHT yellow-gold
+          500: '#f59e0b',  // BRIGHT orange-gold
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+        },
+        
+        // BRIGHT Green colors (highly visible on black)
+        green: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',  // BRIGHT green
+          500: '#22c55e',  // BRIGHT green
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+        },
         
         // Grays
         gray: {
@@ -31,26 +59,28 @@ export default {
           950: '#0d0d0d',
         },
         
-        // Semantic colors
-        success: '#10b981',      // Green for success
-        warning: '#f59e0b',      // Orange for warnings
-        error: '#ef4444',        // Red for errors
-        info: '#3b82f6',         // Blue for info
+        // Semantic colors - BRIGHT and visible
+        success: '#22c55e',      // Bright green
+        warning: '#f59e0b',      // Bright orange
+        error: '#ef4444',        // Bright red
+        info: '#3b82f6',         // Bright blue
         
-        // Text colors - FIXED for contrast
+        // Text colors with STRONG contrast
         'text': {
-          primary: '#ffffff',              // White text for dark backgrounds
-          secondary: 'rgba(255, 255, 255, 0.7)',
-          muted: 'rgba(255, 255, 255, 0.5)',
-          dimmed: 'rgba(255, 255, 255, 0.3)',
+          primary: '#ffffff',              // Pure white
+          secondary: '#e5e5e5',            // Very light gray (was too dim)
+          muted: '#a3a3a3',                // Medium gray (was too dim)
+          dimmed: '#737373',               // Lighter gray
         },
         
         // Background colors
         'bg': {
-          primary: '#000000',              // Black background
+          primary: '#000000',
           secondary: '#0d0d0d',
           elevated: '#171717',
           card: '#1a1a1a',
+          page: '#000000',
+          section: '#0a0a0a',
         },
         
         // Glass/Overlay colors
@@ -70,8 +100,10 @@ export default {
         xs: '2px',
       },
       boxShadow: {
-        'glow': '0 0 40px rgba(255, 255, 255, 0.15)',
-        'glow-strong': '0 0 60px rgba(255, 255, 255, 0.25)',
+        'glow': '0 0 40px rgba(251, 191, 36, 0.3)',
+        'glow-strong': '0 0 60px rgba(251, 191, 36, 0.4)',
+        'glow-gold': '0 0 40px rgba(251, 191, 36, 0.3)',
+        'glow-green': '0 0 40px rgba(34, 197, 94, 0.3)',
       },
     },
   },
