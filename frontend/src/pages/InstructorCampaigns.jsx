@@ -1,16 +1,35 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Mail, Send, Pause, Play, Trash2, ChevronDown, ChevronUp, 
+  Target, Users, Calendar, Plus, BarChart3, Eye, Check, MousePointer
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatDateTime } from '../utils/formatters';
 
 const InstructorCampaigns = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all'); // all, draft, active, paused, completed
-  const [typeFilter, setTypeFilter] = useState('all'); // all, one_time, drip, recurring, behavioral
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [campaignStats, setCampaignStats] = useState({});
   const [formData, setFormData] = useState({
@@ -25,9 +44,7 @@ const InstructorCampaigns = () => {
     trigger_delay_hours: 0
   });
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [executingCampaign, setExecutingCampaign] = useState(null);
 
@@ -37,12 +54,14 @@ const InstructorCampaigns = () => {
 
   const loadCampaigns = async () => {
     try {
+      setLoading(true);
       const response = await instructorAPI.getCampaigns({ limit: 100 });
       setCampaigns(response.data.data.campaigns);
       setError(null);
     } catch (error) {
       console.error('Failed to load campaigns:', error);
       setError('Failed to load campaigns');
+      showError('Failed to load campaigns');
     } finally {
       setLoading(false);
     }
@@ -64,13 +83,11 @@ const InstructorCampaigns = () => {
     e.preventDefault();
 
     if (!formData.name || !formData.subject || !formData.email_template) {
-      setFormError('Please fill in all required fields');
+      showError('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
-    setFormError('');
-    setFormSuccess('');
 
     try {
       await instructorAPI.createCampaign(formData);
@@ -86,33 +103,26 @@ const InstructorCampaigns = () => {
         trigger_event: '',
         trigger_delay_hours: 0
       });
-      setShowCreateForm(false);
-      setFormSuccess(`✓ Campaign "${formData.name}" created successfully!`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      setShowCreateModal(false);
+      showSuccess(`Campaign "${formData.name}" created successfully!`);
     } catch (error) {
       console.error('Create campaign error:', error);
-      setFormError(error.response?.data?.error || 'Failed to create campaign');
+      showError(error.response?.data?.error || 'Failed to create campaign');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleExecuteCampaign = async (campaign) => {
-    if (!window.confirm(`Execute campaign "${campaign.name}"? This will send emails to the target audience.`)) {
-      return;
-    }
-
     setExecutingCampaign(campaign.id);
     try {
       const response = await instructorAPI.executeCampaign(campaign.id);
       const result = response.data.data;
       await loadCampaigns();
-      setFormSuccess(`✓ Campaign executed: ${result.successCount} sent, ${result.failCount} failed`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      showSuccess(`Campaign executed: ${result.successCount} sent, ${result.failCount} failed`);
     } catch (error) {
       console.error('Execute campaign error:', error);
-      setFormError(error.response?.data?.error || 'Failed to execute campaign');
-      setTimeout(() => setFormError(''), 5000);
+      showError(error.response?.data?.error || 'Failed to execute campaign');
     } finally {
       setExecutingCampaign(null);
     }
@@ -122,12 +132,10 @@ const InstructorCampaigns = () => {
     try {
       await instructorAPI.updateCampaignStatus(campaignId, newStatus);
       await loadCampaigns();
-      setFormSuccess(`✓ Campaign status updated to ${newStatus}`);
-      setTimeout(() => setFormSuccess(''), 3000);
+      showSuccess(`Campaign status updated to ${newStatus}`);
     } catch (error) {
       console.error('Update status error:', error);
-      setFormError(error.response?.data?.error || 'Failed to update campaign status');
-      setTimeout(() => setFormError(''), 5000);
+      showError(error.response?.data?.error || 'Failed to update campaign status');
     }
   };
 
@@ -137,15 +145,13 @@ const InstructorCampaigns = () => {
     try {
       await instructorAPI.deleteCampaign(deleteTarget.id);
       await loadCampaigns();
-      setShowDeleteConfirm(false);
+      setShowDeleteModal(false);
       setDeleteTarget(null);
-      setFormSuccess(`✓ Campaign "${deleteTarget.name}" deleted successfully`);
-      setTimeout(() => setFormSuccess(''), 5000);
+      showSuccess(`Campaign "${deleteTarget.name}" deleted successfully`);
     } catch (error) {
       console.error('Delete campaign error:', error);
-      setFormError(error.response?.data?.error || 'Failed to delete campaign');
-      setTimeout(() => setFormError(''), 5000);
-      setShowDeleteConfirm(false);
+      showError(error.response?.data?.error || 'Failed to delete campaign');
+      setShowDeleteModal(false);
       setDeleteTarget(null);
     }
   };
@@ -161,6 +167,26 @@ const InstructorCampaigns = () => {
     }
   };
 
+  const getStatusConfig = (status) => {
+    const configs = {
+      draft: { icon: Mail, color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', label: 'Draft' },
+      active: { icon: Check, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', label: 'Active' },
+      paused: { icon: Pause, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Paused' },
+      completed: { icon: Check, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', label: 'Completed' }
+    };
+    return configs[status] || configs.draft;
+  };
+
+  const getCampaignTypeConfig = (type) => {
+    const configs = {
+      one_time: { icon: Mail, label: 'One-Time', color: 'text-blue-400' },
+      drip: { icon: Send, label: 'Drip', color: 'text-cyan-400' },
+      recurring: { icon: Play, label: 'Recurring', color: 'text-purple-400' },
+      behavioral: { icon: Target, label: 'Behavioral', color: 'text-orange-400' }
+    };
+    return configs[type] || configs.one_time;
+  };
+
   const filteredCampaigns = campaigns.filter(c => {
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     const matchesType = typeFilter === 'all' || c.campaign_type === typeFilter;
@@ -174,331 +200,527 @@ const InstructorCampaigns = () => {
     completed: campaigns.filter(c => c.status === 'completed').length
   };
 
+  const statusTabs = [
+    { id: 'all', label: 'All Campaigns', count: campaigns.length },
+    { id: 'draft', label: 'Draft', count: statusCounts.draft },
+    { id: 'active', label: 'Active', count: statusCounts.active },
+    { id: 'paused', label: 'Paused', count: statusCounts.paused },
+    { id: 'completed', label: 'Completed', count: statusCounts.completed }
+  ];
+
+  const typeTabs = [
+    { id: 'all', label: 'All Types' },
+    { id: 'one_time', label: 'One-Time' },
+    { id: 'drip', label: 'Drip' },
+    { id: 'recurring', label: 'Recurring' },
+    { id: 'behavioral', label: 'Behavioral' }
+  ];
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading campaigns...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <LoadingSkeleton variant="card" count={3} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Error Loading Campaigns</h2>
-            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
-          </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <EmptyState
+            icon={Mail}
+            title="Error Loading Campaigns"
+            description={error}
+            actionLabel="Try Again"
+            onAction={loadCampaigns}
+          />
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
-
-  const statsStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem'
-  };
-
-  const filterButtonStyle = (isActive) => ({
-    padding: '0.5rem 1rem',
-    background: isActive ? '#fbbf24' : 'rgba(255, 255, 255, 0.1)',
-    color: isActive ? '#1a1a1a' : '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    transition: 'all 0.2s'
-  });
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      draft: { bg: 'rgba(163, 163, 163, 0.2)', color: '#a3a3a3', text: '📝 Draft' },
-      active: { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981', text: '✓ Active' },
-      paused: { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', text: '⏸ Paused' },
-      completed: { bg: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', text: '✓ Completed' }
-    };
-
-    const style = styles[status] || styles.draft;
-
-    return (
-      <span style={{
-        padding: '0.25rem 0.75rem',
-        borderRadius: '12px',
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        background: style.bg,
-        color: style.color
-      }}>
-        {style.text}
-      </span>
-    );
-  };
-
-  const getCampaignTypeIcon = (type) => {
-    const icons = {
-      one_time: '📧',
-      drip: '💧',
-      recurring: '🔄',
-      behavioral: '🎯'
-    };
-    return icons[type] || '📧';
-  };
-
   return (
-    <div style={containerStyles}>
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-xl)',
-            maxWidth: '500px',
-            width: '100%',
-            border: '2px solid #ef4444',
-            boxShadow: 'var(--shadow-2xl)'
-          }}>
-            <h3 style={{
-              fontSize: 'var(--text-2xl)',
-              marginBottom: 'var(--space-md)',
-              color: '#ef4444'
-            }}>
-              Delete Campaign
-            </h3>
-            <p style={{
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-xl)',
-              lineHeight: '1.6'
-            }}>
-              Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteTarget(null);
-                }}
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteCampaign}
-                variant="danger"
-              >
-                Delete Campaign
-              </Button>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+            >
+              <Mail className="w-8 h-8 text-blue-400" />
+            </motion.div>
+            <div>
+              <h1 className="text-4xl font-display font-bold">Campaign Management</h1>
+              <p className="text-lg text-text-muted">Create and manage email marketing campaigns</p>
             </div>
           </div>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            variant="success"
+            icon={<Plus className="w-5 h-5" />}
+          >
+            Create Campaign
+          </Button>
         </div>
-      )}
+      </motion.div>
 
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Campaign Management</h1>
-          <p style={{ color: '#a0aec0' }}>Create and manage email marketing campaigns</p>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: showCreateForm ? '#ef4444' : '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            transition: 'all 0.2s'
-          }}
-        >
-          {showCreateForm ? '✗ Cancel' : '+ Create Campaign'}
-        </button>
-      </div>
-
-      {/* Success Message */}
-      {formSuccess && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(16, 185, 129, 0.2)',
-          border: '1px solid #10b981',
-          borderRadius: '8px',
-          color: '#10b981',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{formSuccess}</span>
-          <button onClick={() => setFormSuccess('')} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {formError && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(239, 68, 68, 0.2)',
-          border: '1px solid #ef4444',
-          borderRadius: '8px',
-          color: '#ef4444',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{formError}</span>
-          <button onClick={() => setFormError('')} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
-        </div>
-      )}
-
-      {/* Create Campaign Form */}
-      {showCreateForm && (
-        <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New Campaign</h3>
-          <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Configure your email campaign settings and target audience.
-          </p>
-
-          <form onSubmit={handleCreateCampaign}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Campaign Name <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="e.g., Welcome Series"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Campaign Type <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.campaign_type}
-                  onChange={(e) => setFormData({ ...formData, campaign_type: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
+      {/* Statistics Cards */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+      >
+        {[
+          { label: 'Draft', value: statusCounts.draft, color: 'text-gray-400', bg: 'bg-gray-500/10', icon: Mail },
+          { label: 'Active', value: statusCounts.active, color: 'text-green-400', bg: 'bg-green-500/10', icon: Check },
+          { label: 'Paused', value: statusCounts.paused, color: 'text-yellow-400', bg: 'bg-yellow-500/10', icon: Pause },
+          { label: 'Completed', value: statusCounts.completed, color: 'text-blue-400', bg: 'bg-blue-500/10', icon: Check }
+        ].map((stat) => (
+          <motion.div key={stat.label} variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">{stat.label}</p>
+                  <p className={`text-5xl font-display font-bold ${stat.color}`}>
+                    <AnimatedNumber value={stat.value} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className={`p-4 rounded-2xl ${stat.bg}`}
                 >
-                  <option value="one_time">One-Time Broadcast</option>
-                  <option value="drip">Drip Sequence</option>
-                  <option value="recurring">Recurring</option>
-                  <option value="behavioral">Behavioral Trigger</option>
-                </select>
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                </motion.div>
               </div>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Target Audience <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={formData.target_audience}
-                  onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
+      {/* Filter Tabs */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+        className="space-y-4"
+      >
+        <Card variant="glass-strong" padding="none">
+          <div className="p-2">
+            <div className="text-sm font-semibold text-text-dimmed mb-2 px-4">Status Filter</div>
+            <div className="flex gap-2 relative">
+              {statusTabs.map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-colors relative z-10 ${
+                    statusFilter === tab.id
+                      ? 'text-blue-400'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <option value="all">All Users</option>
-                  <option value="new_users">New Users (last 7 days)</option>
-                  <option value="active">Active Users</option>
-                  <option value="inactive">Inactive Users</option>
-                  <option value="high_earners">High Earners (Top 20%)</option>
-                </select>
-              </div>
+                  {tab.label}
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                    statusFilter === tab.id
+                      ? 'bg-blue-400/20 text-blue-400'
+                      : 'bg-glass-medium text-text-dimmed'
+                  }`}>
+                    {tab.count}
+                  </span>
+                  {statusFilter === tab.id && (
+                    <motion.div
+                      layoutId="activeCampaignStatusTab"
+                      className="absolute inset-0 bg-blue-400/10 border border-blue-400/30 rounded-xl"
+                      style={{ zIndex: -1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        </Card>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
+        <Card variant="glass-strong" padding="none">
+          <div className="p-2">
+            <div className="text-sm font-semibold text-text-dimmed mb-2 px-4">Type Filter</div>
+            <div className="flex gap-2 relative">
+              {typeTabs.map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setTypeFilter(tab.id)}
+                  className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-colors relative z-10 ${
+                    typeFilter === tab.id
+                      ? 'text-purple-400'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                </select>
-              </div>
+                  {tab.label}
+                  {typeFilter === tab.id && (
+                    <motion.div
+                      layoutId="activeCampaignTypeTab"
+                      className="absolute inset-0 bg-purple-400/10 border border-purple-400/30 rounded-xl"
+                      style={{ zIndex: -1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Campaigns List */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.3 }}
+        className="space-y-4"
+      >
+        {filteredCampaigns.length === 0 ? (
+          <EmptyState
+            icon={Mail}
+            title="No Campaigns Found"
+            description={
+              campaigns.length === 0
+                ? "Create your first campaign to start engaging with your network"
+                : "No campaigns match your current filters"
+            }
+            actionLabel="Create Campaign"
+            onAction={() => setShowCreateModal(true)}
+          />
+        ) : (
+          filteredCampaigns.map((campaign, index) => {
+            const statusConfig = getStatusConfig(campaign.status);
+            const typeConfig = getCampaignTypeConfig(campaign.campaign_type);
+            const StatusIcon = statusConfig.icon;
+            const TypeIcon = typeConfig.icon;
+            const isExpanded = selectedCampaign?.id === campaign.id;
+            const stats = campaignStats[campaign.id];
+
+            return (
+              <motion.div
+                key={campaign.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card variant="glass-strong" padding="xl" interactive>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-xl ${statusConfig.bg}`}>
+                          <TypeIcon className={`w-5 h-5 ${typeConfig.color}`} />
+                        </div>
+                        <h3 className="text-2xl font-semibold">{campaign.name}</h3>
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          {statusConfig.label}
+                        </span>
+                      </div>
+
+                      <p className="text-text-muted mb-3">
+                        <strong>Subject:</strong> {campaign.subject}
+                      </p>
+
+                      <div className="flex items-center gap-4 text-sm text-text-dimmed">
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          <span className="capitalize">{campaign.target_audience.replace('_', ' ')}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <TypeIcon className="w-4 h-4" />
+                          <span className="capitalize">{campaign.campaign_type.replace('_', ' ')}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDateTime(campaign.created_at)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {campaign.status === 'draft' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(campaign.id, 'active')}
+                          variant="success"
+                          size="sm"
+                          icon={<Play className="w-4 h-4" />}
+                        >
+                          Activate
+                        </Button>
+                      )}
+
+                      {campaign.status === 'active' && (
+                        <>
+                          {campaign.campaign_type === 'one_time' && (
+                            <Button
+                              onClick={() => handleExecuteCampaign(campaign)}
+                              disabled={executingCampaign === campaign.id}
+                              variant="primary"
+                              size="sm"
+                              icon={<Send className="w-4 h-4" />}
+                            >
+                              {executingCampaign === campaign.id ? 'Sending...' : 'Execute'}
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleUpdateStatus(campaign.id, 'paused')}
+                            variant="outline"
+                            size="sm"
+                            icon={<Pause className="w-4 h-4" />}
+                            className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
+                          >
+                            Pause
+                          </Button>
+                        </>
+                      )}
+
+                      {campaign.status === 'paused' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(campaign.id, 'active')}
+                          variant="success"
+                          size="sm"
+                          icon={<Play className="w-4 h-4" />}
+                        >
+                          Resume
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={() => toggleCampaignDetails(campaign)}
+                        variant="ghost"
+                        size="sm"
+                        icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      >
+                        {isExpanded ? 'Hide' : 'Details'}
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          setDeleteTarget(campaign);
+                          setShowDeleteModal(true);
+                        }}
+                        variant="danger"
+                        size="sm"
+                        icon={<Trash2 className="w-4 h-4" />}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Campaign Details */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-6 pt-6 border-t border-glass-border"
+                      >
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <BarChart3 className="w-5 h-5 text-blue-400" />
+                            <h4 className="text-xl font-semibold">Campaign Statistics</h4>
+                          </div>
+
+                          {stats ? (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <Card variant="glass-medium" padding="lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Send className="w-4 h-4 text-blue-400" />
+                                  <span className="text-sm text-text-dimmed">Total Sent</span>
+                                </div>
+                                <div className="text-3xl font-display font-bold text-blue-400">
+                                  {stats.total_sent || 0}
+                                </div>
+                              </Card>
+
+                              <Card variant="glass-medium" padding="lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Eye className="w-4 h-4 text-green-400" />
+                                  <span className="text-sm text-text-dimmed">Opened</span>
+                                </div>
+                                <div className="text-3xl font-display font-bold text-green-400">
+                                  {stats.total_opened || 0}
+                                </div>
+                                <div className="text-xs text-text-dimmed mt-1">
+                                  {stats.open_rate || 0}% rate
+                                </div>
+                              </Card>
+
+                              <Card variant="glass-medium" padding="lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <MousePointer className="w-4 h-4 text-yellow-400" />
+                                  <span className="text-sm text-text-dimmed">Clicked</span>
+                                </div>
+                                <div className="text-3xl font-display font-bold text-yellow-400">
+                                  {stats.total_clicked || 0}
+                                </div>
+                                <div className="text-xs text-text-dimmed mt-1">
+                                  {stats.click_rate || 0}% rate
+                                </div>
+                              </Card>
+
+                              <Card variant="glass-medium" padding="lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Check className="w-4 h-4 text-purple-400" />
+                                  <span className="text-sm text-text-dimmed">Converted</span>
+                                </div>
+                                <div className="text-3xl font-display font-bold text-purple-400">
+                                  {stats.total_converted || 0}
+                                </div>
+                                <div className="text-xs text-text-dimmed mt-1">
+                                  {stats.conversion_rate || 0}% rate
+                                </div>
+                              </Card>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-text-muted">
+                              Loading statistics...
+                            </div>
+                          )}
+
+                          <div>
+                            <div className="flex items-center gap-3 mb-3">
+                              <Mail className="w-5 h-5 text-gold-400" />
+                              <h4 className="text-lg font-semibold">Email Template</h4>
+                            </div>
+                            <Card variant="glass-medium" padding="lg">
+                              <pre className="text-sm text-text-muted whitespace-pre-wrap font-mono">
+                                {campaign.email_template}
+                              </pre>
+                            </Card>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              </motion.div>
+            );
+          })
+        )}
+      </motion.div>
+
+      {/* Create Campaign Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setFormData({
+            name: '',
+            campaign_type: 'one_time',
+            target_audience: 'all',
+            subject: '',
+            email_template: '',
+            status: 'draft',
+            schedule_at: '',
+            trigger_event: '',
+            trigger_delay_hours: 0
+          });
+        }}
+        title="Create New Campaign"
+        size="lg"
+      >
+        <form onSubmit={handleCreateCampaign} className="space-y-6">
+          <Card variant="glass-medium" padding="lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="text"
+                label="Campaign Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Welcome Series"
+                required
+                icon={<Mail className="w-5 h-5" />}
+              />
+
+              <Input
+                type="select"
+                label="Campaign Type"
+                value={formData.campaign_type}
+                onChange={(e) => setFormData({ ...formData, campaign_type: e.target.value })}
+                required
+                icon={<Send className="w-5 h-5" />}
+              >
+                <option value="one_time">One-Time Broadcast</option>
+                <option value="drip">Drip Sequence</option>
+                <option value="recurring">Recurring</option>
+                <option value="behavioral">Behavioral Trigger</option>
+              </Input>
+
+              <Input
+                type="select"
+                label="Target Audience"
+                value={formData.target_audience}
+                onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
+                required
+                icon={<Users className="w-5 h-5" />}
+              >
+                <option value="all">All Users</option>
+                <option value="new_users">New Users (last 7 days)</option>
+                <option value="active">Active Users</option>
+                <option value="inactive">Inactive Users</option>
+                <option value="high_earners">High Earners (Top 20%)</option>
+              </Input>
+
+              <Input
+                type="select"
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                <option value="draft">Draft</option>
+                <option value="active">Active</option>
+              </Input>
             </div>
 
             {formData.campaign_type === 'behavioral' && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Trigger Event
-                </label>
-                <select
+              <div className="mt-4">
+                <Input
+                  type="select"
+                  label="Trigger Event"
                   value={formData.trigger_event}
                   onChange={(e) => setFormData({ ...formData, trigger_event: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
+                  icon={<Target className="w-5 h-5" />}
                 >
                   <option value="">Select trigger event</option>
                   <option value="user_registration">User Registration</option>
@@ -506,377 +728,113 @@ const InstructorCampaigns = () => {
                   <option value="goal_completed">Goal Completed</option>
                   <option value="withdrawal_processed">Withdrawal Processed</option>
                   <option value="milestone_reached">Milestone Reached</option>
-                </select>
+                </Input>
               </div>
             )}
 
             {formData.campaign_type === 'one_time' && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                  Schedule Send Time (Optional)
-                </label>
-                <input
+              <div className="mt-4">
+                <Input
                   type="datetime-local"
+                  label="Schedule Send Time (Optional)"
                   value={formData.schedule_at}
                   onChange={(e) => setFormData({ ...formData, schedule_at: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
+                  icon={<Calendar className="w-5 h-5" />}
                 />
               </div>
             )}
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                Email Subject <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
+            <div className="mt-4">
+              <Input
                 type="text"
+                label="Email Subject"
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                required
                 placeholder="e.g., Welcome to our platform!"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
+                required
+                icon={<Mail className="w-5 h-5" />}
               />
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem', fontWeight: '600' }}>
-                Email Template <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <textarea
+            <div className="mt-4">
+              <Input
+                type="textarea"
+                label="Email Template"
                 value={formData.email_template}
                 onChange={(e) => setFormData({ ...formData, email_template: e.target.value })}
-                required
                 placeholder="Use {{username}}, {{balance}}, {{referral_link}} as variables..."
                 rows={8}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '0.95rem',
-                  fontFamily: 'monospace',
-                  resize: 'vertical'
-                }}
+                required
+                helper="Available variables: {{username}}, {{email}}, {{balance}}, {{referral_link}}, {{total_earned}}"
               />
-              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#a0aec0' }}>
-                Available variables: {'{{username}}, {{email}}, {{balance}}, {{referral_link}}, {{total_earned}}'}
-              </div>
             </div>
+          </Card>
 
-            <Button type="submit" disabled={submitting}>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              variant="outline"
+              fullWidth
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting}
+              variant="success"
+              fullWidth
+              icon={<Plus className="w-5 h-5" />}
+            >
               {submitting ? 'Creating...' : 'Create Campaign'}
             </Button>
-          </form>
-        </Card>
-      )}
-
-      {/* Stats */}
-      <div style={statsStyles}>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#a3a3a3' }}>{statusCounts.draft}</div>
-          <div style={{ color: '#a0aec0' }}>Draft</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#10b981' }}>{statusCounts.active}</div>
-          <div style={{ color: '#a0aec0' }}>Active</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fbbf24' }}>{statusCounts.paused}</div>
-          <div style={{ color: '#a0aec0' }}>Paused</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#3b82f6' }}>{statusCounts.completed}</div>
-          <div style={{ color: '#a0aec0' }}>Completed</div>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem', fontWeight: '600' }}>
-              Status Filter
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setStatusFilter('all')} style={filterButtonStyle(statusFilter === 'all')}>
-                All
-              </button>
-              <button onClick={() => setStatusFilter('draft')} style={filterButtonStyle(statusFilter === 'draft')}>
-                Draft
-              </button>
-              <button onClick={() => setStatusFilter('active')} style={filterButtonStyle(statusFilter === 'active')}>
-                Active
-              </button>
-              <button onClick={() => setStatusFilter('paused')} style={filterButtonStyle(statusFilter === 'paused')}>
-                Paused
-              </button>
-              <button onClick={() => setStatusFilter('completed')} style={filterButtonStyle(statusFilter === 'completed')}>
-                Completed
-              </button>
-            </div>
           </div>
+        </form>
+      </Modal>
 
-          <div>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem', fontWeight: '600' }}>
-              Type Filter
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setTypeFilter('all')} style={filterButtonStyle(typeFilter === 'all')}>
-                All
-              </button>
-              <button onClick={() => setTypeFilter('one_time')} style={filterButtonStyle(typeFilter === 'one_time')}>
-                One-Time
-              </button>
-              <button onClick={() => setTypeFilter('drip')} style={filterButtonStyle(typeFilter === 'drip')}>
-                Drip
-              </button>
-              <button onClick={() => setTypeFilter('recurring')} style={filterButtonStyle(typeFilter === 'recurring')}>
-                Recurring
-              </button>
-              <button onClick={() => setTypeFilter('behavioral')} style={filterButtonStyle(typeFilter === 'behavioral')}>
-                Behavioral
-              </button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Campaigns List */}
-      <div style={{ display: 'grid', gap: '1.5rem' }}>
-        {filteredCampaigns.length === 0 ? (
-          <Card style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📧</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No campaigns found</h3>
-            <p style={{ color: '#a0aec0' }}>
-              {campaigns.length === 0
-                ? 'Create your first campaign to start engaging with your network'
-                : 'No campaigns match your current filters'}
-            </p>
-          </Card>
-        ) : (
-          filteredCampaigns.map((campaign) => (
-            <Card key={campaign.id} style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{getCampaignTypeIcon(campaign.campaign_type)}</span>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>{campaign.name}</h3>
-                    {getStatusBadge(campaign.status)}
-                  </div>
-                  <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                    <strong>Subject:</strong> {campaign.subject}
-                  </div>
-                  <div style={{ color: '#a0aec0', fontSize: '0.875rem' }}>
-                    <strong>Target:</strong> {campaign.target_audience.replace('_', ' ')} •
-                    <strong> Type:</strong> {campaign.campaign_type.replace('_', ' ')} •
-                    <strong> Created:</strong> {formatDateTime(campaign.created_at)}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {campaign.status === 'draft' && (
-                    <>
-                      <button
-                        onClick={() => handleUpdateStatus(campaign.id, 'active')}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: '#10b981',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        Activate
-                      </button>
-                    </>
-                  )}
-
-                  {campaign.status === 'active' && (
-                    <>
-                      {campaign.campaign_type === 'one_time' && (
-                        <button
-                          onClick={() => handleExecuteCampaign(campaign)}
-                          disabled={executingCampaign === campaign.id}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: executingCampaign === campaign.id ? '#6b7280' : '#3b82f6',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: executingCampaign === campaign.id ? 'not-allowed' : 'pointer',
-                            fontWeight: '600',
-                            fontSize: '0.875rem'
-                          }}
-                        >
-                          {executingCampaign === campaign.id ? 'Sending...' : '📤 Execute'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleUpdateStatus(campaign.id, 'paused')}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: '#fbbf24',
-                          color: '#1a1a1a',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        Pause
-                      </button>
-                    </>
-                  )}
-
-                  {campaign.status === 'paused' && (
-                    <button
-                      onClick={() => handleUpdateStatus(campaign.id, 'active')}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: '#10b981',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      Resume
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => toggleCampaignDetails(campaign)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {selectedCampaign?.id === campaign.id ? '▲ Hide' : '▼ Details'}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setDeleteTarget(campaign);
-                      setShowDeleteConfirm(true);
-                    }}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-
-              {/* Campaign Details */}
-              {selectedCampaign?.id === campaign.id && (
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1.5rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#fbbf24' }}>Campaign Statistics</h4>
-
-                  {campaignStats[campaign.id] ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0', marginBottom: '0.25rem' }}>Total Sent</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#3b82f6' }}>
-                          {campaignStats[campaign.id].total_sent || 0}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0', marginBottom: '0.25rem' }}>Opened</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981' }}>
-                          {campaignStats[campaign.id].total_opened || 0}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0' }}>
-                          {campaignStats[campaign.id].open_rate || 0}% rate
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0', marginBottom: '0.25rem' }}>Clicked</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fbbf24' }}>
-                          {campaignStats[campaign.id].total_clicked || 0}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0' }}>
-                          {campaignStats[campaign.id].click_rate || 0}% rate
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0', marginBottom: '0.25rem' }}>Converted</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#8b5cf6' }}>
-                          {campaignStats[campaign.id].total_converted || 0}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#a0aec0' }}>
-                          {campaignStats[campaign.id].conversion_rate || 0}% rate
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0' }}>
-                      Loading statistics...
-                    </div>
-                  )}
-
-                  <h4 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: '#fbbf24' }}>Email Template</h4>
-                  <div style={{
-                    padding: '1rem',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '6px',
-                    fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
-                  }}>
-                    {campaign.email_template}
-                  </div>
-                </div>
-              )}
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        title="Delete Campaign"
+        size="md"
+      >
+        {deleteTarget && (
+          <div className="space-y-6">
+            <Card variant="glass-medium" padding="lg" className="border border-red-500/30">
+              <p className="text-text-muted leading-relaxed">
+                Are you sure you want to delete "<strong>{deleteTarget.name}</strong>"? 
+                This action cannot be undone.
+              </p>
             </Card>
-          ))
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteTarget(null);
+                }}
+                variant="outline"
+                fullWidth
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteCampaign}
+                variant="danger"
+                fullWidth
+                icon={<Trash2 className="w-5 h-5" />}
+              >
+                Delete Campaign
+              </Button>
+            </div>
+          </div>
         )}
-      </div>
-    </div>
+      </Modal>
+    </motion.div>
   );
 };
 
