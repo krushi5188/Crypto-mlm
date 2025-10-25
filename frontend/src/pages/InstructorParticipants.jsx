@@ -1,35 +1,60 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, Search, Filter, CheckCircle, XCircle, Clock, 
+  UserPlus, Eye, Mail, Wallet, TrendingUp, AlertCircle,
+  X, Calendar, Shield
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const InstructorParticipants = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
+  const [filter, setFilter] = useState('all');
   const [processingId, setProcessingId] = useState(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  
+  // Add Member Modal
+  const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     password: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
-
-  // Confirmation Modal State
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
-  const [confirmMessage, setConfirmMessage] = useState('');
-  const [confirmTitle, setConfirmTitle] = useState('');
+  
+  // Reject Modal
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [pendingRejectId, setPendingRejectId] = useState(null);
   const [pendingRejectUsername, setPendingRejectUsername] = useState('');
+  
+  // Approve Modal
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [pendingApproveId, setPendingApproveId] = useState(null);
+  const [pendingApproveUsername, setPendingApproveUsername] = useState('');
+  
+  // Details Modal
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
 
   useEffect(() => {
     loadParticipants();
@@ -37,91 +62,73 @@ const InstructorParticipants = () => {
 
   const loadParticipants = async () => {
     try {
+      setLoading(true);
       const response = await instructorAPI.getParticipants({ limit: 1000 });
       setParticipants(response.data.data.participants);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load participants:', error);
-      setError('Failed to load participants');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load participants';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load participants:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddStudent = async (e) => {
+  const handleAddMember = async (e) => {
     e.preventDefault();
     
     if (!formData.email || !formData.username || !formData.password) {
-      setFormError('Please fill in all required fields');
+      showError('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
-    setFormError(''); // Clear any previous errors
-    setFormSuccess(''); // Clear any previous success
     
     try {
       await instructorAPI.addMember(formData);
-      // Reload participants
       await loadParticipants();
-      // Reset form
       setFormData({ email: '', username: '', password: '' });
-      setShowAddForm(false);
-      setFormSuccess(`✓ Member ${formData.username} created successfully!`);
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => setFormSuccess(''), 5000);
-    } catch (error) {
-      console.error('Add member error:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to create member account';
-      const details = error.response?.data?.details;
+      setShowAddModal(false);
+      showSuccess(`Member ${formData.username} created successfully!`);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to create member account';
+      const details = err.response?.data?.details;
       if (details && details.length > 0) {
-        // Show validation details
-        setFormError(`${errorMsg}: ${details.map(d => d.message).join(', ')}`);
+        showError(`${errorMsg}: ${details.map(d => d.message).join(', ')}`);
       } else {
-        setFormError(errorMsg);
+        showError(errorMsg);
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const showConfirmDialog = (title, message, action) => {
-    setConfirmTitle(title);
-    setConfirmMessage(message);
-    setConfirmAction(() => action);
-    setShowConfirm(true);
+  const handleApprove = (participantId, username) => {
+    setPendingApproveId(participantId);
+    setPendingApproveUsername(username);
+    setShowApproveModal(true);
   };
 
-  const handleConfirm = () => {
-    if (confirmAction) {
-      confirmAction();
+  const confirmApprove = async () => {
+    setShowApproveModal(false);
+    setProcessingId(pendingApproveId);
+    
+    try {
+      await instructorAPI.approveParticipant(pendingApproveId);
+      await loadParticipants();
+      showSuccess(`${pendingApproveUsername} has been approved successfully!`);
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to approve participant');
+    } finally {
+      setProcessingId(null);
+      setPendingApproveId(null);
+      setPendingApproveUsername('');
     }
-    setShowConfirm(false);
   };
 
-  const handleApprove = async (participantId, username) => {
-    showConfirmDialog(
-      'Approve Member',
-      `Approve ${username}? This will activate their account and distribute commissions to their upline.`,
-      async () => {
-        setProcessingId(participantId);
-        try {
-          await instructorAPI.approveParticipant(participantId);
-          await loadParticipants();
-          setFormSuccess(`✓ ${username} has been approved successfully!`);
-          setTimeout(() => setFormSuccess(''), 5000);
-        } catch (error) {
-          console.error('Approval error:', error);
-          setFormError(error.response?.data?.error || 'Failed to approve participant');
-          setTimeout(() => setFormError(''), 5000);
-        } finally {
-          setProcessingId(null);
-        }
-      }
-    );
-  };
-
-  const handleReject = async (participantId, username) => {
+  const handleReject = (participantId, username) => {
     setPendingRejectId(participantId);
     setPendingRejectUsername(username);
     setRejectReason('');
@@ -130,7 +137,8 @@ const InstructorParticipants = () => {
 
   const confirmReject = async () => {
     if (!rejectReason.trim()) {
-      return; // Don't allow empty reason
+      showError('Please provide a rejection reason');
+      return;
     }
 
     setShowRejectModal(false);
@@ -139,18 +147,29 @@ const InstructorParticipants = () => {
     try {
       await instructorAPI.rejectParticipant(pendingRejectId, { reason: rejectReason });
       await loadParticipants();
-      setFormSuccess(`✓ ${pendingRejectUsername} has been rejected.`);
-      setTimeout(() => setFormSuccess(''), 5000);
-    } catch (error) {
-      console.error('Rejection error:', error);
-      setFormError(error.response?.data?.error || 'Failed to reject participant');
-      setTimeout(() => setFormError(''), 5000);
+      showSuccess(`${pendingRejectUsername} has been rejected.`);
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to reject participant');
     } finally {
       setProcessingId(null);
       setPendingRejectId(null);
       setPendingRejectUsername('');
       setRejectReason('');
     }
+  };
+
+  const handleViewDetails = (participant) => {
+    setSelectedParticipant(participant);
+    setShowDetailsModal(true);
+  };
+
+  const getStatusConfig = (status) => {
+    const configs = {
+      pending: { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Pending' },
+      approved: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', label: 'Approved' },
+      rejected: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'Rejected' }
+    };
+    return configs[status] || configs.approved;
   };
 
   const filteredParticipants = participants.filter(p => {
@@ -166,517 +185,653 @@ const InstructorParticipants = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading participants...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <LoadingSkeleton variant="card" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Error Loading Participants</h2>
-            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Participants</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadParticipants} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
           </div>
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
-
-  const statsStyles = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '2rem'
-  };
-
-  const filterButtonStyle = (isActive) => ({
-    padding: '0.5rem 1rem',
-    background: isActive ? '#fbbf24' : 'rgba(255, 255, 255, 0.1)',
-    color: isActive ? '#1a1a1a' : '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    transition: 'all 0.2s'
-  });
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      pending: { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', text: '⏳ Pending' },
-      approved: { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981', text: '✓ Approved' },
-      rejected: { bg: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', text: '✗ Rejected' }
-    };
-
-    const style = styles[status] || styles.approved;
-
-    return (
-      <span style={{
-        padding: '0.25rem 0.75rem',
-        borderRadius: '12px',
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        background: style.bg,
-        color: style.color
-      }}>
-        {style.text}
-      </span>
-    );
-  };
-
   return (
-    <div style={containerStyles}>
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-xl)',
-            maxWidth: '500px',
-            width: '100%',
-            border: '2px solid var(--primary-gold)',
-            boxShadow: 'var(--shadow-2xl)'
-          }}>
-            <h3 style={{
-              fontSize: 'var(--text-2xl)',
-              marginBottom: 'var(--space-md)',
-              color: 'var(--text-primary)'
-            }}>
-              {confirmTitle}
-            </h3>
-            <p style={{
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-xl)',
-              lineHeight: '1.6'
-            }}>
-              {confirmMessage}
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => setShowConfirm(false)}
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                variant="success"
-              >
-                Confirm
-              </Button>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+            >
+              <Users className="w-8 h-8 text-blue-400" />
+            </motion.div>
+            <div>
+              <h1 className="text-4xl font-display font-bold">Participants Management</h1>
+              <p className="text-lg text-text-muted">Manage member registrations and approvals</p>
             </div>
           </div>
+          <Button
+            onClick={() => setShowAddModal(true)}
+            variant="primary"
+            icon={<UserPlus className="w-5 h-5" />}
+          >
+            Add Member
+          </Button>
         </div>
-      )}
-
-      {/* Reject Modal with Reason Input */}
-      {showRejectModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-xl)',
-            maxWidth: '500px',
-            width: '100%',
-            border: '2px solid #ef4444',
-            boxShadow: 'var(--shadow-2xl)'
-          }}>
-            <h3 style={{
-              fontSize: 'var(--text-2xl)',
-              marginBottom: 'var(--space-md)',
-              color: '#ef4444'
-            }}>
-              Reject {pendingRejectUsername}
-            </h3>
-            <p style={{
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-md)',
-              lineHeight: '1.6'
-            }}>
-              Please provide a reason for rejecting this member:
-            </p>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              rows={4}
-              style={{
-                width: '100%',
-                padding: 'var(--space-md)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--text-base)',
-                marginBottom: 'var(--space-lg)',
-                resize: 'vertical'
-              }}
-            />
-            <div style={{ display: 'flex', gap: 'var(--space-md)', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setPendingRejectId(null);
-                  setPendingRejectUsername('');
-                  setRejectReason('');
-                }}
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmReject}
-                disabled={!rejectReason.trim()}
-                variant="danger"
-                style={{
-                  opacity: !rejectReason.trim() ? 0.5 : 1,
-                  cursor: !rejectReason.trim() ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Reject Member
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Participants Management</h1>
-          <p style={{ color: '#a0aec0' }}>Manage member registrations and approvals</p>
-        </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: showAddForm ? '#ef4444' : '#10b981',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            transition: 'all 0.2s'
-          }}
-        >
-          {showAddForm ? '✗ Cancel' : '+ Add Member'}
-        </button>
-      </div>
-
-      {/* Success Message */}
-      {formSuccess && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(16, 185, 129, 0.2)',
-          border: '1px solid #10b981',
-          borderRadius: '8px',
-          color: '#10b981',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{formSuccess}</span>
-          <button onClick={() => setFormSuccess('')} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
-        </div>
-      )}
-
-      {/* Add Student Form */}
-      {showAddForm && (
-        <Card style={{ marginBottom: '2rem', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', border: '2px solid #10b981' }}>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Create New Member Account</h3>
-          <p style={{ color: '#a0aec0', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            Members added by instructor are automatically approved and can login immediately.
-          </p>
-
-          {/* Form Error Message */}
-          {formError && (
-            <div style={{
-              marginBottom: '1.5rem',
-              padding: '1rem',
-              background: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444'
-            }}>
-              {formError}
-            </div>
-          )}
-
-          <form onSubmit={handleAddStudent}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                  Email <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => {
-                    setFormData({ ...formData, email: e.target.value });
-                    setFormError('');
-                  }}
-                  required
-                  placeholder="member@example.com"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                  Username <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => {
-                    setFormData({ ...formData, username: e.target.value });
-                    setFormError('');
-                  }}
-                  required
-                  placeholder="johndoe (3-20 alphanumeric)"
-                  minLength={3}
-                  maxLength={20}
-                  pattern="[a-zA-Z0-9]+"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => {
-                    setFormData({ ...formData, password: e.target.value });
-                    setFormError('');
-                  }}
-                  required
-                  placeholder="Min 8 chars"
-                  minLength={8}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '1rem'
-                  }}
-                />
-                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#a0aec0', lineHeight: '1.4' }}>
-                  Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 number
-                </div>
-              </div>
-            </div>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Member Account'}
-            </Button>
-          </form>
-        </Card>
-      )}
+      </motion.div>
 
       {/* Stats */}
-      <div style={statsStyles}>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fbbf24' }}>{pendingCount}</div>
-          <div style={{ color: '#a0aec0' }}>Pending Approval</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#10b981' }}>{approvedCount}</div>
-          <div style={{ color: '#a0aec0' }}>Approved</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#ef4444' }}>{rejectedCount}</div>
-          <div style={{ color: '#a0aec0' }}>Rejected</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{participants.length}</div>
-          <div style={{ color: '#a0aec0' }}>Total Members</div>
-        </Card>
-      </div>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="yellow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Pending Approval</p>
+                <p className="text-5xl font-display font-bold text-yellow-400">
+                  <AnimatedNumber value={pendingCount} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="p-4 rounded-2xl bg-yellow-500/10"
+              >
+                <Clock className="w-8 h-8 text-yellow-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
 
-      {/* Search and Filters */}
-      <Card style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by username or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: '250px',
-              padding: '0.75rem 1rem',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '1rem'
-            }}
-          />
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => setFilter('all')} style={filterButtonStyle(filter === 'all')}>
-              All
-            </button>
-            <button onClick={() => setFilter('pending')} style={filterButtonStyle(filter === 'pending')}>
-              Pending ({pendingCount})
-            </button>
-            <button onClick={() => setFilter('approved')} style={filterButtonStyle(filter === 'approved')}>
-              Approved
-            </button>
-            <button onClick={() => setFilter('rejected')} style={filterButtonStyle(filter === 'rejected')}>
-              Rejected
-            </button>
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="green">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Approved</p>
+                <p className="text-5xl font-display font-bold text-green-400">
+                  <AnimatedNumber value={approvedCount} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: -5 }}
+                className="p-4 rounded-2xl bg-green-500/10"
+              >
+                <CheckCircle className="w-8 h-8 text-green-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="red">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Rejected</p>
+                <p className="text-5xl font-display font-bold text-red-400">
+                  <AnimatedNumber value={rejectedCount} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="p-4 rounded-2xl bg-red-500/10"
+              >
+                <XCircle className="w-8 h-8 text-red-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="blue">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Total Members</p>
+                <p className="text-5xl font-display font-bold text-blue-400">
+                  <AnimatedNumber value={participants.length} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: -5 }}
+                className="p-4 rounded-2xl bg-blue-500/10"
+              >
+                <Users className="w-8 h-8 text-blue-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Filters */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="xl">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-400" />
+              <h3 className="text-lg font-semibold">Filter Participants</h3>
+            </div>
+
+            <Input
+              type="text"
+              placeholder="Search by username or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
+
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {[
+                { value: 'all', label: 'All Members', count: participants.length },
+                { value: 'pending', label: 'Pending', count: pendingCount },
+                { value: 'approved', label: 'Approved', count: approvedCount },
+                { value: 'rejected', label: 'Rejected', count: rejectedCount }
+              ].map((tab) => (
+                <motion.button
+                  key={tab.value}
+                  onClick={() => setFilter(tab.value)}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative whitespace-nowrap ${
+                    filter === tab.value ? 'text-gold-400' : 'text-text-dimmed hover:text-text-primary'
+                  }`}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    filter === tab.value ? 'bg-gold-400/20 text-gold-400' : 'bg-glass-medium text-text-dimmed'
+                  }`}>
+                    {tab.count}
+                  </span>
+                  {filter === tab.value && (
+                    <motion.div
+                      layoutId="activeParticipantTab"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-400"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                </motion.button>
+              ))}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </motion.div>
 
       {/* Participants Table */}
-      <Card>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Username</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Email</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Balance</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Network</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Joined</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredParticipants.length === 0 ? (
-                <tr>
-                  <td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
-                    No participants found
-                  </td>
-                </tr>
-              ) : (
-                filteredParticipants.map((participant) => (
-                  <tr key={participant.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <td style={{ padding: '1rem', fontWeight: '600' }}>{participant.username}</td>
-                    <td style={{ padding: '1rem', color: '#a0aec0' }}>{participant.email}</td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      {getStatusBadge(participant.approvalStatus)}
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
-                      {formatCurrency(participant.balance)} USDT
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      {participant.directRecruits} / {participant.networkSize}
-                    </td>
-                    <td style={{ padding: '1rem', color: '#a0aec0', fontSize: '0.875rem' }}>
-                      {formatDate(participant.joinedAt)}
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      {participant.approvalStatus === 'pending' && (
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => handleApprove(participant.id, participant.username)}
-                            disabled={processingId === participant.id}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: processingId === participant.id ? 'not-allowed' : 'pointer',
-                              fontWeight: '600',
-                              fontSize: '0.875rem',
-                              opacity: processingId === participant.id ? 0.5 : 1
-                            }}
-                          >
-                            ✓ Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(participant.id, participant.username)}
-                            disabled={processingId === participant.id}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: '#ef4444',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: processingId === participant.id ? 'not-allowed' : 'pointer',
-                              fontWeight: '600',
-                              fontSize: '0.875rem',
-                              opacity: processingId === participant.id ? 0.5 : 1
-                            }}
-                          >
-                            ✗ Reject
-                          </button>
-                        </div>
-                      )}
-                      {participant.approvalStatus === 'approved' && (
-                        <span style={{ color: '#10b981', fontSize: '0.875rem' }}>Active</span>
-                      )}
-                      {participant.approvalStatus === 'rejected' && (
-                        <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>Inactive</span>
-                      )}
-                    </td>
+      {filteredParticipants.length === 0 ? (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
+        >
+          <EmptyState
+            icon={Users}
+            title="No Participants Found"
+            description={search ? "No participants match your search criteria." : "No participants available."}
+            actionLabel={search ? "Clear Search" : "Add Member"}
+            onAction={search ? () => setSearch('') : () => setShowAddModal(true)}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
+        >
+          <Card variant="glass-strong" padding="none">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-glass-border">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Username</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Email</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-text-dimmed">Status</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Balance</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Network</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Joined</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-text-dimmed">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-glass-border">
+                  {filteredParticipants.map((participant, index) => {
+                    const statusConfig = getStatusConfig(participant.approvalStatus);
+                    const StatusIcon = statusConfig.icon;
+
+                    return (
+                      <motion.tr
+                        key={participant.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                        className="transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center font-bold text-white">
+                              {participant.username.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-semibold">{participant.username}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-muted">{participant.email}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-gold-400">
+                          {formatCurrency(participant.balance)} USDT
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="text-sm">
+                            <div className="text-blue-400 font-semibold">{participant.directRecruits} direct</div>
+                            <div className="text-text-dimmed">{participant.networkSize} total</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-dimmed text-sm">
+                          {formatDate(participant.joinedAt)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              onClick={() => handleViewDetails(participant)}
+                              variant="ghost"
+                              size="sm"
+                              icon={<Eye className="w-4 h-4" />}
+                            >
+                              View
+                            </Button>
+                            {participant.approvalStatus === 'pending' && (
+                              <>
+                                <Button
+                                  onClick={() => handleApprove(participant.id, participant.username)}
+                                  disabled={processingId === participant.id}
+                                  variant="success"
+                                  size="sm"
+                                  icon={<CheckCircle className="w-4 h-4" />}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  onClick={() => handleReject(participant.id, participant.username)}
+                                  disabled={processingId === participant.id}
+                                  variant="danger"
+                                  size="sm"
+                                  icon={<XCircle className="w-4 h-4" />}
+                                >
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Add Member Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setFormData({ email: '', username: '', password: '' });
+        }}
+        title="Add New Member"
+        size="md"
+      >
+        <form onSubmit={handleAddMember} className="space-y-6">
+          <Card variant="glass-medium" padding="lg" glow="blue">
+            <p className="text-sm text-text-muted">
+              Members added by instructor are automatically approved and can login immediately.
+            </p>
+          </Card>
+
+          <Input
+            type="email"
+            label="Email Address"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="member@example.com"
+            icon={<Mail className="w-5 h-5" />}
+            required
+          />
+
+          <Input
+            type="text"
+            label="Username"
+            value={formData.username}
+            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+            placeholder="johndoe (3-20 alphanumeric)"
+            icon={<Users className="w-5 h-5" />}
+            minLength={3}
+            maxLength={20}
+            pattern="[a-zA-Z0-9]+"
+            required
+            helpText="3-20 alphanumeric characters"
+          />
+
+          <Input
+            type="password"
+            label="Password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            placeholder="Minimum 8 characters"
+            icon={<Shield className="w-5 h-5" />}
+            minLength={8}
+            required
+            helpText="8+ chars, 1 uppercase, 1 lowercase, 1 number"
+          />
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setShowAddModal(false);
+                setFormData({ email: '', username: '', password: '' });
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              disabled={submitting}
+              icon={<UserPlus className="w-5 h-5" />}
+            >
+              {submitting ? 'Creating...' : 'Create Member'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Approve Confirmation Modal */}
+      <Modal
+        isOpen={showApproveModal}
+        onClose={() => {
+          setShowApproveModal(false);
+          setPendingApproveId(null);
+          setPendingApproveUsername('');
+        }}
+        title="Approve Member"
+        size="sm"
+      >
+        <div className="space-y-6">
+          <p className="text-text-muted leading-relaxed">
+            Approve <span className="font-semibold text-green-400">{pendingApproveUsername}</span>? This will activate their account and distribute commissions to their upline.
+          </p>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowApproveModal(false);
+                setPendingApproveId(null);
+                setPendingApproveUsername('');
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApprove}
+              variant="success"
+              fullWidth
+              icon={<CheckCircle className="w-5 h-5" />}
+            >
+              Confirm Approval
+            </Button>
+          </div>
         </div>
-      </Card>
-    </div>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setPendingRejectId(null);
+          setPendingRejectUsername('');
+          setRejectReason('');
+        }}
+        title={`Reject ${pendingRejectUsername}`}
+        size="md"
+      >
+        <div className="space-y-6">
+          <p className="text-text-muted leading-relaxed">
+            Please provide a reason for rejecting this member:
+          </p>
+
+          <Input
+            type="textarea"
+            label="Rejection Reason"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Enter rejection reason..."
+            rows={4}
+            required
+          />
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowRejectModal(false);
+                setPendingRejectId(null);
+                setPendingRejectUsername('');
+                setRejectReason('');
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmReject}
+              variant="danger"
+              fullWidth
+              disabled={!rejectReason.trim()}
+              icon={<XCircle className="w-5 h-5" />}
+            >
+              Reject Member
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Participant Details Modal */}
+      {selectedParticipant && (
+        <Modal
+          isOpen={showDetailsModal}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedParticipant(null);
+          }}
+          title={selectedParticipant.username}
+          size="lg"
+        >
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-3xl font-bold text-white">
+                {selectedParticipant.username.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-2xl font-display font-bold">{selectedParticipant.username}</h3>
+                <p className="text-text-muted">{selectedParticipant.email}</p>
+              </div>
+            </div>
+
+            <Card variant="glass-medium" padding="lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-text-dimmed">Status</span>
+                  </div>
+                  <div className="flex">
+                    {(() => {
+                      const statusConfig = getStatusConfig(selectedParticipant.approvalStatus);
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${statusConfig.bg} ${statusConfig.color} border ${statusConfig.border}`}>
+                          <StatusIcon className="w-4 h-4" />
+                          {statusConfig.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="w-4 h-4 text-gold-400" />
+                    <span className="text-sm text-text-dimmed">Balance</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-gold-400">
+                    {formatCurrency(selectedParticipant.balance)} USDT
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-text-dimmed">Direct Recruits</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-blue-400">
+                    <AnimatedNumber value={selectedParticipant.directRecruits} />
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-text-dimmed">Network Size</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-purple-400">
+                    <AnimatedNumber value={selectedParticipant.networkSize} />
+                  </p>
+                </div>
+
+                <div className="col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-4 h-4 text-green-400" />
+                    <span className="text-sm text-text-dimmed">Joined Date</span>
+                  </div>
+                  <p className="text-lg font-semibold text-green-400">
+                    {formatDate(selectedParticipant.joinedAt)}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <div className="flex gap-3">
+              {selectedParticipant.approvalStatus === 'pending' && (
+                <>
+                  <Button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleApprove(selectedParticipant.id, selectedParticipant.username);
+                    }}
+                    variant="success"
+                    fullWidth
+                    icon={<CheckCircle className="w-5 h-5" />}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleReject(selectedParticipant.id, selectedParticipant.username);
+                    }}
+                    variant="danger"
+                    fullWidth
+                    icon={<XCircle className="w-5 h-5" />}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
+              <Button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedParticipant(null);
+                }}
+                variant="outline"
+                fullWidth
+                icon={<X className="w-5 h-5" />}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </motion.div>
   );
 };
 
