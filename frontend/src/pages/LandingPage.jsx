@@ -138,7 +138,6 @@ const LandingPage = () => {
                 onClick={() => navigate('/login')}
                 size="xl"
                 variant="primary"
-                icon={<ArrowRight className="w-5 h-5" />}
                 iconRight={<ArrowRight className="w-5 h-5" />}
               >
                 Get Started
