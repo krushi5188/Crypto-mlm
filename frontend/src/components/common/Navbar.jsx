@@ -5,7 +5,8 @@ import {
   Menu, X, ChevronDown, LogOut, User, Settings,
   LayoutDashboard, Users, DollarSign, Trophy, Award,
   Shield, BarChart3, UserCheck, Network, AlertTriangle,
-  Brain, Wallet, Cog
+  Brain, Wallet, Cog, Bell, TrendingDown, Share2,
+  Calendar, Target, BookOpen, Key
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
@@ -46,10 +47,19 @@ const Navbar = () => {
   // Navigation items for members
   const memberNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { path: '/wallets', label: 'Wallets', icon: <Wallet className="w-4 h-4" /> },
     { path: '/network', label: 'Network', icon: <Users className="w-4 h-4" /> },
     { path: '/earnings', label: 'Earnings', icon: <DollarSign className="w-4 h-4" /> },
+    { path: '/withdrawals', label: 'Withdrawals', icon: <TrendingDown className="w-4 h-4" /> },
+    { path: '/analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
     { path: '/achievements', label: 'Achievements', icon: <Trophy className="w-4 h-4" /> },
     { path: '/leaderboard', label: 'Leaderboard', icon: <Award className="w-4 h-4" /> },
+    { path: '/share', label: 'Share', icon: <Share2 className="w-4 h-4" /> },
+    { path: '/events', label: 'Events', icon: <Calendar className="w-4 h-4" /> },
+    { path: '/goals', label: 'Goals', icon: <Target className="w-4 h-4" /> },
+    { path: '/resources', label: 'Resources', icon: <BookOpen className="w-4 h-4" /> },
+    { path: '/notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+    { path: '/api-keys', label: 'API Keys', icon: <Key className="w-4 h-4" /> },
   ];
 
   // Navigation items for instructors
