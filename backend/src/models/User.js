@@ -155,6 +155,11 @@ class User {
     };
   }
 
+  // Alias for getAllStudents - used by instructor routes
+  static async getAllMembers(page, limit, sortBy, sortOrder, search) {
+    return this.getAllStudents(page, limit, sortBy, sortOrder, search);
+  }
+
   // Get top earners
   static async getTopEarners(limit = 10) {
     const result = await pool.query(
