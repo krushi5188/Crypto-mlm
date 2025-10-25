@@ -90,13 +90,12 @@ const Input = ({
 
   // Label classes
   const labelClasses = `
-    absolute left-4 transition-all duration-200 pointer-events-none
+    absolute transition-all duration-200 pointer-events-none
     ${isFloating
-      ? 'top-0 -translate-y-1/2 text-xs px-1 bg-bg-page'
-      : 'top-1/2 -translate-y-1/2 text-base'
+      ? 'top-0 left-4 -translate-y-1/2 text-xs px-1 bg-zinc-900'
+      : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-base'
     }
-    ${error ? 'text-error' : success ? 'text-success' : isFocused ? 'text-gold-400' : 'text-text-dimmed'}
-    ${icon && !isFloating ? 'left-12' : ''}
+    ${error ? 'text-error' : success ? 'text-success' : isFocused ? 'text-gold-400' : 'text-gray-400'}
   `.trim().replace(/\s+/g, ' ');
 
   return (
@@ -104,7 +103,7 @@ const Input = ({
       <div className="relative">
         {/* Left Icon */}
         {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dimmed">
+          <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-opacity duration-200 ${isFloating ? 'opacity-100' : 'opacity-0'} text-gray-500`}>
             {icon}
           </div>
         )}
@@ -116,7 +115,7 @@ const Input = ({
           name={name}
           value={value}
           onChange={onChange}
-          placeholder={placeholder || label}
+          placeholder=" "
           required={required}
           disabled={disabled}
           maxLength={maxLength}
@@ -132,14 +131,16 @@ const Input = ({
             className={labelClasses}
             initial={false}
             animate={{
+              left: isFloating ? '16px' : '50%',
+              x: isFloating ? '0%' : '-50%',
+              y: '-50%',
               top: isFloating ? '0' : '50%',
               fontSize: isFloating ? '0.75rem' : '1rem',
-              scale: isFloating ? 0.95 : 1
             }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
             {label}
-            {required && <span className="text-error ml-1">*</span>}
+            {required && <span className="text-red-400 ml-1">*</span>}
           </motion.label>
         )}
 
@@ -161,7 +162,7 @@ const Input = ({
             <motion.button
               type="button"
               onClick={handleClear}
-              className="text-text-dimmed hover:text-text-primary transition-colors"
+              className="text-gray-400 hover:text-white transition-colors"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
@@ -177,7 +178,7 @@ const Input = ({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-text-dimmed hover:text-text-primary transition-colors"
+              className="text-gray-400 hover:text-white transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="w-5 h-5" />
@@ -189,7 +190,7 @@ const Input = ({
 
           {/* Custom Right Icon */}
           {iconRight && !success && !clearable && !isPassword && (
-            <div className="text-text-dimmed">
+            <div className="text-gray-400">
               {iconRight}
             </div>
           )}
@@ -209,7 +210,7 @@ const Input = ({
                 transition: { duration: 0.2 }
               }}
               exit={{ opacity: 0, x: -10 }}
-              className="flex items-center gap-1 text-sm text-error"
+              className="flex items-center gap-1 text-sm text-red-400"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
@@ -221,7 +222,7 @@ const Input = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={`text-sm ${success ? 'text-success' : 'text-text-muted'}`}
+              className={`text-sm ${success ? 'text-success' : 'text-gray-400'}`}
             >
               {helperText}
             </motion.span>
@@ -235,7 +236,7 @@ const Input = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             className={`text-sm ml-auto ${
-              characterCount >= maxLength ? 'text-error' : 'text-text-dimmed'
+              characterCount >= maxLength ? 'text-red-400' : 'text-gray-400'
             }`}
           >
             {characterCount} / {maxLength}
