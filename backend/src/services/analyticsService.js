@@ -30,15 +30,15 @@ class AnalyticsService {
 
     // Get distribution stats
     const distStats = await User.getDistributionStats();
-    const totalStudents = distStats.total_students || 1; // Avoid division by zero
+    const totalMembers = distStats.total_students || 1; // Avoid division by zero
 
     const distribution = {
       zeroBalance: distStats.zero_balance || 0,
       brokeEven: distStats.broke_even || 0,
       profited: distStats.profited || 0,
-      percentZero: ((distStats.zero_balance || 0) / totalStudents * 100).toFixed(2),
-      percentBrokeEven: ((distStats.broke_even || 0) / totalStudents * 100).toFixed(2),
-      percentProfited: ((distStats.profited || 0) / totalStudents * 100).toFixed(2)
+      percentZero: ((distStats.zero_balance || 0) / totalMembers * 100).toFixed(2),
+      percentBrokeEven: ((distStats.broke_even || 0) / totalMembers * 100).toFixed(2),
+      percentProfited: ((distStats.profited || 0) / totalMembers * 100).toFixed(2)
     };
 
     // Get wealth concentration
