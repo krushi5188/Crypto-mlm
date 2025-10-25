@@ -243,3 +243,19 @@
   color: var(--accent-gray-dark);
   border-bottom-color: var(--accent-gray);
 }
+
+/* Force sidebar to always be black with white text */
+[data-theme="light"] aside {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] aside nav {
+  background: #000000 !important;
+}
+
+[data-theme="light"] aside a,
+[data-theme="light"] aside button,
+[data-theme="light"] aside div {
+  color: #ffffff !important;
+}
