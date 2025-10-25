@@ -184,7 +184,7 @@ const LoginPage = () => {
           </div>
 
           {/* Footer Links */}
-          <div className="mt-8 text-center text-sm text-gray-500">
+          <div className="mt-8 text-center text-sm text-gray-300">
             <p>
               By signing in, you agree to our{' '}
               <Link to="/terms" className="text-gold-400 hover:text-gold-300 transition-colors">
