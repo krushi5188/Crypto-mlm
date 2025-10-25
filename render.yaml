@@ -43,7 +43,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: ADMIN_EMAIL
-        value: instructor@university.edu
+        value: admin@atlasnetwork.com
       - key: ADMIN_USERNAME
         value: instructor
       - key: ADMIN_PASSWORD
