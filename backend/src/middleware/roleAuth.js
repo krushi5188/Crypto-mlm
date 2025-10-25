@@ -23,6 +23,6 @@ const requireRole = (role) => {
 const requireInstructor = requireRole('instructor');
 
 // Require member role
-const requireStudent = requireRole('member');
+const requireMember = requireRole('member');
 
-module.exports = { requireRole, requireInstructor, requireStudent };
+module.exports = { requireRole, requireInstructor, requireMember };
