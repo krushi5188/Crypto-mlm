@@ -1,21 +1,41 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  DollarSign, TrendingDown, Clock, CheckCircle, XCircle, 
+  AlertCircle, Wallet, Plus, X, Info
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 
 const MemberWithdrawals = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [withdrawals, setWithdrawals] = useState([]);
   const [stats, setStats] = useState(null);
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [error, setError] = useState(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
   const [amount, setAmount] = useState('');
   const [selectedWallet, setSelectedWallet] = useState('');
   const [notes, setNotes] = useState('');
   const [feeInfo, setFeeInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     loadData();
@@ -35,6 +55,7 @@ const MemberWithdrawals = () => {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const [withdrawalsRes, statsRes, walletsRes] = await Promise.all([
         memberAPI.getWithdrawals(),
         memberAPI.getWithdrawalStats(),
@@ -44,9 +65,13 @@ const MemberWithdrawals = () => {
       setStats(statsRes.data.data);
       setWallets(walletsRes.data.data.wallets || []);
       const primary = walletsRes.data.data.wallets.find(w => w.is_primary);
-      if (primary) setSelectedWallet(primary.id);
-    } catch (error) {
-      console.error('Failed to load withdrawal data:', error);
+      if (primary) setSelectedWallet(primary.id.toString());
+      setError(null);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to load withdrawal data';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load withdrawal data:', err);
     } finally {
       setLoading(false);
     }
@@ -54,17 +79,17 @@ const MemberWithdrawals = () => {
 
   const handleSubmitWithdrawal = async (e) => {
     e.preventDefault();
-    setError('');
+    setFormError('');
     setSubmitting(true);
     try {
       const withdrawAmount = parseFloat(amount);
       if (withdrawAmount < 10) {
-        setError('Minimum withdrawal amount is $10 USDT');
+        setFormError('Minimum withdrawal amount is $10 USDT');
         setSubmitting(false);
         return;
       }
       if (!selectedWallet) {
-        setError('Please select a wallet address');
+        setFormError('Please select a wallet address');
         setSubmitting(false);
         return;
       }
@@ -76,147 +101,383 @@ const MemberWithdrawals = () => {
         network: wallet.network,
         notes: notes || null
       });
+      showSuccess('Withdrawal request submitted successfully');
       setAmount('');
       setNotes('');
-      setShowRequestForm(false);
+      setSelectedWallet('');
+      setShowRequestModal(false);
       setFeeInfo(null);
       await loadData();
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to submit withdrawal request');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to submit withdrawal request';
+      setFormError(errorMsg);
+      showError(errorMsg);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleCancelWithdrawal = async (withdrawalId) => {
-    if (!window.confirm('Are you sure you want to cancel this withdrawal request?')) return;
     try {
       await memberAPI.cancelWithdrawal(withdrawalId);
+      showSuccess('Withdrawal request cancelled');
       await loadData();
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to cancel withdrawal');
+    } catch (err) {
+      showError(err.response?.data?.error || 'Failed to cancel withdrawal');
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = { completed: '#10b981', pending: '#fbbf24', approved: '#3b82f6', rejected: '#ef4444' };
-    return colors[status] || '#6b7280';
+  const getStatusInfo = (status) => {
+    const statusMap = {
+      completed: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', border: 'border-success/30' },
+      pending: { icon: Clock, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/30' },
+      approved: { icon: CheckCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+      rejected: { icon: XCircle, color: 'text-error', bg: 'bg-error/10', border: 'border-error/30' },
+    };
+    return statusMap[status] || { icon: Clock, color: 'text-text-muted', bg: 'bg-glass-medium', border: 'border-glass-border' };
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading withdrawals...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
+        <LoadingSkeleton variant="card" />
       </div>
     );
   }
 
-  return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Withdrawals</h1>
-        <p style={{ color: '#a0aec0' }}>Manage your withdrawal requests</p>
-      </div>
-
-      {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <Card><div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>Total Withdrawn</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>${formatCurrency(stats.total_withdrawn)} USDT</div>
-          </div></Card>
-          <Card><div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>Pending</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#fbbf24' }}>${formatCurrency(stats.pending_amount)} USDT</div>
-          </div></Card>
-          <Card><div style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginBottom: '0.5rem' }}>Total Fees</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)' }}>${formatCurrency(stats.total_fees)} USDT</div>
-          </div></Card>
-        </div>
-      )}
-
-      {!showRequestForm && (
-        <Button onClick={() => setShowRequestForm(true)} size="lg" fullWidth style={{ marginBottom: '2rem' }}>💰 Request Withdrawal</Button>
-      )}
-
-      {showRequestForm && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <div style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Request Withdrawal</h3>
-            {error && <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{error}</div>}
-            <form onSubmit={handleSubmitWithdrawal}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Amount (USDT)</label>
-                <input type="number" step="0.01" min="10" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Minimum: $10 USDT" required style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }} />
-              </div>
-              {feeInfo && (
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Amount:</span><span style={{ fontWeight: '600' }}>${amount} USDT</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#a0aec0' }}><span>Fee (2% + $1):</span><span>-${feeInfo.fee} USDT</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', fontSize: '1.125rem', fontWeight: '700', color: '#10b981' }}><span>You will Receive:</span><span>${feeInfo.netAmount} USDT</span></div>
-                </div>
-              )}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Wallet</label>
-                <select value={selectedWallet} onChange={(e) => setSelectedWallet(e.target.value)} required style={{ width: '100%', padding: '0.75rem', fontSize: '1rem' }}>
-                  <option value="">Select a wallet</option>
-                  {wallets.map(wallet => (
-                    <option key={wallet.id} value={wallet.id}>{wallet.label} - {wallet.address.substring(0, 10)}...{wallet.address.slice(-6)} ({wallet.network})</option>
-                  ))}
-                </select>
-                {wallets.length === 0 && <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>Please add a wallet address in your profile first</p>}
-              </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Notes (Optional)</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional information..." rows="3" style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', resize: 'vertical' }} />
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <Button type="submit" disabled={submitting || wallets.length === 0} fullWidth>{submitting ? 'Submitting...' : 'Submit Request'}</Button>
-                <Button type="button" variant="outline" onClick={() => { setShowRequestForm(false); setAmount(''); setNotes(''); setError(''); setFeeInfo(null); }} fullWidth>Cancel</Button>
-              </div>
-            </form>
+  if (error) {
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Withdrawals</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadData} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
           </div>
         </Card>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="p-3 rounded-2xl bg-gradient-to-br from-green-500/20 to-blue-500/20"
+            >
+              <TrendingDown className="w-8 h-8 text-green-400" />
+            </motion.div>
+            <div>
+              <h1 className="text-4xl font-display font-bold">Withdrawals</h1>
+              <p className="text-lg text-text-muted">Manage your withdrawal requests</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowRequestModal(true)}
+            variant="primary"
+            size="lg"
+            icon={<Plus className="w-5 h-5" />}
+          >
+            Request Withdrawal
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Stats */}
+      {stats && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive glow="green">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <p className="text-sm text-text-dimmed">Total Withdrawn</p>
+                </div>
+                <p className="text-4xl font-display font-bold text-green-400 mb-1">
+                  $<AnimatedNumber value={stats.total_withdrawn} decimals={2} />
+                </p>
+                <p className="text-sm text-text-dimmed">USDT</p>
+              </div>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive glow="gold">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-warning" />
+                  <p className="text-sm text-text-dimmed">Pending</p>
+                </div>
+                <p className="text-4xl font-display font-bold text-warning mb-1">
+                  $<AnimatedNumber value={stats.pending_amount} decimals={2} />
+                </p>
+                <p className="text-sm text-text-dimmed">USDT</p>
+              </div>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="lg" interactive>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <DollarSign className="w-5 h-5 text-text-muted" />
+                  <p className="text-sm text-text-dimmed">Total Fees</p>
+                </div>
+                <p className="text-4xl font-display font-bold mb-1">
+                  $<AnimatedNumber value={stats.total_fees} decimals={2} />
+                </p>
+                <p className="text-sm text-text-dimmed">USDT</p>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
       )}
 
-      <Card>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}><h3 style={{ fontSize: '1.25rem' }}>Withdrawal History</h3></div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Date</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Amount</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Net</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {withdrawals.length === 0 ? (
-                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>No withdrawal requests yet</td></tr>
-              ) : (
-                withdrawals.map((w) => (
-                  <tr key={w.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <td style={{ padding: '1rem' }}>{formatDateTime(w.created_at)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600' }}>${formatCurrency(w.amount)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '700', color: '#10b981' }}>${formatCurrency(w.net_amount)}</td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.875rem', fontWeight: '600', background: `${getStatusColor(w.status)}20`, color: getStatusColor(w.status) }}>{w.status.toUpperCase()}</span>
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                      {w.status === 'pending' && <button onClick={() => handleCancelWithdrawal(w.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem' }}>Cancel</button>}
-                      {w.status === 'rejected' && w.rejected_reason && <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>{w.rejected_reason}</span>}
-                    </td>
+      {/* Withdrawal History */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass" padding="none">
+          <div className="p-6 border-b border-glass-border">
+            <h3 className="text-2xl font-display font-semibold">Withdrawal History</h3>
+          </div>
+          {withdrawals.length === 0 ? (
+            <div className="p-12">
+              <EmptyState
+                icon={TrendingDown}
+                title="No Withdrawals Yet"
+                description="You haven't made any withdrawal requests. Click the button above to request your first withdrawal."
+                actionLabel="Request Withdrawal"
+                onAction={() => setShowRequestModal(true)}
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-glass-border">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Date</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Amount</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Net</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-text-dimmed">Status</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-text-dimmed">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+                </thead>
+                <tbody className="divide-y divide-glass-border">
+                  {withdrawals.map((w, index) => {
+                    const statusInfo = getStatusInfo(w.status);
+                    const StatusIcon = statusInfo.icon;
+                    return (
+                      <motion.tr
+                        key={w.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                        className="transition-colors"
+                      >
+                        <td className="px-6 py-4 text-text-muted">{formatDateTime(w.created_at)}</td>
+                        <td className="px-6 py-4 text-right font-semibold">${formatCurrency(w.amount)}</td>
+                        <td className="px-6 py-4 text-right font-bold text-green-400">${formatCurrency(w.net_amount)}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.bg} ${statusInfo.color} border ${statusInfo.border}`}>
+                              <StatusIcon className="w-3 h-3" />
+                              {w.status.toUpperCase()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {w.status === 'pending' && (
+                            <Button
+                              onClick={() => handleCancelWithdrawal(w.id)}
+                              variant="danger"
+                              size="sm"
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                          {w.status === 'rejected' && w.rejected_reason && (
+                            <span className="text-sm text-error">{w.rejected_reason}</span>
+                          )}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Withdrawal Request Modal */}
+      <Modal
+        isOpen={showRequestModal}
+        onClose={() => {
+          setShowRequestModal(false);
+          setAmount('');
+          setNotes('');
+          setFormError('');
+          setFeeInfo(null);
+        }}
+        title="Request Withdrawal"
+        size="lg"
+      >
+        <form onSubmit={handleSubmitWithdrawal} className="space-y-6">
+          <AnimatePresence>
+            {formError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-start gap-3"
+              >
+                <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-error">{formError}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <Input
+            type="number"
+            label="Amount (USDT)"
+            placeholder="Minimum: $10 USDT"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            icon={<DollarSign className="w-5 h-5" />}
+            required
+            step="0.01"
+            min="10"
+            helperText="Minimum withdrawal: $10 USDT"
+          />
+
+          {feeInfo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-2"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-semibold text-blue-400">Fee Calculation</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Amount:</span>
+                <span className="font-semibold">${amount} USDT</span>
+              </div>
+              <div className="flex justify-between text-sm text-text-dimmed">
+                <span>Fee (2% + $1):</span>
+                <span>-${feeInfo.fee} USDT</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-blue-500/20 text-lg font-bold text-green-400">
+                <span>You will receive:</span>
+                <span>${feeInfo.netAmount} USDT</span>
+              </div>
+            </motion.div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Wallet</label>
+            <select
+              value={selectedWallet}
+              onChange={(e) => setSelectedWallet(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors"
+            >
+              <option value="">Select a wallet</option>
+              {wallets.map(wallet => (
+                <option key={wallet.id} value={wallet.id}>
+                  {wallet.label} - {wallet.address.substring(0, 10)}...{wallet.address.slice(-6)} ({wallet.network})
+                </option>
+              ))}
+            </select>
+            {wallets.length === 0 && (
+              <p className="text-sm text-error mt-2">Please add a wallet address in your profile first</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any additional information..."
+              rows="3"
+              className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={submitting || wallets.length === 0}
+              fullWidth
+              variant="primary"
+            >
+              Submit Request
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowRequestModal(false);
+                setAmount('');
+                setNotes('');
+                setFormError('');
+                setFeeInfo(null);
+              }}
+              fullWidth
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </motion.div>
   );
 };
 
