@@ -45,7 +45,7 @@ services:
       - key: ADMIN_EMAIL
         value: admin@atlasnetwork.com
       - key: ADMIN_USERNAME
-        value: instructor
+        value: admin
       - key: ADMIN_PASSWORD
         sync: false # Set this manually in Render dashboard
       - key: MAX_PARTICIPANTS
