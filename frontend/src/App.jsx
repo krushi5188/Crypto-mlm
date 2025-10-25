@@ -132,6 +132,14 @@ const AnimatedRoutes = () => {
           </PublicRoute>
         } />
 
+        <Route path="/register" element={
+          <PublicRoute>
+            <AppLayout>
+              <RegisterPage />
+            </AppLayout>
+          </PublicRoute>
+        } />
+
         {/* Error Page Route */}
         <Route path="/error" element={
           <AppLayout>
@@ -220,6 +228,54 @@ const AnimatedRoutes = () => {
           </ProtectedRoute>
         } />
 
+        <Route path="/wallets" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberWallets />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/share" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberShare />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/events" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberEvents />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/goals" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberGoals />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/resources" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberResources />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/api-keys" element={
+          <ProtectedRoute allowedRole="member">
+            <AppLayout>
+              <MemberApiKeys />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
         {/* Instructor Routes */}
         <Route path="/instructor/analytics" element={
           <ProtectedRoute allowedRole="instructor">
@@ -289,6 +345,22 @@ const AnimatedRoutes = () => {
           <ProtectedRoute allowedRole="instructor">
             <AppLayout>
               <InstructorConfiguration />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/instructor/ab-testing" element={
+          <ProtectedRoute allowedRole="instructor">
+            <AppLayout>
+              <InstructorABTesting />
+            </AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/instructor/campaigns" element={
+          <ProtectedRoute allowedRole="instructor">
+            <AppLayout>
+              <InstructorCampaigns />
             </AppLayout>
           </ProtectedRoute>
         } />
