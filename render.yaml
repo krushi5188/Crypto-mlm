@@ -51,7 +51,7 @@ services:
       - key: MAX_PARTICIPANTS
         value: 999999999
       - key: PLATFORM_DURATION_DAYS
-        value: 365
+        value: 0
       - key: RECRUITMENT_FEE
         value: 100
       - key: COMMISSION_LEVEL_1
