@@ -2,11 +2,16 @@
 
 An educational platform that teaches university members about multi-level marketing (MLM) structures, pyramid schemes, and crypto-based network marketing through hands-on simulation.
 
-> **🚀 Deploy Everything on Vercel + Supabase (Recommended & FREE):** 
+> **🚀 Deploy in Under 10 Minutes - Choose Your Platform:**
 > 
-> See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide
+> - **⚡ [QUICK START](./QUICK_DEPLOY.md)** - 5-minute deployment guide
+> - **📖 [FULL DEPLOYMENT GUIDE](./DEPLOYMENT_GUIDE.md)** - Complete instructions for both platforms
 > 
-> See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for database setup
+> **Platform Options:**
+> - **Vercel** (+ Supabase/PlanetScale) - Best for speed & global CDN - [Guide](./DEPLOYMENT_GUIDE.md#option-1-deploy-on-vercel-)
+> - **Render.com** - Easiest all-in-one setup - [Guide](./DEPLOYMENT_GUIDE.md#option-2-deploy-on-rendercom-)
+> 
+> **Both 100% FREE for classroom use!**
 
 ## 🎓 Educational Purpose
 
@@ -29,21 +34,23 @@ This simulator allows members to:
 
 **Backend:**
 - Node.js with Express.js
-- PostgreSQL database (Supabase)
+- PostgreSQL database
 - JWT authentication
 - bcrypt password hashing
 
 **Frontend:**
 - React.js with Vite
+- Framer Motion animations
+- Lucide React icons
+- Recharts for data visualization
 - React Router for navigation
 - Axios for API calls
 - Responsive design (mobile-first)
 
-**Deployment:**
-- Frontend: Vercel
-- Backend: Vercel (serverless)
-- Database: Supabase (PostgreSQL)
-- **Total Cost: $0 (Free tier handles 300+ members)**
+**Deployment Options:**
+- **Option 1:** Vercel (Frontend + Backend) + Supabase/PlanetScale (Database)
+- **Option 2:** Render.com (All-in-one: Frontend + Backend + Database)
+- **Total Cost:** $0 (Free tiers handle 300+ members)
 
 ## 🚀 Quick Start
 
