@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  AlertTriangle, Wifi, Database, Server, XCircle,
+  RefreshCw, Heart, Search, Key, FileWarning, Zap
+} from 'lucide-react';
+import Button from '../components/common/Button';
+import Card from '../components/common/Card';
+import { pageVariants, pageTransition, fadeInUp, scaleIn } from '../utils/animations';
 
 const ErrorPage = () => {
   const navigate = useNavigate();
@@ -35,33 +43,19 @@ const ErrorPage = () => {
     }
   }, []);
 
-  if (!errorData) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        background: 'var(--bg-primary)'
-      }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-      </div>
-    );
-  }
-
   // Get icon and title based on error type
   const getErrorIcon = (type) => {
     switch (type) {
       case 'NETWORK_ERROR':
-        return '🔌';
+        return <Wifi className="w-16 h-16 text-error" />;
       case 'SERVICE_UNAVAILABLE':
-        return '⚠️';
+        return <AlertTriangle className="w-16 h-16 text-warning" />;
       case 'DATABASE_ERROR':
-        return '🗄️';
+        return <Database className="w-16 h-16 text-error" />;
       case 'SERVER_ERROR':
-        return '🔥';
+        return <Server className="w-16 h-16 text-error" />;
       default:
-        return '❌';
+        return <XCircle className="w-16 h-16 text-error" />;
     }
   };
 
@@ -102,247 +96,225 @@ const ErrorPage = () => {
     navigate('/login');
   };
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-md)',
-      background: 'var(--bg-primary)'
-    }}>
-      <div style={{
-        maxWidth: '600px',
-        width: '100%',
-        background: '#1a1a1a',
-        border: '2px solid #d32f2f',
-        borderRadius: 'var(--radius-lg)',
-        padding: '40px',
-        boxShadow: '0 4px 20px rgba(211, 47, 47, 0.2)'
-      }} className="fade-in">
-
-        {/* Error Icon */}
-        <div style={{
-          fontSize: '48px',
-          textAlign: 'center',
-          marginBottom: 'var(--space-lg)'
-        }}>
-          {getErrorIcon(errorData.type)}
-        </div>
-
-        {/* Error Title */}
-        <h1 style={{
-          color: '#d32f2f',
-          fontSize: '24px',
-          textAlign: 'center',
-          marginBottom: 'var(--space-lg)',
-          fontWeight: '600'
-        }}>
-          {getErrorTitle(errorData.type)}
-        </h1>
-
-        {/* Error Message */}
-        <p style={{
-          color: '#cccccc',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          textAlign: 'center',
-          marginBottom: 'var(--space-xl)'
-        }}>
-          {errorData.message}
-        </p>
-
-        {/* Environment Variables Check Callout - for network/503 errors */}
-        {(errorData.type === 'NETWORK_ERROR' || errorData.type === 'SERVICE_UNAVAILABLE') && (
-          <div style={{
-            background: 'rgba(33, 150, 243, 0.1)',
-            border: '1px solid rgba(33, 150, 243, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-md)',
-            marginBottom: 'var(--space-xl)',
-            color: '#64b5f6',
-            fontSize: '13px',
-            lineHeight: '1.6'
-          }}>
-            <strong>💡 Most Common Fix:</strong>
-            <p style={{ margin: '8px 0 0 0' }}>
-              This error is usually caused by missing or incorrect environment variables. 
-              Click "Check Environment Variables" below to see exactly what's misconfigured and how to fix it.
-            </p>
-          </div>
-        )}
-
-        {/* Technical Details */}
-        {errorData.details && (
-          <div style={{
-            background: '#0d0d0d',
-            border: '1px solid #333333',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-md)',
-            marginBottom: 'var(--space-xl)'
-          }}>
-            <p style={{
-              color: '#999999',
-              fontSize: '12px',
-              fontFamily: 'monospace',
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              {errorData.details}
-            </p>
-          </div>
-        )}
-
-        {/* Status Code */}
-        {errorData.statusCode && (
-          <div style={{
-            textAlign: 'center',
-            color: '#999999',
-            fontSize: '12px',
-            marginBottom: 'var(--space-xl)'
-          }}>
-            Status Code: {errorData.statusCode}
-          </div>
-        )}
-
-        {/* Additional Help for Database Errors */}
-        {errorData.type === 'SERVICE_UNAVAILABLE' && (
-          <div style={{
-            background: 'rgba(255, 152, 0, 0.1)',
-            border: '1px solid rgba(255, 152, 0, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-md)',
-            marginBottom: 'var(--space-xl)',
-            color: '#ffcc80',
-            fontSize: '13px',
-            lineHeight: '1.6'
-          }}>
-            <strong>Troubleshooting:</strong>
-            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-              <li>Check if the backend server is running</li>
-              <li>Verify database connection in .env file</li>
-              <li>Ensure PostgreSQL is running and accessible</li>
-              <li>Check backend logs for initialization errors</li>
-            </ul>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 'var(--space-md)'
-        }}>
-          <button
-            onClick={handleRetry}
-            style={{
-              background: '#cccccc',
-              color: '#000000',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
-          >
-            🔄 Retry Connection
-          </button>
-
-          <button
-            onClick={handleCheckHealth}
-            style={{
-              background: '#cccccc',
-              color: '#000000',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
-          >
-            ❤️ Check Backend Status
-          </button>
-
-          <button
-            onClick={handleViewDiagnostics}
-            style={{
-              background: '#cccccc',
-              color: '#000000',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
-          >
-            🔍 View Diagnostics
-          </button>
-
-          <button
-            onClick={handleCheckEnvVars}
-            style={{
-              background: '#cccccc',
-              color: '#000000',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
-          >
-            🔍 Check Environment Variables
-          </button>
-
-          <button
-            onClick={handleGoToLogin}
-            style={{
-              background: '#cccccc',
-              color: '#000000',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-            onMouseLeave={(e) => e.target.style.background = '#cccccc'}
-          >
-            🔑 Go to Login
-          </button>
-        </div>
-
-        {/* Timestamp */}
-        {errorData.timestamp && (
-          <div style={{
-            textAlign: 'center',
-            color: '#666666',
-            fontSize: '11px',
-            marginTop: 'var(--space-lg)'
-          }}>
-            Error occurred at: {new Date(errorData.timestamp).toLocaleString()}
-          </div>
-        )}
+  if (!errorData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        >
+          <Zap className="w-12 h-12 text-gold-400" />
+        </motion.div>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="min-h-screen flex items-center justify-center py-12 px-4"
+    >
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-error/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-warning/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-2xl relative z-10">
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <Card
+            variant="glass-strong"
+            padding="xl"
+            className="border-2 border-error/30"
+          >
+            {/* Error Icon */}
+            <motion.div
+              variants={scaleIn}
+              initial="hidden"
+              animate="visible"
+              className="flex justify-center mb-6"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                {getErrorIcon(errorData.type)}
+              </motion.div>
+            </motion.div>
+
+            {/* Error Title */}
+            <h1 className="text-4xl font-display font-bold text-center mb-6 text-error">
+              {getErrorTitle(errorData.type)}
+            </h1>
+
+            {/* Error Message */}
+            <p className="text-lg text-text-muted text-center mb-8 leading-relaxed">
+              {errorData.message}
+            </p>
+
+            {/* Environment Variables Check Callout - for network/503 errors */}
+            {(errorData.type === 'NETWORK_ERROR' || errorData.type === 'SERVICE_UNAVAILABLE') && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card
+                  variant="glass-medium"
+                  padding="lg"
+                  className="mb-6 border border-blue-400/30"
+                >
+                  <div className="flex items-start gap-3">
+                    <FileWarning className="w-5 h-5 text-blue-400 flex-shrink-0 mt-1" />
+                    <div>
+                      <p className="font-semibold text-blue-400 mb-2">Most Common Fix</p>
+                      <p className="text-sm text-text-muted leading-relaxed">
+                        This error is usually caused by missing or incorrect environment variables.
+                        Click "Check Environment Variables" below to see exactly what's misconfigured and how to fix it.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Technical Details */}
+            <AnimatePresence>
+              {errorData.details && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-6"
+                >
+                  <Card variant="glass" padding="md">
+                    <p className="text-xs font-mono text-text-dimmed whitespace-pre-wrap break-words">
+                      {errorData.details}
+                    </p>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Status Code */}
+            {errorData.statusCode && (
+              <div className="text-center text-sm text-text-dimmed mb-6">
+                Status Code: <span className="font-mono text-error">{errorData.statusCode}</span>
+              </div>
+            )}
+
+            {/* Additional Help for Service Unavailable */}
+            {errorData.type === 'SERVICE_UNAVAILABLE' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card
+                  variant="glass-medium"
+                  padding="lg"
+                  className="mb-8 border border-warning/30"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-1" />
+                    <div>
+                      <p className="font-semibold text-warning mb-3">Troubleshooting Steps</p>
+                      <ul className="space-y-2 text-sm text-text-muted">
+                        <li className="flex items-start gap-2">
+                          <span className="text-gold-400 mt-1">•</span>
+                          <span>Check if the backend server is running</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-gold-400 mt-1">•</span>
+                          <span>Verify database connection in .env file</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-gold-400 mt-1">•</span>
+                          <span>Ensure PostgreSQL is running and accessible</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-gold-400 mt-1">•</span>
+                          <span>Check backend logs for initialization errors</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Action Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-2 md:grid-cols-3 gap-3"
+            >
+              <Button
+                onClick={handleRetry}
+                variant="primary"
+                size="md"
+                icon={<RefreshCw className="w-4 h-4" />}
+              >
+                Retry
+              </Button>
+
+              <Button
+                onClick={handleCheckHealth}
+                variant="outline"
+                size="md"
+                icon={<Heart className="w-4 h-4" />}
+              >
+                Backend Status
+              </Button>
+
+              <Button
+                onClick={handleViewDiagnostics}
+                variant="outline"
+                size="md"
+                icon={<Search className="w-4 h-4" />}
+              >
+                Diagnostics
+              </Button>
+
+              <Button
+                onClick={handleCheckEnvVars}
+                variant="outline"
+                size="md"
+                icon={<FileWarning className="w-4 h-4" />}
+                className="md:col-span-2"
+              >
+                Check Environment
+              </Button>
+
+              <Button
+                onClick={handleGoToLogin}
+                variant="ghost"
+                size="md"
+                icon={<Key className="w-4 h-4" />}
+              >
+                Go to Login
+              </Button>
+            </motion.div>
+
+            {/* Timestamp */}
+            {errorData.timestamp && (
+              <div className="mt-8 text-center text-xs text-text-dimmed">
+                Error occurred at: {new Date(errorData.timestamp).toLocaleString()}
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 };
 
