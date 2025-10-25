@@ -49,8 +49,8 @@ services:
       - key: ADMIN_PASSWORD
         sync: false # Set this manually in Render dashboard
       - key: MAX_PARTICIPANTS
-        value: 300
-      - key: SEMESTER_DURATION_DAYS
+        value: 10000
+      - key: PLATFORM_DURATION_DAYS
         value: 112
       - key: RECRUITMENT_FEE
         value: 100
