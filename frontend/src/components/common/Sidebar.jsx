@@ -126,7 +126,7 @@ const Sidebar = () => {
                     font-medium text-sm transition-all
                     ${active
                       ? 'bg-white text-black'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      : 'text-white hover:text-white hover:bg-white/10'
                     }
                     ${isCollapsed ? 'justify-center' : ''}
                   `}
@@ -146,7 +146,7 @@ const Sidebar = () => {
       <div className="p-2 border-t border-white/10 space-y-1">
         <Link to="/profile">
           <motion.div
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:text-white hover:bg-white/10 transition-all"
             whileHover={{ x: 2 }}
           >
             <User className="w-5 h-5 flex-shrink-0" />
@@ -157,7 +157,7 @@ const Sidebar = () => {
         {isMember() && (
           <Link to="/security">
             <motion.div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:text-white hover:bg-white/10 transition-all"
               whileHover={{ x: 2 }}
             >
               <Shield className="w-5 h-5 flex-shrink-0" />
