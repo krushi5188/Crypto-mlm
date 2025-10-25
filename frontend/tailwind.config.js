@@ -7,9 +7,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Monochrome Premium Colors (from template)
-        primary: '#ffffff',
-        secondary: '#000000',
+        // Monochrome Premium Colors - Fixed for readability
+        primary: '#000000',      // Black primary
+        secondary: '#ffffff',    // White secondary
         accent: '#404040',
         
         // Base colors
@@ -31,22 +31,36 @@ export default {
           950: '#0d0d0d',
         },
         
-        // Semantic colors (monochrome versions)
-        success: '#ffffff',
-        warning: '#a3a3a3',
-        error: '#525252',
-        info: '#737373',
+        // Semantic colors
+        success: '#10b981',      // Green for success
+        warning: '#f59e0b',      // Orange for warnings
+        error: '#ef4444',        // Red for errors
+        info: '#3b82f6',         // Blue for info
         
-        // Text colors
+        // Text colors - FIXED for contrast
         'text': {
-          primary: '#ffffff',
-          secondary: 'rgba(255, 255, 255, 0.65)',
+          primary: '#ffffff',              // White text for dark backgrounds
+          secondary: 'rgba(255, 255, 255, 0.7)',
           muted: 'rgba(255, 255, 255, 0.5)',
-          dimmed: 'rgba(255, 255, 255, 0.25)',
+          dimmed: 'rgba(255, 255, 255, 0.3)',
+        },
+        
+        // Background colors
+        'bg': {
+          primary: '#000000',              // Black background
+          secondary: '#0d0d0d',
+          elevated: '#171717',
+          card: '#1a1a1a',
         },
         
         // Glass/Overlay colors
+        'glass': {
+          light: 'rgba(255, 255, 255, 0.05)',
+          medium: 'rgba(255, 255, 255, 0.1)',
+          strong: 'rgba(255, 255, 255, 0.15)',
+        },
         'glass-border': 'rgba(255, 255, 255, 0.1)',
+        'glass-border-strong': 'rgba(255, 255, 255, 0.2)',
       },
       fontFamily: {
         display: ['Red Hat Display', 'system-ui', 'sans-serif'],
