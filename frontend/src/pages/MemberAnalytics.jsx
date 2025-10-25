@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  TrendingUp, BarChart3, Target, AlertTriangle, CheckCircle, 
+  Info, RefreshCw, Calendar, Clock, Activity, AlertCircle
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency } from '../utils/formatters';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MemberAnalytics = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [analytics, setAnalytics] = useState(null);
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +44,11 @@ const MemberAnalytics = () => {
       setAnalytics(analyticsRes.data.data.analytics);
       setInsights(insightsRes.data.data.insights);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
-      setError(error.response?.data?.error || 'Failed to load analytics data');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load analytics data';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load analytics:', err);
     } finally {
       setLoading(false);
     }
@@ -40,416 +59,394 @@ const MemberAnalytics = () => {
       setRecalculating(true);
       await memberAPI.post('/analytics/recalculate');
       await loadAnalytics();
-    } catch (error) {
-      console.error('Failed to recalculate:', error);
+      showSuccess('Analytics recalculated successfully');
+    } catch (err) {
+      showError('Failed to recalculate analytics');
+      console.error('Failed to recalculate:', err);
     } finally {
       setRecalculating(false);
     }
   };
 
-  const getRiskLevelColor = (level) => {
-    const colors = {
-      low: 'var(--accent-green)',
-      medium: '#f59e0b',
-      high: '#f97316',
-      critical: '#ef4444'
+  const getRiskLevelInfo = (level) => {
+    const riskMap = {
+      low: { color: 'text-success', bg: 'bg-success/10', border: 'border-success/30' },
+      medium: { color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/30' },
+      high: { color: 'text-error', bg: 'bg-error/10', border: 'border-error/30' },
+      critical: { color: 'text-error', bg: 'bg-error/10', border: 'border-error/30' }
     };
-    return colors[level] || colors.low;
+    return riskMap[level] || riskMap.low;
   };
 
-  const getInsightIcon = (type) => {
-    const icons = {
-      warning: '⚠️',
-      success: '✅',
-      info: 'ℹ️'
+  const getInsightInfo = (type) => {
+    const insightMap = {
+      warning: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10' },
+      success: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10' },
+      info: { icon: Info, color: 'text-blue-400', bg: 'bg-blue-500/10' }
     };
-    return icons[type] || '📊';
+    return insightMap[type] || insightMap.info;
   };
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 'var(--space-md)'
-      }}>
-        <div className="spin" style={{ fontSize: '4rem' }}>📊</div>
-        <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)' }}>Loading analytics...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LoadingSkeleton variant="card" count={2} />
+        </div>
       </div>
     );
   }
 
   if (error || !analytics) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-md)'
-      }}>
-        <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-lg)' }}>📊</div>
-          <h2 style={{ fontSize: 'var(--text-4xl)', marginBottom: 'var(--space-md)', fontWeight: '600' }}>
-            Unable to Load Analytics
-          </h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-xl)', fontSize: 'var(--text-lg)' }}>
-            {error || 'Unable to load analytics data.'}
-          </p>
-          <Button onClick={loadAnalytics} size="lg">
-            Retry
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Analytics</h3>
+              <p className="text-text-muted mb-4">{error || 'Unable to load analytics data.'}</p>
+              <Button onClick={loadAnalytics} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
-  // Prepare chart data for earnings projection
   const earningsProjectionData = [
     { period: 'Current', value: analytics.avgMonthlyEarnings, type: 'actual' },
     { period: '30 Days', value: analytics.predicted30dEarnings, type: 'predicted' },
     { period: '90 Days', value: analytics.predicted90dEarnings, type: 'predicted' }
   ];
 
-  // Growth rate data
   const growthData = [
     { metric: 'Earnings', rate: analytics.earningsGrowthRate },
     { metric: 'Network', rate: analytics.networkGrowthRate }
   ];
 
   return (
-    <div style={{ padding: 'var(--space-xl) var(--space-md)' }}>
-      {/* Hero Section */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <div className="fade-in" style={{ maxWidth: '800px', marginBottom: 'var(--space-xl)' }}>
-          <h1 style={{
-            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-            marginBottom: 'var(--space-md)',
-            fontWeight: '700',
-            letterSpacing: '-0.02em'
-          }}>
-            Predictive Analytics
-          </h1>
-          <p style={{
-            fontSize: 'var(--text-xl)',
-            color: 'var(--text-muted)',
-            lineHeight: '1.6',
-            marginBottom: 'var(--space-lg)'
-          }}>
-            AI-powered insights into your earnings, network growth, and future projections
-          </p>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+            >
+              <BarChart3 className="w-8 h-8 text-blue-400" />
+            </motion.div>
+            <div>
+              <h1 className="text-4xl font-display font-bold">Predictive Analytics</h1>
+              <p className="text-lg text-text-muted">AI-powered insights into your earnings and growth</p>
+            </div>
+          </div>
           <Button
             onClick={handleRecalculate}
+            loading={recalculating}
             disabled={recalculating}
-            variant="secondary"
+            variant="outline"
+            icon={<RefreshCw className="w-5 h-5" />}
           >
-            {recalculating ? '🔄 Recalculating...' : '🔄 Refresh Analytics'}
+            Refresh Analytics
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Insights Cards */}
       {insights.length > 0 && (
-        <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-          <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-xl)', fontWeight: '600' }}>
-            Actionable Insights
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-lg)' }}>
-            {insights.map((insight, index) => (
-              <Card key={index} className={`fade-in-up delay-${index * 100}`}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-md)' }}>
-                  <div style={{ fontSize: '2rem' }}>{getInsightIcon(insight.type)}</div>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: '600', marginBottom: 'var(--space-xs)' }}>
-                      {insight.title}
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-base)', lineHeight: '1.6' }}>
-                      {insight.message}
-                    </p>
-                    {insight.action && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        style={{ marginTop: 'var(--space-md)', padding: '0' }}
-                      >
-                        {insight.action} →
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
+          <h2 className="text-3xl font-display font-semibold">Actionable Insights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {insights.map((insight, index) => {
+              const insightInfo = getInsightInfo(insight.type);
+              const InsightIcon = insightInfo.icon;
+              return (
+                <motion.div key={index} variants={itemVariants}>
+                  <Card variant="glass-strong" padding="lg" interactive>
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-xl ${insightInfo.bg}`}>
+                        <InsightIcon className={`w-6 h-6 ${insightInfo.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-2">{insight.title}</h3>
+                        <p className="text-sm text-text-muted mb-3">{insight.message}</p>
+                        {insight.action && (
+                          <Button variant="ghost" size="sm">
+                            {insight.action} →
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Key Metrics */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 'var(--space-xl)'
-        }}>
-          <Card className="fade-in-up delay-100" style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-md)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Activity Score
-            </div>
-            <div style={{
-              fontSize: 'clamp(2rem, 4vw, 3rem)',
-              fontWeight: '700',
-              color: analytics.activityScore >= 0.7 ? 'var(--accent-green)' : analytics.activityScore >= 0.4 ? '#f59e0b' : '#ef4444',
-              marginBottom: 'var(--space-sm)'
-            }}>
-              {(analytics.activityScore * 100).toFixed(0)}%
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
-              {analytics.daysActive} days active
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="lg" interactive>
+            <div className="text-center">
+              <Activity className="w-8 h-8 mx-auto mb-3 text-blue-400" />
+              <p className="text-sm text-text-dimmed mb-2 uppercase tracking-wider">Activity Score</p>
+              <p className={`text-4xl font-display font-bold mb-2 ${
+                analytics.activityScore >= 0.7 ? 'text-success' : 
+                analytics.activityScore >= 0.4 ? 'text-warning' : 'text-error'
+              }`}>
+                <AnimatedNumber value={analytics.activityScore * 100} decimals={0} />%
+              </p>
+              <p className="text-xs text-text-dimmed">{analytics.daysActive} days active</p>
             </div>
           </Card>
+        </motion.div>
 
-          <Card className="fade-in-up delay-200" style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-md)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Churn Risk
-            </div>
-            <div style={{
-              fontSize: 'clamp(2rem, 4vw, 3rem)',
-              fontWeight: '700',
-              color: getRiskLevelColor(analytics.churnRiskLevel),
-              marginBottom: 'var(--space-sm)',
-              textTransform: 'capitalize'
-            }}>
-              {analytics.churnRiskLevel}
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
-              Score: {(analytics.churnRiskScore * 100).toFixed(0)}%
-            </div>
-          </Card>
-
-          <Card className="fade-in-up delay-300" style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-md)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Avg Daily Earnings
-            </div>
-            <div style={{
-              fontSize: 'clamp(2rem, 4vw, 3rem)',
-              fontWeight: '700',
-              color: 'var(--primary-gold)',
-              marginBottom: 'var(--space-sm)'
-            }}>
-              ${analytics.avgDailyEarnings.toFixed(2)}
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
-              ${analytics.avgWeeklyEarnings.toFixed(2)}/week
-            </div>
-          </Card>
-
-          <Card className="fade-in-up delay-400" style={{ textAlign: 'center' }}>
-            <div style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-muted)',
-              marginBottom: 'var(--space-md)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Earnings Growth
-            </div>
-            <div style={{
-              fontSize: 'clamp(2rem, 4vw, 3rem)',
-              fontWeight: '700',
-              color: analytics.earningsGrowthRate >= 0 ? 'var(--accent-green)' : '#ef4444',
-              marginBottom: 'var(--space-sm)'
-            }}>
-              {analytics.earningsGrowthRate > 0 ? '+' : ''}{analytics.earningsGrowthRate.toFixed(1)}%
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dimmed)' }}>
-              Last 30 days
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Earnings Projection Chart */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <Card className="fade-in-up">
-          <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-lg)', fontWeight: '600' }}>
-            Earnings Projection
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={earningsProjectionData}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#d4af37" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#d4af37" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="period" stroke="rgba(255,255,255,0.5)" />
-              <YAxis stroke="rgba(255,255,255,0.5)" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                formatter={(value) => `$${value.toFixed(2)}`}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#d4af37"
-                fillOpacity={1}
-                fill="url(#colorValue)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-          <div style={{ marginTop: 'var(--space-lg)', padding: 'var(--space-md)', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-md)', fontSize: 'var(--text-sm)' }}>
-              <div>
-                <div style={{ color: 'var(--text-dimmed)', marginBottom: 'var(--space-xs)' }}>Current Monthly</div>
-                <div style={{ fontSize: 'var(--text-lg)', fontWeight: '600', color: 'var(--primary-gold)' }}>
-                  ${analytics.avgMonthlyEarnings.toFixed(2)}
-                </div>
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="lg" interactive>
+            <div className="text-center">
+              <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-warning" />
+              <p className="text-sm text-text-dimmed mb-2 uppercase tracking-wider">Churn Risk</p>
+              <div className={`inline-flex px-4 py-2 rounded-full text-2xl font-display font-bold mb-2 capitalize ${
+                getRiskLevelInfo(analytics.churnRiskLevel).bg
+              } ${getRiskLevelInfo(analytics.churnRiskLevel).color} border ${getRiskLevelInfo(analytics.churnRiskLevel).border}`}>
+                {analytics.churnRiskLevel}
               </div>
-              <div>
-                <div style={{ color: 'var(--text-dimmed)', marginBottom: 'var(--space-xs)' }}>30-Day Forecast</div>
-                <div style={{ fontSize: 'var(--text-lg)', fontWeight: '600', color: 'var(--accent-green)' }}>
-                  ${analytics.predicted30dEarnings.toFixed(2)}
-                </div>
+              <p className="text-xs text-text-dimmed">Score: {(analytics.churnRiskScore * 100).toFixed(0)}%</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="lg" interactive glow="gold">
+            <div className="text-center">
+              <TrendingUp className="w-8 h-8 mx-auto mb-3 text-gold-400" />
+              <p className="text-sm text-text-dimmed mb-2 uppercase tracking-wider">Avg Daily Earnings</p>
+              <p className="text-4xl font-display font-bold text-gold-400 mb-2">
+                $<AnimatedNumber value={analytics.avgDailyEarnings} decimals={2} />
+              </p>
+              <p className="text-xs text-text-dimmed">${analytics.avgWeeklyEarnings.toFixed(2)}/week</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="lg" interactive glow="green">
+            <div className="text-center">
+              <Target className="w-8 h-8 mx-auto mb-3 text-green-400" />
+              <p className="text-sm text-text-dimmed mb-2 uppercase tracking-wider">Earnings Growth</p>
+              <p className={`text-4xl font-display font-bold mb-2 ${
+                analytics.earningsGrowthRate >= 0 ? 'text-success' : 'text-error'
+              }`}>
+                {analytics.earningsGrowthRate > 0 ? '+' : ''}
+                <AnimatedNumber value={analytics.earningsGrowthRate} decimals={1} />%
+              </p>
+              <p className="text-xs text-text-dimmed">Last 30 days</p>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.3 }}
+        >
+          <Card variant="glass-strong" padding="xl">
+            <h3 className="text-2xl font-display font-semibold mb-6">Earnings Projection</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={earningsProjectionData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="period" stroke="rgba(255,255,255,0.5)" />
+                <YAxis stroke="rgba(255,255,255,0.5)" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f0f23', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px' }}
+                  formatter={(value) => [`$${value.toFixed(2)}`, 'Value']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#fbbf24"
+                  fillOpacity={1}
+                  fill="url(#colorValue)"
+                  strokeWidth={3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-xs text-text-dimmed mb-1">Current Monthly</p>
+                <p className="text-lg font-semibold text-gold-400">
+                  $<AnimatedNumber value={analytics.avgMonthlyEarnings} decimals={2} />
+                </p>
               </div>
-              <div>
-                <div style={{ color: 'var(--text-dimmed)', marginBottom: 'var(--space-xs)' }}>90-Day Forecast</div>
-                <div style={{ fontSize: 'var(--text-lg)', fontWeight: '600', color: 'var(--accent-green)' }}>
-                  ${analytics.predicted90dEarnings.toFixed(2)}
-                </div>
+              <div className="text-center">
+                <p className="text-xs text-text-dimmed mb-1">30-Day Forecast</p>
+                <p className="text-lg font-semibold text-green-400">
+                  $<AnimatedNumber value={analytics.predicted30dEarnings} decimals={2} />
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-text-dimmed mb-1">90-Day Forecast</p>
+                <p className="text-lg font-semibold text-green-400">
+                  $<AnimatedNumber value={analytics.predicted90dEarnings} decimals={2} />
+                </p>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.4 }}
+        >
+          <Card variant="glass-strong" padding="xl">
+            <h3 className="text-2xl font-display font-semibold mb-6">Growth Rates</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={growthData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="metric" stroke="rgba(255,255,255,0.5)" />
+                <YAxis stroke="rgba(255,255,255,0.5)" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f0f23', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px' }}
+                  formatter={(value) => [`${value.toFixed(1)}%`, 'Rate']}
+                />
+                <Bar dataKey="rate" fill="#10b981" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Growth Rates Chart */}
-      <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-        <Card className="fade-in-up delay-100">
-          <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-lg)', fontWeight: '600' }}>
-            Growth Rates
-          </h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={growthData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="metric" stroke="rgba(255,255,255,0.5)" />
-              <YAxis stroke="rgba(255,255,255,0.5)" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                formatter={(value) => `${value.toFixed(1)}%`}
-              />
-              <Bar dataKey="rate" fill="#10b981" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
-      {/* Best Recruitment Times */}
+      {/* Optimal Recruitment Times */}
       {analytics.bestRecruitmentDay && (
-        <div className="container" style={{ marginBottom: 'var(--space-3xl)' }}>
-          <Card className="fade-in-up delay-200">
-            <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-lg)', fontWeight: '600' }}>
-              Optimal Recruitment Times
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-xl)' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>📅</div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                  Best Day
-                </div>
-                <div style={{ fontSize: 'var(--text-2xl)', fontWeight: '600', color: 'var(--primary-gold)' }}>
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.5 }}
+        >
+          <Card variant="glass-strong" padding="xl" glow="gold">
+            <h3 className="text-2xl font-display font-semibold mb-6">Optimal Recruitment Times</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-gold-400" />
+                <p className="text-sm text-text-dimmed mb-2">Best Day</p>
+                <p className="text-3xl font-display font-bold text-gold-400">
                   {analytics.bestRecruitmentDay}
-                </div>
+                </p>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>⏰</div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                  Best Hour
-                </div>
-                <div style={{ fontSize: 'var(--text-2xl)', fontWeight: '600', color: 'var(--primary-gold)' }}>
+              <div className="text-center">
+                <Clock className="w-12 h-12 mx-auto mb-4 text-gold-400" />
+                <p className="text-sm text-text-dimmed mb-2">Best Hour</p>
+                <p className="text-3xl font-display font-bold text-gold-400">
                   {analytics.bestRecruitmentHour}:00
-                </div>
+                </p>
               </div>
             </div>
-            <div style={{
-              marginTop: 'var(--space-xl)',
-              padding: 'var(--space-md)',
-              background: 'rgba(212, 175, 55, 0.1)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(212, 175, 55, 0.2)'
-            }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                <strong style={{ color: 'var(--primary-gold)' }}>Tip:</strong> Based on your historical data, you have the best success recruiting on {analytics.bestRecruitmentDay}s around {analytics.bestRecruitmentHour}:00. Try to focus your outreach efforts during these times!
+            <div className="p-4 bg-gold-400/10 border border-gold-400/30 rounded-xl">
+              <p className="text-sm text-text-muted">
+                <strong className="text-gold-400">Tip:</strong> Based on your historical data, you have the best success recruiting on {analytics.bestRecruitmentDay}s around {analytics.bestRecruitmentHour}:00. Focus your outreach during these times!
               </p>
             </div>
           </Card>
-        </div>
+        </motion.div>
       )}
 
-      {/* Additional Stats */}
-      <div className="container">
-        <Card className="fade-in-up delay-300">
-          <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-lg)', fontWeight: '600' }}>
-            Additional Metrics
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-lg)' }}>
+      {/* Additional Metrics */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.6 }}
+      >
+        <Card variant="glass-strong" padding="xl">
+          <h3 className="text-2xl font-display font-semibold mb-6">Additional Metrics</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                Network Growth Rate
-              </div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: '600' }}>
-                {analytics.networkGrowthRate > 0 ? '+' : ''}{analytics.networkGrowthRate.toFixed(1)}%
-              </div>
+              <p className="text-sm text-text-dimmed mb-2">Network Growth Rate</p>
+              <p className="text-3xl font-display font-bold">
+                {analytics.networkGrowthRate > 0 ? '+' : ''}
+                <AnimatedNumber value={analytics.networkGrowthRate} decimals={1} />%
+              </p>
             </div>
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                Predicted 30d Recruits
-              </div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: '600' }}>
-                {analytics.predicted30dRecruits}
-              </div>
+              <p className="text-sm text-text-dimmed mb-2">Predicted 30d Recruits</p>
+              <p className="text-3xl font-display font-bold">
+                <AnimatedNumber value={analytics.predicted30dRecruits} />
+              </p>
             </div>
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                Days Inactive
-              </div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: '600', color: analytics.daysInactive > 7 ? '#ef4444' : 'var(--accent-green)' }}>
-                {analytics.daysInactive}
-              </div>
+              <p className="text-sm text-text-dimmed mb-2">Days Inactive</p>
+              <p className={`text-3xl font-display font-bold ${
+                analytics.daysInactive > 7 ? 'text-error' : 'text-success'
+              }`}>
+                <AnimatedNumber value={analytics.daysInactive} />
+              </p>
             </div>
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                Last Updated
-              </div>
-              <div style={{ fontSize: 'var(--text-base)', color: 'var(--text-dimmed)' }}>
+              <p className="text-sm text-text-dimmed mb-2">Last Updated</p>
+              <p className="text-lg text-text-muted">
                 {new Date(analytics.lastUpdated).toLocaleDateString()}
-              </div>
+              </p>
             </div>
           </div>
         </Card>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
