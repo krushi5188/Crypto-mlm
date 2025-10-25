@@ -259,3 +259,23 @@
 [data-theme="light"] aside div {
   color: #ffffff !important;
 }
+
+/* Force login and landing pages to have visible text on black backgrounds */
+[data-theme="light"] .min-h-screen a {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .min-h-screen a:hover {
+  color: #fbbf24 !important;
+}
+
+[data-theme="light"] .min-h-screen p,
+[data-theme="light"] .min-h-screen span {
+  color: #d1d5db !important;
+}
+
+[data-theme="light"] .min-h-screen h1,
+[data-theme="light"] .min-h-screen h2,
+[data-theme="light"] .min-h-screen h3 {
+  color: #ffffff !important;
+}
