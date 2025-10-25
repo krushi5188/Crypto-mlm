@@ -265,7 +265,7 @@ const NotificationDropdown = () => {
               textAlign: 'center'
             }}>
               <Link
-                to="/member/notifications"
+                to="/gamification/notifications"
                 style={{
                   color: 'var(--primary)',
                   textDecoration: 'none',

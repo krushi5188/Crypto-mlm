@@ -11,7 +11,7 @@ const NotificationCenter = () => {
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      const response = await api.get('/member/notifications?limit=20');
+      const response = await api.get('/gamification/notifications?limit=20');
       setNotifications(response.data.notifications);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -21,7 +21,7 @@ const NotificationCenter = () => {
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const response = await api.get('/member/notifications/unread-count');
+      const response = await api.get('/gamification/notifications/unread-count');
       setUnreadCount(response.data.unreadCount);
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
@@ -31,7 +31,7 @@ const NotificationCenter = () => {
   // Mark as read
   const markAsRead = async (notificationId) => {
     try {
-      await api.put(`/member/notifications/${notificationId}/read`);
+      await api.put(`/gamification/notifications/${notificationId}/read`);
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
@@ -45,7 +45,7 @@ const NotificationCenter = () => {
   const markAllAsRead = async () => {
     try {
       setLoading(true);
-      await api.put('/member/notifications/read-all');
+      await api.put('/gamification/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -58,7 +58,7 @@ const NotificationCenter = () => {
   // Delete notification
   const deleteNotification = async (notificationId) => {
     try {
-      await api.delete(`/member/notifications/${notificationId}`);
+      await api.delete(`/gamification/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       const notification = notifications.find(n => n.id === notificationId);
       if (notification && !notification.is_read) {
@@ -206,7 +206,7 @@ const NotificationCenter = () => {
               <button style={styles.viewAllButton} onClick={() => {
                 setIsOpen(false);
                 // Navigate to notifications page (you can add this route later)
-                window.location.href = '/member/notifications';
+                window.location.href = '/gamification/notifications';
               }}>
                 View All Notifications
               </button>
