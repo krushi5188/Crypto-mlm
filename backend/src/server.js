@@ -14,7 +14,6 @@ if (fs.existsSync(envPath)) {
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const path = require('path');
 const { pool, testConnection } = require('./config/database');
 const { hashPassword } = require('./utils/passwordHash');
 const { apiLimiter } = require('./middleware/rateLimiter');
