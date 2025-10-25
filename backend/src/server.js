@@ -506,20 +506,51 @@ app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/gamification', gamificationRoutes);
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Atlas Network API',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/api/v1/auth',
-      member: '/api/v1/member',
-      instructor: '/api/v1/instructor',
-      system: '/api/v1/system',
-      gamification: '/api/v1/gamification'
+// Serve frontend static files (for unified deployment)
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendDistPath)) {
+  console.log('✓ Serving frontend from:', frontendDistPath);
+  
+  // Serve static assets (JS, CSS, images, etc.)
+  app.use(express.static(frontendDistPath));
+  
+  // SPA fallback: serve index.html for all non-API routes
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    // Serve index.html for all other routes (React Router handles them)
+    const indexPath = path.join(frontendDistPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({
+        error: 'Frontend not built. Run: cd frontend && npm run build',
+        code: 'FRONTEND_NOT_BUILT'
+      });
     }
   });
-});
+} else {
+  console.log('⚠ Frontend dist not found. API-only mode.');
+  
+  // Root endpoint (API-only mode)
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Atlas Network API',
+      version: '1.0.0',
+      endpoints: {
+        auth: '/api/v1/auth',
+        member: '/api/v1/member',
+        instructor: '/api/v1/instructor',
+        system: '/api/v1/system',
+        gamification: '/api/v1/gamification'
+      },
+      note: 'Frontend not built. Run: cd frontend && npm run build'
+    });
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
