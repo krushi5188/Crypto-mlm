@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 import AvatarUpload from './AvatarUpload';
 
 const OnboardingWizard = ({ user, onComplete }) => {
@@ -80,14 +80,14 @@ const OnboardingWizard = ({ user, onComplete }) => {
     try {
       // Create goal if set
       if (goal.target > 0) {
-        await studentAPI.createGoal({
+        await memberAPI.createGoal({
           goal_type: goal.type,
           target_value: goal.target
         });
       }
 
       // Mark onboarding as complete
-      await studentAPI.completeOnboarding();
+      await memberAPI.completeOnboarding();
 
       if (onComplete) {
         onComplete();
@@ -104,7 +104,7 @@ const OnboardingWizard = ({ user, onComplete }) => {
 
   const handleAvatarUpload = async (file) => {
     try {
-      const response = await studentAPI.uploadAvatar(file);
+      const response = await memberAPI.uploadAvatar(file);
       setAvatarUrl(response.data.data.avatarUrl);
     } catch (err) {
       throw new Error('Failed to upload avatar');

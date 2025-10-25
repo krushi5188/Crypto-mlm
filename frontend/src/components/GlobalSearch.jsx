@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { studentAPI } from '../services/api';
+import { memberAPI } from '../services/api';
 
 const GlobalSearch = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -64,7 +64,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     debounceTimer.current = setTimeout(async () => {
       try {
         // Use real API endpoint
-        const response = await studentAPI.search(query, 20);
+        const response = await memberAPI.search(query, 20);
         const apiResults = response.data.data.results || [];
         
         // Map API results to component format

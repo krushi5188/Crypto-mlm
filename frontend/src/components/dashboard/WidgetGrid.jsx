@@ -8,7 +8,7 @@ import RecentEarningsWidget from '../widgets/RecentEarningsWidget';
 import QuickActionsWidget from '../widgets/QuickActionsWidget';
 import ReferralStatsWidget from '../widgets/ReferralStatsWidget';
 import HelpTooltip from '../HelpTooltip';
-import { studentAPI } from '../../services/api';
+import { memberAPI } from '../../services/api';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -63,7 +63,7 @@ const WidgetGrid = ({ dashboardData, onLayoutChange }) => {
 
   const loadPreferences = async () => {
     try {
-      const response = await studentAPI.getPreferences();
+      const response = await memberAPI.getPreferences();
       const prefs = response.data.data;
 
       if (prefs && prefs.dashboard_layout) {
@@ -89,7 +89,7 @@ const WidgetGrid = ({ dashboardData, onLayoutChange }) => {
 
     // Save to backend
     try {
-      await studentAPI.updatePreferences({
+      await memberAPI.updatePreferences({
         dashboard_layout: allLayouts
       });
       if (onLayoutChange) {
@@ -113,7 +113,7 @@ const WidgetGrid = ({ dashboardData, onLayoutChange }) => {
     );
 
     try {
-      await studentAPI.updatePreferences({
+      await memberAPI.updatePreferences({
         hidden_widgets: hidden
       });
     } catch (error) {
@@ -126,7 +126,7 @@ const WidgetGrid = ({ dashboardData, onLayoutChange }) => {
     setVisibleWidgets(Object.keys(widgetComponents));
 
     try {
-      await studentAPI.updatePreferences({
+      await memberAPI.updatePreferences({
         dashboard_layout: defaultLayouts,
         hidden_widgets: []
       });
