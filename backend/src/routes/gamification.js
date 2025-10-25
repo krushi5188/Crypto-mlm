@@ -6,11 +6,11 @@ const RankService = require('../services/rankService');
 const LeaderboardService = require('../services/leaderboardService');
 const NotificationService = require('../services/notificationService');
 const { authenticate } = require('../middleware/auth');
-const { requireStudent } = require('../middleware/roleAuth');
+const { requireMember } = require('../middleware/roleAuth');
 
 // Apply authentication
 router.use(authenticate);
-router.use(requireStudent);
+router.use(requireMember);
 
 /**
  * SECURITY ENDPOINTS
