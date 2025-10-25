@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, Sparkles, Home, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/common/Button';
@@ -54,15 +54,31 @@ const LoginPage = () => {
       animate="animate"
       exit="exit"
       transition={pageTransition}
-      className="min-h-screen flex items-center justify-center py-12 px-4"
+      className="min-h-screen flex items-center justify-center py-12 px-4 bg-black"
     >
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gold-400/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gold-400/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
+        {/* Back to Home Button */}
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          className="mb-6"
+        >
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </Link>
+        </motion.div>
+
         <motion.div
           variants={fadeInUp}
           initial="hidden"
@@ -72,22 +88,22 @@ const LoginPage = () => {
           <div className="text-center mb-8">
             <motion.div
               variants={scaleIn}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-glass-medium border border-glass-border text-sm font-medium text-gold-400 mb-6"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-gold-400 mb-6"
             >
               <Sparkles className="w-4 h-4" />
               Atlas Network
             </motion.div>
 
-            <h1 className="text-5xl font-display font-bold mb-3 tracking-tight">
+            <h1 className="text-5xl font-display font-bold mb-3 tracking-tight text-white">
               Welcome Back
             </h1>
-            <p className="text-lg text-text-muted">
+            <p className="text-lg text-gray-400">
               Sign in to access your account
             </p>
           </div>
 
           {/* Login Card */}
-          <Card variant="glass-strong" padding="xl">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-8 shadow-2xl">
             {/* Error Message */}
             <AnimatePresence mode="wait">
               {error && (
@@ -95,10 +111,10 @@ const LoginPage = () => {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="mb-6 p-4 rounded-xl bg-error/10 border border-error/30 flex items-start gap-3"
+                  className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3"
                 >
-                  <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-error">{error}</p>
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-400">{error}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -132,9 +148,9 @@ const LoginPage = () => {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-glass-border bg-glass-medium text-gold-400 focus:ring-2 focus:ring-gold-400/20"
+                    className="w-4 h-4 rounded border-gray-600 bg-zinc-800 text-gold-400 focus:ring-2 focus:ring-gold-400/20"
                   />
-                  <span className="text-text-secondary">Remember me</span>
+                  <span className="text-gray-300">Remember me</span>
                 </label>
                 <Link
                   to="/forgot-password"
@@ -160,10 +176,10 @@ const LoginPage = () => {
             {/* Divider */}
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-glass-border" />
+                <div className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-bg-elevated text-text-dimmed">
+                <span className="px-4 bg-zinc-900 text-gray-400">
                   New to Atlas Network?
                 </span>
               </div>
@@ -181,10 +197,10 @@ const LoginPage = () => {
                 </Button>
               </Link>
             </div>
-          </Card>
+          </div>
 
           {/* Footer Links */}
-          <div className="mt-8 text-center text-sm text-text-dimmed">
+          <div className="mt-8 text-center text-sm text-gray-500">
             <p>
               By signing in, you agree to our{' '}
               <Link to="/terms" className="text-gold-400 hover:text-gold-300 transition-colors">
