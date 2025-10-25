@@ -1,0 +1,107 @@
+--- a/backend/src/routes/instructor.js
++++ b/backend/src/routes/instructor.js
+@@ -566,93 +566,17 @@ router.post('/resume', async (req, res) => {
+ });
+ 
+ /**
+- * POST /api/v1/instructor/reset
+- * Reset system (full or soft)
++ * POST /api/v1/instructor/reset - DISABLED
++ * This endpoint has been permanently disabled to protect member data
+  */
+-router.post('/reset', validate('reset'), async (req, res) => {
+-  const connection = await pool.getConnection();
+-
+-  try {
+-    const { type, confirm } = req.validatedBody;
+-
+-    if (!confirm) {
+-      return res.status(400).json({
+-        error: 'Reset must be confirmed',
+-        code: 'VALIDATION_ERROR'
+-      });
+-    }
+-
+-    await connection.beginTransaction();
+-
+-    let participantsAffected = 0;
+-
+-    if (type === 'full') {
+-      // Full reset: Delete all members
+-      const [countResult] = await connection.query(
+-        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
+-      );
+-      participantsAffected = countResult[0].count;
+-
+-      // Delete members (CASCADE will delete referrals, transactions, admin_actions)
+-      await connection.query("DELETE FROM users WHERE role = 'member'");
+-
+-      // Reset system totals
+-      await connection.query(
+-        \`UPDATE system_config SET config_value = '0'
+-         WHERE config_key IN ('total_coins_distributed', 'total_recruitment_fees')\`
+-      );
+-    } else if (type === 'soft') {
+-      // Soft reset: Reset balances but keep accounts
+-      const [countResult] = await connection.query(
+-        "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
+-      );
+-      participantsAffected = countResult[0].count;
+-
+-      // Reset user balances and stats
+-      await connection.query(
+-        \`UPDATE users SET
+-         balance = 0,
+-         total_earned = 0,
+-         direct_recruits = 0,
+-         network_size = 0
+-         WHERE role = 'member'\`
+-      );
+-
+-      // Delete transactions and referrals
+-      await connection.query("DELETE FROM transactions");
+-      await connection.query("DELETE FROM referrals");
+-
+-      // Reset system totals
+-      await connection.query(
+-        \`UPDATE system_config SET config_value = '0'
+-         WHERE config_key IN ('total_coins_distributed', 'total_recruitment_fees')\`
+-      );
+-    }
+-
+-    // Log admin action
+-    await connection.query(
+-      \`INSERT INTO admin_actions (admin_id, action_type, details, ip_address)
+-       VALUES (?, 'reset', ?, ?)\`,
+-      [req.user.id, JSON.stringify({ type, participants_affected: participantsAffected }), req.ip]
+-    );
+-
+-    await connection.commit();
+-
+-    res.json({
+-      success: true,
+-      data: {
+-        message: \`\${type === 'full' ? 'Full' : 'Soft'} reset completed\`,
+-        participantsAffected
+-      }
+-    });
+-  } catch (error) {
+-    await connection.rollback();
+-    console.error('Reset error:', error);
+-    res.status(500).json({
+-      error: 'Failed to reset system',
+-      code: 'DATABASE_ERROR'
+-    });
+-  } finally {
+-    connection.release();
+-  }
++router.post('/reset', async (req, res) => {
++  res.status(403).json({
++    success: false,
++    error: 'Reset functionality has been permanently disabled',
++    message: 'Member data cannot be reset. This is a production platform with permanent data storage.',
++    code: 'FEATURE_DISABLED'
++  });
+ });
+ 
+ /**
