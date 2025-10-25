@@ -18,19 +18,21 @@ const StatsCard = ({
   variant = 'default',
   className = ''
 }) => {
-  // Variant styles
+  // Variant styles with distinct colors
   const variantStyles = {
-    default: 'from-glass-medium to-glass-strong',
-    gold: 'from-gold-400/10 to-gold-600/10 border-gold-400/30',
-    green: 'from-green-400/10 to-green-600/10 border-green-400/30',
-    blue: 'from-blue-400/10 to-blue-600/10 border-blue-400/30'
+    default: 'from-gray-800/50 to-gray-900/50 border-gray-700/30',
+    gold: 'from-yellow-900/30 to-yellow-950/50 border-yellow-700/30',
+    green: 'from-green-900/30 to-green-950/50 border-green-700/30',
+    blue: 'from-blue-900/30 to-blue-950/50 border-blue-700/30',
+    purple: 'from-purple-900/30 to-purple-950/50 border-purple-700/30'
   };
 
   const iconColors = {
-    default: 'text-text-secondary',
+    default: 'text-gray-400',
     gold: 'text-gold-400',
     green: 'text-green-400',
-    blue: 'text-blue-400'
+    blue: 'text-blue-400',
+    purple: 'text-purple-400'
   };
 
   return (
@@ -43,12 +45,12 @@ const StatsCard = ({
       <Card
         variant="glass"
         interactive
-        className={`bg-gradient-to-br ${variantStyles[variant]} h-full`}
+        className={`bg-gradient-to-br ${variantStyles[variant]} border min-h-[160px] flex flex-col`}
       >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-sm font-medium text-text-muted mb-1">{title}</p>
-            <h3 className="text-4xl font-display font-bold text-text-primary tracking-tight">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-400 mb-2">{title}</p>
+            <h3 className="text-4xl font-display font-bold text-white tracking-tight">
               <AnimatedNumber
                 value={value}
                 prefix={prefix}
@@ -58,30 +60,32 @@ const StatsCard = ({
             </h3>
           </div>
           {icon && (
-            <div className={`p-3 rounded-xl bg-glass-medium ${iconColors[variant]}`}>
+            <div className={`p-3 rounded-xl bg-black/30 ${iconColors[variant]}`}>
               {icon}
             </div>
           )}
         </div>
 
-        {(trend || trendValue) && (
-          <div className="flex items-center gap-2 text-sm">
-            {trend === 'up' ? (
-              <div className="flex items-center gap-1 text-success">
-                <TrendingUp className="w-4 h-4" />
-                <span className="font-medium">{trendValue}</span>
-              </div>
-            ) : trend === 'down' ? (
-              <div className="flex items-center gap-1 text-error">
-                <TrendingDown className="w-4 h-4" />
-                <span className="font-medium">{trendValue}</span>
-              </div>
-            ) : (
-              <span className="text-text-dimmed">{trendValue}</span>
-            )}
-            <span className="text-text-dimmed">{trendLabel}</span>
-          </div>
-        )}
+        <div className="mt-auto min-h-[24px]">
+          {(trend || trendValue) && (
+            <div className="flex items-center gap-2 text-sm">
+              {trend === 'up' ? (
+                <div className="flex items-center gap-1 text-green-400">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="font-medium">{trendValue}</span>
+                </div>
+              ) : trend === 'down' ? (
+                <div className="flex items-center gap-1 text-red-400">
+                  <TrendingDown className="w-4 h-4" />
+                  <span className="font-medium">{trendValue}</span>
+                </div>
+              ) : (
+                <span className="text-gray-400">{trendValue}</span>
+              )}
+              <span className="text-gray-500">{trendLabel}</span>
+            </div>
+          )}
+        </div>
       </Card>
     </motion.div>
   );
