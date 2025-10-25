@@ -74,7 +74,8 @@ const LoginPage = () => {
             fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', 
             marginBottom: 'var(--space-md)',
             fontWeight: '700',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.02em',
+            color: 'var(--text-primary)'
           }}>
             Welcome Back
           </h1>
