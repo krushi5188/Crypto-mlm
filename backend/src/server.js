@@ -25,6 +25,10 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - REQUIRED for Render/Vercel/any proxy deployment
+// This allows rate limiter and IP detection to work correctly
+app.set('trust proxy', true);
+
 // Middleware
 // Allow CORS for same-origin requests in production and localhost in dev
 const corsOptions = {
