@@ -206,7 +206,7 @@ const NotificationCenter = () => {
               <button style={styles.viewAllButton} onClick={() => {
                 setIsOpen(false);
                 // Navigate to notifications page (you can add this route later)
-                window.location.href = '/gamification/notifications';
+                window.location.href = '/notifications';
               }}>
                 View All Notifications
               </button>
