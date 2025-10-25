@@ -2,8 +2,8 @@
 
 [data-theme="light"] {
   /* Premium Monochrome Color Palette */
-  --primary-white: #ffffff;
   --primary-black: #000000;
+  --primary-white: #ffffff;
   --accent-gray: #404040;
   --accent-gray-dark: #262626;
   --accent-gray-light: #737373;
@@ -15,7 +15,7 @@
   --glass-bg: rgba(0, 0, 0, 0.02);
   --glass-border: rgba(0, 0, 0, 0.08);
 
-  /* Light Text Colors */
+  /* Light Text Colors - Black on white background */
   --text-primary: #000000;
   --text-secondary: #262626;
   --text-muted: #525252;
@@ -29,6 +29,12 @@
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --shadow-glow: 0 0 40px rgba(0, 0, 0, 0.15);
   --shadow-glow-strong: 0 0 60px rgba(0, 0, 0, 0.25);
+  
+  /* Semantic colors with proper contrast */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 }
 
 /* Light Theme Specific Overrides */
@@ -135,27 +141,27 @@
 
 /* Alerts in light mode */
 [data-theme="light"] .alert-success {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(0, 0, 0, 0.2);
-  color: #262626;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #047857;
 }
 
 [data-theme="light"] .alert-error {
-  background: rgba(82, 82, 82, 0.1);
-  border-color: rgba(82, 82, 82, 0.3);
-  color: #525252;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
 }
 
 [data-theme="light"] .alert-warning {
-  background: rgba(163, 163, 163, 0.1);
-  border-color: rgba(163, 163, 163, 0.3);
-  color: #737373;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #d97706;
 }
 
 [data-theme="light"] .alert-info {
-  background: rgba(115, 115, 115, 0.1);
-  border-color: rgba(115, 115, 115, 0.3);
-  color: #737373;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #2563eb;
 }
 
 /* Scrollbar in light mode */
