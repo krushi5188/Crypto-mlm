@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  BarChart3, TrendingUp, Layers, DollarSign, Users,
+  Activity, Target, Calendar, AlertCircle
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
-import HelpTooltip from '../components/HelpTooltip';
+import { useToast } from '../context/ToastContext';
+import Card from '../components/common/Card';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import {
+  pageVariants,
+  pageTransition,
+  containerVariants,
+  itemVariants,
+  fadeInUp
+} from '../utils/animations';
 
 const InstructorBI = () => {
+  const { error: showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [data, setData] = useState({
@@ -40,6 +57,7 @@ const InstructorBI = () => {
     } catch (err) {
       console.error('Failed to load BI data:', err);
       setError('Failed to load analytics data');
+      showError('Failed to load analytics data');
     } finally {
       setLoading(false);
     }
@@ -47,836 +65,549 @@ const InstructorBI = () => {
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner}>⏳</div>
-          <p style={styles.loadingText}>Loading analytics...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <LoadingSkeleton variant="card" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.container}>
-        <div style={styles.errorContainer}>
-          <p style={styles.errorText}>{error}</p>
-          <button onClick={loadAllData} style={styles.retryButton}>Retry</button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <EmptyState
+            icon={AlertCircle}
+            title="Failed to Load Analytics Data"
+            description={error}
+            actionLabel="Try Again"
+            onAction={loadAllData}
+          />
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Business Intelligence</h1>
-        <p style={styles.subtitle}>
-          Advanced analytics and insights
-          <HelpTooltip content="Track key business metrics including user retention, conversion rates, network depth, earnings distribution, and growth predictions." position="right" maxWidth="250px" />
-        </p>
-      </div>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+          >
+            <BarChart3 className="w-8 h-8 text-blue-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Business Intelligence</h1>
+            <p className="text-lg text-text-muted">Advanced analytics and insights</p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Tabs */}
-      <div style={styles.tabs}>
-        <button
-          onClick={() => setActiveTab('overview')}
-          style={activeTab === 'overview' ? styles.tabActive : styles.tab}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('conversion')}
-          style={activeTab === 'conversion' ? styles.tabActive : styles.tab}
-        >
-          Conversion Funnel
-        </button>
-        <button
-          onClick={() => setActiveTab('network')}
-          style={activeTab === 'network' ? styles.tabActive : styles.tab}
-        >
-          Network Depth
-        </button>
-        <button
-          onClick={() => setActiveTab('earnings')}
-          style={activeTab === 'earnings' ? styles.tabActive : styles.tab}
-        >
-          Earnings Distribution
-        </button>
-        <button
-          onClick={() => setActiveTab('growth')}
-          style={activeTab === 'growth' ? styles.tabActive : styles.tab}
-        >
-          Growth Predictions
-        </button>
-      </div>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="none">
+          <div className="flex gap-3 overflow-x-auto pb-2 px-4 pt-4">
+            {[
+              { value: 'overview', label: 'Overview' },
+              { value: 'conversion', label: 'Conversion Funnel' },
+              { value: 'network', label: 'Network Depth' },
+              { value: 'earnings', label: 'Earnings Distribution' },
+              { value: 'growth', label: 'Growth Predictions' }
+            ].map((tab) => (
+              <motion.button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative whitespace-nowrap ${
+                  activeTab === tab.value ? 'text-gold-400' : 'text-text-dimmed hover:text-text-primary'
+                }`}
+                whileHover={{ y: -2 }}
+                whileTap={{ y: 0 }}
+              >
+                <span>{tab.label}</span>
+                {activeTab === tab.value && (
+                  <motion.div
+                    layoutId="activeBITab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-400"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Tab Content */}
-      <div style={styles.tabContent}>
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div style={styles.overviewGrid}>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Conversion Funnel</h3>
-              {data.conversion && (
-                <div style={styles.funnelContainer}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Conversion Funnel Preview */}
+            {data.conversion && (
+              <Card variant="glass-strong" padding="xl" glow="blue">
+                <div className="flex items-center gap-3 mb-6">
+                  <Target className="w-6 h-6 text-blue-400" />
+                  <h3 className="text-2xl font-semibold">Conversion Funnel</h3>
+                </div>
+                <div className="space-y-4">
                   {data.conversion.funnel.map((stage, index) => (
-                    <div key={index} style={styles.funnelStage}>
-                      <div style={styles.funnelBar}>
-                        <div
-                          style={{
-                            ...styles.funnelBarFill,
-                            width: `${stage.percentage}%`
-                          }}
-                        />
-                      </div>
-                      <div style={styles.funnelInfo}>
-                        <span style={styles.funnelStage}>{stage.stage}</span>
-                        <span style={styles.funnelCount}>
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-semibold">{stage.stage}</span>
+                        <span className="text-text-muted">
                           {stage.count} ({stage.percentage.toFixed(1)}%)
                         </span>
                       </div>
+                      <div className="h-3 bg-glass-medium rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${stage.percentage}%` }}
+                          transition={{ duration: 1, delay: index * 0.1 }}
+                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                        />
+                      </div>
                     </div>
                   ))}
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Avg Days to First Commission:</span>
-                    <span style={styles.statValue}>
-                      {data.conversion.avgDaysToFirstCommission.toFixed(1)} days
-                    </span>
-                  </div>
+                  <Card variant="glass-medium" padding="md" className="mt-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-text-dimmed">Avg Days to First Commission</span>
+                      <span className="font-bold text-blue-400">
+                        {data.conversion.avgDaysToFirstCommission.toFixed(1)} days
+                      </span>
+                    </div>
+                  </Card>
                 </div>
-              )}
-            </div>
+              </Card>
+            )}
 
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Network Depth</h3>
-              {data.networkDepth && (
-                <div>
-                  <div style={styles.statGrid}>
-                    <div style={styles.statItem}>
-                      <span style={styles.statLabel}>Max Depth:</span>
-                      <span style={styles.statValue}>{data.networkDepth.maxDepth} levels</span>
-                    </div>
-                    <div style={styles.statItem}>
-                      <span style={styles.statLabel}>Avg Depth:</span>
-                      <span style={styles.statValue}>{data.networkDepth.avgDepth} levels</span>
-                    </div>
-                  </div>
-                  <div style={styles.depthList}>
-                    {data.networkDepth.distribution.slice(0, 5).map((level, index) => (
-                      <div key={index} style={styles.depthItem}>
-                        <span style={styles.depthLevel}>Level {level.level}</span>
-                        <span style={styles.depthCount}>{level.userCount} users</span>
-                        <span style={styles.depthEarnings}>
-                          ${level.totalEarned.toFixed(2)}
-                        </span>
+            {/* Network Depth Preview */}
+            {data.networkDepth && (
+              <Card variant="glass-strong" padding="xl" glow="purple">
+                <div className="flex items-center gap-3 mb-6">
+                  <Layers className="w-6 h-6 text-purple-400" />
+                  <h3 className="text-2xl font-semibold">Network Depth</h3>
+                </div>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card variant="glass-medium" padding="lg">
+                      <div className="text-center">
+                        <p className="text-sm text-text-dimmed mb-2">Max Depth</p>
+                        <p className="text-4xl font-display font-bold text-purple-400">
+                          <AnimatedNumber value={data.networkDepth.maxDepth} />
+                        </p>
+                        <p className="text-xs text-text-dimmed mt-1">levels</p>
                       </div>
+                    </Card>
+                    <Card variant="glass-medium" padding="lg">
+                      <div className="text-center">
+                        <p className="text-sm text-text-dimmed mb-2">Avg Depth</p>
+                        <p className="text-4xl font-display font-bold text-blue-400">
+                          <AnimatedNumber value={data.networkDepth.avgDepth} decimals={1} />
+                        </p>
+                        <p className="text-xs text-text-dimmed mt-1">levels</p>
+                      </div>
+                    </Card>
+                  </div>
+                  <div className="space-y-2">
+                    {data.networkDepth.distribution.slice(0, 5).map((level, index) => (
+                      <Card key={index} variant="glass-medium" padding="sm">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-semibold">Level {level.level}</span>
+                          <div className="flex gap-4 text-text-muted">
+                            <span>{level.userCount} users</span>
+                            <span className="text-green-400 font-semibold">
+                              ${level.totalEarned.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+              </Card>
+            )}
 
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Earnings Distribution</h3>
-              {data.earningsDistribution && (
-                <div>
-                  <div style={styles.percentileGrid}>
-                    <div style={styles.percentileItem}>
-                      <span style={styles.percentileLabel}>25th</span>
-                      <span style={styles.percentileValue}>
-                        ${data.earningsDistribution.percentiles.p25.toFixed(2)}
+            {/* Earnings Distribution Preview */}
+            {data.earningsDistribution && (
+              <Card variant="glass-strong" padding="xl" glow="gold">
+                <div className="flex items-center gap-3 mb-6">
+                  <DollarSign className="w-6 h-6 text-gold-400" />
+                  <h3 className="text-2xl font-semibold">Earnings Distribution</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(data.earningsDistribution.percentiles).map(([key, value]) => (
+                    <Card key={key} variant="glass-medium" padding="lg">
+                      <div className="text-center">
+                        <p className="text-xs text-text-dimmed mb-2">{key.toUpperCase()}</p>
+                        <p className="text-2xl font-display font-bold text-gold-400">
+                          ${value.toFixed(2)}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Growth Predictions Preview */}
+            {data.growthPredictions && (
+              <Card variant="glass-strong" padding="xl" glow="green">
+                <div className="flex items-center gap-3 mb-6">
+                  <TrendingUp className="w-6 h-6 text-green-400" />
+                  <h3 className="text-2xl font-semibold">Growth Projections</h3>
+                </div>
+                <div className="space-y-6">
+                  <Card variant="glass-medium" padding="lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-dimmed">Growth Rate</span>
+                      <span className="text-2xl font-bold text-green-400">
+                        {data.growthPredictions.growthRate}
                       </span>
                     </div>
-                    <div style={styles.percentileItem}>
-                      <span style={styles.percentileLabel}>50th</span>
-                      <span style={styles.percentileValue}>
-                        ${data.earningsDistribution.percentiles.p50.toFixed(2)}
-                      </span>
-                    </div>
-                    <div style={styles.percentileItem}>
-                      <span style={styles.percentileLabel}>75th</span>
-                      <span style={styles.percentileValue}>
-                        ${data.earningsDistribution.percentiles.p75.toFixed(2)}
-                      </span>
-                    </div>
-                    <div style={styles.percentileItem}>
-                      <span style={styles.percentileLabel}>90th</span>
-                      <span style={styles.percentileValue}>
-                        ${data.earningsDistribution.percentiles.p90.toFixed(2)}
-                      </span>
-                    </div>
+                  </Card>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card variant="glass-medium" padding="lg">
+                      <div className="text-center">
+                        <p className="text-sm text-text-dimmed mb-2">7-Day</p>
+                        <p className="text-3xl font-display font-bold text-blue-400">
+                          <AnimatedNumber value={data.growthPredictions.projections[6]?.projectedUsers || 0} />
+                        </p>
+                        <p className="text-xs text-text-dimmed mt-1">users</p>
+                      </div>
+                    </Card>
+                    <Card variant="glass-medium" padding="lg">
+                      <div className="text-center">
+                        <p className="text-sm text-text-dimmed mb-2">30-Day</p>
+                        <p className="text-3xl font-display font-bold text-green-400">
+                          <AnimatedNumber value={data.growthPredictions.projections[29]?.projectedUsers || 0} />
+                        </p>
+                        <p className="text-xs text-text-dimmed mt-1">users</p>
+                      </div>
+                    </Card>
                   </div>
                 </div>
-              )}
-            </div>
-
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Growth Projections</h3>
-              {data.growthPredictions && (
-                <div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>Growth Rate:</span>
-                    <span style={styles.statValue}>{data.growthPredictions.growthRate}</span>
-                  </div>
-                  <div style={styles.statItem}>
-                    <span style={styles.statLabel}>30-Day Projection:</span>
-                    <span style={styles.statValue}>
-                      {data.growthPredictions.projections[29]?.projectedUsers || 'N/A'} users
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+              </Card>
+            )}
           </div>
         )}
 
+        {/* Conversion Funnel Tab */}
         {activeTab === 'conversion' && data.conversion && (
-          <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+              <Target className="w-6 h-6 text-blue-400" />
               Conversion Funnel Analysis
-              <HelpTooltip content="Shows the percentage of users progressing through each stage from registration to active participation. Helps identify where users drop off." position="right" maxWidth="280px" />
             </h2>
-            <div style={styles.largeCard}>
+            <div className="space-y-6">
               {data.conversion.funnel.map((stage, index) => (
-                <div key={index} style={styles.largeFunnelStage}>
-                  <div style={styles.funnelStageHeader}>
-                    <h3 style={styles.funnelStageTitle}>{stage.stage}</h3>
-                    <div style={styles.funnelStageStats}>
-                      <span style={styles.funnelStageCount}>{stage.count} users</span>
-                      <span style={styles.funnelStagePercentage}>
-                        {stage.percentage.toFixed(1)}%
-                      </span>
+                <Card key={index} variant="glass" padding="lg">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-xl font-semibold">{stage.stage}</h3>
+                      <div className="text-right">
+                        <div className="text-3xl font-display font-bold text-blue-400">
+                          {stage.percentage.toFixed(1)}%
+                        </div>
+                        <div className="text-sm text-text-muted">{stage.count} users</div>
+                      </div>
                     </div>
-                  </div>
-                  <div style={styles.largeFunnelBar}>
-                    <div
-                      style={{
-                        ...styles.largeFunnelBarFill,
-                        width: `${stage.percentage}%`
-                      }}
-                    />
-                  </div>
-                  {index < data.conversion.funnel.length - 1 && (
-                    <div style={styles.funnelDropoff}>
-                      Dropoff: {(stage.percentage - data.conversion.funnel[index + 1].percentage).toFixed(1)}%
+                    <div className="h-4 bg-glass-medium rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stage.percentage}%` }}
+                        transition={{ duration: 1, delay: index * 0.1 }}
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                      />
                     </div>
-                  )}
-                </div>
+                    {index < data.conversion.funnel.length - 1 && (
+                      <div className="text-sm text-red-400 font-semibold">
+                        Dropoff: {(stage.percentage - data.conversion.funnel[index + 1].percentage).toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                </Card>
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
+        {/* Network Depth Tab */}
         {activeTab === 'network' && data.networkDepth && (
-          <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+              <Layers className="w-6 h-6 text-purple-400" />
               Network Depth Distribution
-              <HelpTooltip content="Shows how many users exist at each level of the referral tree. Higher average depth indicates deeper network penetration." position="right" maxWidth="280px" />
             </h2>
-            <div style={styles.statsRow}>
-              <div style={styles.statCard}>
-                <span style={styles.statCardLabel}>
-                  Maximum Depth
-                  <HelpTooltip content="The deepest level reached in the referral network." position="top" />
-                </span>
-                <span style={styles.statCardValue}>{data.networkDepth.maxDepth}</span>
-                <span style={styles.statCardUnit}>levels</span>
-              </div>
-              <div style={styles.statCard}>
-                <span style={styles.statCardLabel}>Average Depth</span>
-                <span style={styles.statCardValue}>{data.networkDepth.avgDepth}</span>
-                <span style={styles.statCardUnit}>levels</span>
-              </div>
-              <div style={styles.statCard}>
-                <span style={styles.statCardLabel}>Total Levels</span>
-                <span style={styles.statCardValue}>{data.networkDepth.distribution.length}</span>
-                <span style={styles.statCardUnit}>active</span>
-              </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card variant="glass-medium" padding="xl" glow="purple">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">Maximum Depth</p>
+                  <p className="text-6xl font-display font-bold text-purple-400 mb-2">
+                    <AnimatedNumber value={data.networkDepth.maxDepth} />
+                  </p>
+                  <p className="text-sm text-text-dimmed">levels</p>
+                </div>
+              </Card>
+              <Card variant="glass-medium" padding="xl" glow="blue">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">Average Depth</p>
+                  <p className="text-6xl font-display font-bold text-blue-400 mb-2">
+                    <AnimatedNumber value={data.networkDepth.avgDepth} decimals={1} />
+                  </p>
+                  <p className="text-sm text-text-dimmed">levels</p>
+                </div>
+              </Card>
+              <Card variant="glass-medium" padding="xl" glow="green">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">Total Levels</p>
+                  <p className="text-6xl font-display font-bold text-green-400 mb-2">
+                    <AnimatedNumber value={data.networkDepth.distribution.length} />
+                  </p>
+                  <p className="text-sm text-text-dimmed">active</p>
+                </div>
+              </Card>
             </div>
 
-            <div style={styles.levelTable}>
-              <div style={styles.levelTableHeader}>
-                <span style={styles.levelTableCol}>Level</span>
-                <span style={styles.levelTableCol}>Users</span>
-                <span style={styles.levelTableCol}>Avg Network</span>
-                <span style={styles.levelTableCol}>Total Earned</span>
+            <Card variant="glass" padding="none">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-glass-border">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Level</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Users</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Avg Network</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Total Earned</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-glass-border">
+                    {data.networkDepth.distribution.map((level, index) => (
+                      <motion.tr
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                        className="transition-colors"
+                      >
+                        <td className="px-6 py-4 font-semibold">Level {level.level}</td>
+                        <td className="px-6 py-4 text-right text-blue-400 font-semibold">
+                          <AnimatedNumber value={level.userCount} />
+                        </td>
+                        <td className="px-6 py-4 text-right text-purple-400">
+                          {level.avgNetworkSize.toFixed(1)}
+                        </td>
+                        <td className="px-6 py-4 text-right text-green-400 font-semibold">
+                          ${level.totalEarned.toFixed(2)}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {data.networkDepth.distribution.map((level, index) => (
-                <div key={index} style={styles.levelTableRow}>
-                  <span style={styles.levelTableCol}>Level {level.level}</span>
-                  <span style={styles.levelTableCol}>{level.userCount}</span>
-                  <span style={styles.levelTableCol}>{level.avgNetworkSize.toFixed(1)}</span>
-                  <span style={styles.levelTableCol}>${level.totalEarned.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            </Card>
+          </Card>
         )}
 
+        {/* Earnings Distribution Tab */}
         {activeTab === 'earnings' && data.earningsDistribution && (
-          <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+              <DollarSign className="w-6 h-6 text-gold-400" />
               Earnings Distribution
-              <HelpTooltip content="Statistical breakdown of user earnings showing percentiles and distribution across earning brackets." position="right" maxWidth="280px" />
             </h2>
 
-            <h3 style={styles.subsectionTitle}>
-              Percentiles
-              <HelpTooltip content="P50 (median) means 50% of users earned this amount or less. P90 means 90% earned this amount or less." position="right" maxWidth="280px" />
-            </h3>
-            <div style={styles.percentileRow}>
-              {Object.entries(data.earningsDistribution.percentiles).map(([key, value]) => (
-                <div key={key} style={styles.percentileCard}>
-                  <span style={styles.percentileCardLabel}>{key.toUpperCase()}</span>
-                  <span style={styles.percentileCardValue}>${value.toFixed(2)}</span>
-                </div>
+            <h3 className="text-xl font-semibold mb-4">Percentiles</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+              {Object.entries(data.earningsDistribution.percentiles).map(([key, value], index) => (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card variant="glass-medium" padding="lg" glow="gold">
+                    <div className="text-center">
+                      <p className="text-xs text-text-dimmed mb-2">{key.toUpperCase()}</p>
+                      <p className="text-3xl font-display font-bold text-gold-400">
+                        ${value.toFixed(2)}
+                      </p>
+                    </div>
+                  </Card>
+                </motion.div>
               ))}
             </div>
 
-            <h3 style={styles.subsectionTitle}>Distribution by Bracket</h3>
-            <div style={styles.distributionTable}>
-              <div style={styles.distributionTableHeader}>
-                <span style={styles.distributionTableCol}>Bracket</span>
-                <span style={styles.distributionTableCol}>Users</span>
-                <span style={styles.distributionTableCol}>Min</span>
-                <span style={styles.distributionTableCol}>Max</span>
-                <span style={styles.distributionTableCol}>Average</span>
+            <h3 className="text-xl font-semibold mb-4">Distribution by Bracket</h3>
+            <Card variant="glass" padding="none">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-glass-border">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-dimmed">Bracket</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Users</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Min</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Max</th>
+                      <th className="px-6 py-4 text-right text-sm font-semibold text-text-dimmed">Average</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-glass-border">
+                    {data.earningsDistribution.distribution.map((bracket, index) => (
+                      <motion.tr
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                        className="transition-colors"
+                      >
+                        <td className="px-6 py-4 font-semibold">${bracket.bracket}</td>
+                        <td className="px-6 py-4 text-right text-blue-400 font-semibold">
+                          <AnimatedNumber value={bracket.userCount} />
+                        </td>
+                        <td className="px-6 py-4 text-right text-text-muted">
+                          ${bracket.minEarned.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-right text-text-muted">
+                          ${bracket.maxEarned.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-right text-green-400 font-semibold">
+                          ${bracket.avgEarned.toFixed(2)}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {data.earningsDistribution.distribution.map((bracket, index) => (
-                <div key={index} style={styles.distributionTableRow}>
-                  <span style={styles.distributionTableCol}>${bracket.bracket}</span>
-                  <span style={styles.distributionTableCol}>{bracket.userCount}</span>
-                  <span style={styles.distributionTableCol}>${bracket.minEarned.toFixed(2)}</span>
-                  <span style={styles.distributionTableCol}>${bracket.maxEarned.toFixed(2)}</span>
-                  <span style={styles.distributionTableCol}>${bracket.avgEarned.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+            </Card>
+          </Card>
         )}
 
+        {/* Growth Predictions Tab */}
         {activeTab === 'growth' && data.growthPredictions && (
-          <div style={styles.detailView}>
-            <h2 style={styles.sectionTitle}>
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+              <TrendingUp className="w-6 h-6 text-green-400" />
               Growth Predictions
-              <HelpTooltip content="Linear regression projections based on historical growth patterns over the last 30 days." position="right" maxWidth="280px" />
             </h2>
 
-            <div style={styles.growthSummary}>
-              <div style={styles.growthStatCard}>
-                <span style={styles.growthStatLabel}>Growth Rate</span>
-                <span style={styles.growthStatValue}>{data.growthPredictions.growthRate}</span>
-              </div>
-              <div style={styles.growthStatCard}>
-                <span style={styles.growthStatLabel}>7-Day Projection</span>
-                <span style={styles.growthStatValue}>
-                  {data.growthPredictions.projections[6]?.projectedUsers || 'N/A'} users
-                </span>
-              </div>
-              <div style={styles.growthStatCard}>
-                <span style={styles.growthStatLabel}>30-Day Projection</span>
-                <span style={styles.growthStatValue}>
-                  {data.growthPredictions.projections[29]?.projectedUsers || 'N/A'} users
-                </span>
-              </div>
-            </div>
-
-            <h3 style={styles.subsectionTitle}>Historical Growth (Last 30 Days)</h3>
-            <div style={styles.growthTable}>
-              {data.growthPredictions.historicalGrowth.slice(-10).map((day, index) => (
-                <div key={index} style={styles.growthTableRow}>
-                  <span style={styles.growthTableDate}>
-                    {new Date(day.date).toLocaleDateString()}
-                  </span>
-                  <span style={styles.growthTableValue}>+{day.newUsers} new</span>
-                  <span style={styles.growthTableValue}>{day.cumulativeUsers} total</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card variant="glass-medium" padding="xl" glow="blue">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">Growth Rate</p>
+                  <p className="text-4xl font-display font-bold text-blue-400 mb-2">
+                    {data.growthPredictions.growthRate}
+                  </p>
                 </div>
-              ))}
+              </Card>
+              <Card variant="glass-medium" padding="xl" glow="purple">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">7-Day Projection</p>
+                  <p className="text-4xl font-display font-bold text-purple-400 mb-2">
+                    <AnimatedNumber value={data.growthPredictions.projections[6]?.projectedUsers || 0} />
+                  </p>
+                  <p className="text-sm text-text-dimmed">users</p>
+                </div>
+              </Card>
+              <Card variant="glass-medium" padding="xl" glow="green">
+                <div className="text-center">
+                  <p className="text-sm text-text-dimmed mb-3">30-Day Projection</p>
+                  <p className="text-4xl font-display font-bold text-green-400 mb-2">
+                    <AnimatedNumber value={data.growthPredictions.projections[29]?.projectedUsers || 0} />
+                  </p>
+                  <p className="text-sm text-text-dimmed">users</p>
+                </div>
+              </Card>
             </div>
 
-            <h3 style={styles.subsectionTitle}>30-Day Projection</h3>
-            <div style={styles.projectionList}>
-              {data.growthPredictions.projections
-                .filter((_, index) => index % 5 === 0 || index === data.growthPredictions.projections.length - 1)
-                .map((proj, index) => (
-                  <div key={index} style={styles.projectionItem}>
-                    <span style={styles.projectionDay}>Day +{proj.day}</span>
-                    <span style={styles.projectionUsers}>{proj.projectedUsers} users</span>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-400" />
+                  Historical Growth (Last 10 Days)
+                </h3>
+                <div className="space-y-3">
+                  {data.growthPredictions.historicalGrowth.slice(-10).map((day, index) => (
+                    <Card key={index} variant="glass-medium" padding="md">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">
+                          {new Date(day.date).toLocaleDateString()}
+                        </span>
+                        <div className="flex gap-4 text-sm">
+                          <span className="text-green-400 font-semibold">+{day.newUsers} new</span>
+                          <span className="text-text-muted">{day.cumulativeUsers} total</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-green-400" />
+                  30-Day Projection
+                </h3>
+                <div className="space-y-3">
+                  {data.growthPredictions.projections
+                    .filter((_, index) => index % 5 === 0 || index === data.growthPredictions.projections.length - 1)
+                    .map((proj, index) => (
+                      <Card key={index} variant="glass-medium" padding="md">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">Day +{proj.day}</span>
+                          <span className="text-green-400 font-bold">
+                            <AnimatedNumber value={proj.projectedUsers} /> users
+                          </span>
+                        </div>
+                      </Card>
+                    ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </Card>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
-};
-
-const styles = {
-  container: {
-    padding: 'var(--space-lg)',
-    maxWidth: '1400px',
-    margin: '0 auto'
-  },
-  header: {
-    marginBottom: 'var(--space-lg)'
-  },
-  title: {
-    fontSize: 'var(--text-4xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-xs)'
-  },
-  subtitle: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-muted)'
-  },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '400px',
-    gap: 'var(--space-md)'
-  },
-  spinner: {
-    fontSize: '3rem',
-    animation: 'pulse 2s ease-in-out infinite'
-  },
-  loadingText: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-muted)'
-  },
-  errorContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-3xl)'
-  },
-  errorText: {
-    fontSize: 'var(--text-base)',
-    color: '#ef4444'
-  },
-  retryButton: {
-    padding: '0.75rem 1.5rem',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--text-primary)',
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  tabs: {
-    display: 'flex',
-    gap: 'var(--space-xs)',
-    marginBottom: 'var(--space-lg)',
-    borderBottom: '2px solid var(--glass-border)',
-    overflowX: 'auto'
-  },
-  tab: {
-    padding: 'var(--space-md) var(--space-lg)',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    color: 'var(--text-muted)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)',
-    marginBottom: '-2px',
-    whiteSpace: 'nowrap'
-  },
-  tabActive: {
-    padding: 'var(--space-md) var(--space-lg)',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid var(--primary-gold)',
-    color: 'var(--primary-gold)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    marginBottom: '-2px',
-    whiteSpace: 'nowrap'
-  },
-  tabContent: {
-    minHeight: '400px'
-  },
-  overviewGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: 'var(--space-lg)'
-  },
-  card: {
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-lg)'
-  },
-  cardTitle: {
-    fontSize: 'var(--text-xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-md)'
-  },
-  funnelContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-md)'
-  },
-  funnelStage: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-xs)'
-  },
-  funnelBar: {
-    height: '8px',
-    background: 'var(--bg-tertiary)',
-    borderRadius: '4px',
-    overflow: 'hidden'
-  },
-  funnelBarFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, var(--primary-gold), var(--accent-green))',
-    transition: 'width var(--transition-base)'
-  },
-  funnelInfo: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: 'var(--text-sm)'
-  },
-  funnelCount: {
-    color: 'var(--text-muted)',
-    fontWeight: '600'
-  },
-  statGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 'var(--space-md)',
-    marginBottom: 'var(--space-md)'
-  },
-  statItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 'var(--space-sm)',
-    background: 'var(--bg-tertiary)',
-    borderRadius: 'var(--radius-md)'
-  },
-  statLabel: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)',
-    fontWeight: '500'
-  },
-  statValue: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-primary)',
-    fontWeight: '700'
-  },
-  depthList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-xs)'
-  },
-  depthItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: 'var(--space-sm)',
-    background: 'var(--bg-tertiary)',
-    borderRadius: 'var(--radius-sm)',
-    fontSize: 'var(--text-sm)'
-  },
-  depthLevel: {
-    fontWeight: '600',
-    color: 'var(--text-primary)'
-  },
-  depthCount: {
-    color: 'var(--text-muted)'
-  },
-  depthEarnings: {
-    color: 'var(--accent-green)',
-    fontWeight: '600'
-  },
-  percentileGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 'var(--space-sm)'
-  },
-  percentileItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: 'var(--space-sm)',
-    background: 'var(--bg-tertiary)',
-    borderRadius: 'var(--radius-md)',
-    textAlign: 'center'
-  },
-  percentileLabel: {
-    fontSize: 'var(--text-xs)',
-    color: 'var(--text-muted)',
-    marginBottom: 'var(--space-xs)'
-  },
-  percentileValue: {
-    fontSize: 'var(--text-lg)',
-    color: 'var(--text-primary)',
-    fontWeight: '700'
-  },
-  detailView: {
-    maxWidth: '1000px'
-  },
-  sectionTitle: {
-    fontSize: 'var(--text-3xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-lg)'
-  },
-  subsectionTitle: {
-    fontSize: 'var(--text-xl)',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-    marginTop: 'var(--space-xl)',
-    marginBottom: 'var(--space-md)'
-  },
-  largeCard: {
-    padding: 'var(--space-xl)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-xl)',
-    boxShadow: 'var(--shadow-xl)'
-  },
-  largeFunnelStage: {
-    marginBottom: 'var(--space-xl)'
-  },
-  funnelStageHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 'var(--space-sm)'
-  },
-  funnelStageTitle: {
-    fontSize: 'var(--text-lg)',
-    fontWeight: '700',
-    color: 'var(--text-primary)'
-  },
-  funnelStageStats: {
-    display: 'flex',
-    gap: 'var(--space-md)',
-    alignItems: 'center'
-  },
-  funnelStageCount: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-secondary)',
-    fontWeight: '600'
-  },
-  funnelStagePercentage: {
-    fontSize: 'var(--text-xl)',
-    color: 'var(--primary-gold)',
-    fontWeight: '700'
-  },
-  largeFunnelBar: {
-    height: '16px',
-    background: 'var(--bg-tertiary)',
-    borderRadius: '8px',
-    overflow: 'hidden'
-  },
-  largeFunnelBarFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, var(--primary-gold), var(--accent-green))',
-    transition: 'width var(--transition-base)'
-  },
-  funnelDropoff: {
-    marginTop: 'var(--space-sm)',
-    fontSize: 'var(--text-sm)',
-    color: '#ef4444',
-    fontWeight: '600'
-  },
-  statsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: 'var(--space-md)',
-    marginBottom: 'var(--space-xl)'
-  },
-  statCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    textAlign: 'center'
-  },
-  statCardLabel: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)',
-    marginBottom: 'var(--space-sm)'
-  },
-  statCardValue: {
-    fontSize: 'var(--text-4xl)',
-    fontWeight: '700',
-    color: 'var(--primary-gold)',
-    marginBottom: 'var(--space-xs)'
-  },
-  statCardUnit: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)'
-  },
-  levelTable: {
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    overflow: 'hidden'
-  },
-  levelTableHeader: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1.5fr 1.5fr',
-    gap: 'var(--space-sm)',
-    padding: 'var(--space-md)',
-    background: 'var(--bg-tertiary)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '700',
-    color: 'var(--text-secondary)'
-  },
-  levelTableRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1.5fr 1.5fr',
-    gap: 'var(--space-sm)',
-    padding: 'var(--space-md)',
-    borderTop: '1px solid var(--glass-border)',
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-primary)',
-    transition: 'background var(--transition-fast)'
-  },
-  levelTableCol: {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  percentileRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-    gap: 'var(--space-md)',
-    marginBottom: 'var(--space-xl)'
-  },
-  percentileCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: 'var(--space-md)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)'
-  },
-  percentileCardLabel: {
-    fontSize: 'var(--text-xs)',
-    color: 'var(--text-muted)',
-    marginBottom: 'var(--space-xs)',
-    fontWeight: '600'
-  },
-  percentileCardValue: {
-    fontSize: 'var(--text-xl)',
-    color: 'var(--accent-green)',
-    fontWeight: '700'
-  },
-  distributionTable: {
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    overflow: 'hidden'
-  },
-  distributionTableHeader: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-    gap: 'var(--space-sm)',
-    padding: 'var(--space-md)',
-    background: 'var(--bg-tertiary)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '700',
-    color: 'var(--text-secondary)'
-  },
-  distributionTableRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-    gap: 'var(--space-sm)',
-    padding: 'var(--space-md)',
-    borderTop: '1px solid var(--glass-border)',
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-primary)'
-  },
-  distributionTableCol: {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  },
-  growthSummary: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: 'var(--space-lg)',
-    marginBottom: 'var(--space-xl)'
-  },
-  growthStatCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)'
-  },
-  growthStatLabel: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)',
-    marginBottom: 'var(--space-sm)'
-  },
-  growthStatValue: {
-    fontSize: 'var(--text-2xl)',
-    fontWeight: '700',
-    color: 'var(--primary-gold)'
-  },
-  growthTable: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-xs)',
-    marginBottom: 'var(--space-xl)'
-  },
-  growthTableRow: {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr 1fr',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-sm)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 'var(--text-sm)'
-  },
-  growthTableDate: {
-    color: 'var(--text-primary)',
-    fontWeight: '600'
-  },
-  growthTableValue: {
-    color: 'var(--text-muted)'
-  },
-  projectionList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-xs)'
-  },
-  projectionItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: 'var(--space-sm)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 'var(--text-sm)'
-  },
-  projectionDay: {
-    color: 'var(--text-primary)',
-    fontWeight: '600'
-  },
-  projectionUsers: {
-    color: 'var(--accent-green)',
-    fontWeight: '700'
-  }
 };
 
 export default InstructorBI;
