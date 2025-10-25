@@ -44,7 +44,7 @@ const Sidebar = () => {
   // Navigation items for instructors
   const instructorNavItems = [
     { path: '/instructor/analytics', label: 'Analytics', icon: BarChart3 },
-    { path: '/instructor/participants', label: 'Participants', icon: UserCheck },
+    { path: '/instructor/participants', label: 'Members', icon: UserCheck },
     { path: '/instructor/network', label: 'Network', icon: Network },
     { path: '/instructor/referrals', label: 'Referrals', icon: Users },
     { path: '/instructor/deposits', label: 'Deposits', icon: DollarSign },
