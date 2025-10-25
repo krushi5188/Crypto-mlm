@@ -12,18 +12,13 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference
+    // Always default to dark theme for monochrome black design
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       return savedTheme;
     }
 
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
-
-    return 'dark'; // Default to dark
+    return 'dark'; // Always default to dark
   });
 
   useEffect(() => {
