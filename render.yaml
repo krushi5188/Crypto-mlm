@@ -1,0 +1,115 @@
+# Render.com Infrastructure Configuration
+# This file defines all services needed to run Atlas Network on Render.com
+
+services:
+  # Backend API Service
+  - type: web
+    name: atlas-network-api
+    runtime: node
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm ci && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: atlas-network-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: atlas-network-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: atlas-network-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: atlas-network-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: atlas-network-db
+          property: password
+      - key: DB_SSL
+        value: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ADMIN_EMAIL
+        value: instructor@university.edu
+      - key: ADMIN_USERNAME
+        value: instructor
+      - key: ADMIN_PASSWORD
+        sync: false # Set this manually in Render dashboard
+      - key: MAX_PARTICIPANTS
+        value: 300
+      - key: SEMESTER_DURATION_DAYS
+        value: 112
+      - key: RECRUITMENT_FEE
+        value: 100
+      - key: COMMISSION_LEVEL_1
+        value: 10
+      - key: COMMISSION_LEVEL_2
+        value: 7
+      - key: COMMISSION_LEVEL_3
+        value: 5
+      - key: COMMISSION_LEVEL_4
+        value: 3
+      - key: COMMISSION_LEVEL_5
+        value: 2
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: FRONTEND_URL
+        sync: false # Set this after frontend deployment
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+  # Frontend Static Site
+  - type: web
+    name: atlas-network-frontend
+    runtime: static
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # Set this after backend deployment (https://your-api.onrender.com/api/v1)
+      - key: VITE_APP_NAME
+        value: Atlas Network Simulator
+      - key: VITE_REFERRAL_BASE_URL
+        sync: false # Set this after frontend deployment (https://your-frontend.onrender.com/register)
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true
+
+# Database
+databases:
+  - name: atlas-network-db
+    databaseName: atlas_network
+    user: atlas_admin
+    plan: free
+    region: oregon
+    ipAllowList: []
