@@ -1,19 +1,39 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Wallet, Plus, Star, Trash2, CheckCircle, AlertCircle,
+  Info, Copy, ExternalLink
+} from 'lucide-react';
 import { memberAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 
 const MemberWallets = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     wallet_address: '',
     wallet_type: 'manual',
     network: 'TRC20',
     label: ''
   });
-  const [error, setError] = useState(null);
+  const [formError, setFormError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [metaMaskAvailable, setMetaMaskAvailable] = useState(false);
 
   useEffect(() => {
@@ -27,10 +47,15 @@ const MemberWallets = () => {
 
   const loadWallets = async () => {
     try {
+      setLoading(true);
       const response = await memberAPI.getWallets();
       setWallets(response.data.data.wallets || []);
-    } catch (error) {
-      console.error('Failed to load wallets:', error);
+      setError(null);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to load wallets';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load wallets:', err);
     } finally {
       setLoading(false);
     }
@@ -38,7 +63,7 @@ const MemberWallets = () => {
 
   const connectMetaMask = async () => {
     if (!metaMaskAvailable) {
-      alert('MetaMask is not installed. Please install MetaMask extension.');
+      showError('MetaMask is not installed. Please install MetaMask extension.');
       return;
     }
 
@@ -46,324 +71,377 @@ const MemberWallets = () => {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
 
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
         wallet_address: address,
         wallet_type: 'metamask',
         network: 'ERC20',
         label: 'MetaMask Wallet'
-      }));
-      setShowForm(true);
-    } catch (error) {
-      console.error('MetaMask connection error:', error);
-      alert('Failed to connect MetaMask');
+      });
+      setShowModal(true);
+      showSuccess('MetaMask connected successfully');
+    } catch (err) {
+      console.error('MetaMask connection error:', err);
+      showError('Failed to connect MetaMask');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
+    setSubmitting(true);
 
     try {
       await memberAPI.addWallet(formData);
-      setShowForm(false);
+      showSuccess('Wallet added successfully');
+      setShowModal(false);
       setFormData({ wallet_address: '', wallet_type: 'manual', network: 'TRC20', label: '' });
       await loadWallets();
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to add wallet');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to add wallet';
+      setFormError(errorMsg);
+      showError(errorMsg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleSetPrimary = async (id) => {
     try {
       await memberAPI.setPrimaryWallet(id);
+      showSuccess('Primary wallet updated');
       await loadWallets();
-    } catch (error) {
-      alert('Failed to set primary wallet');
+    } catch (err) {
+      showError('Failed to set primary wallet');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this wallet?')) return;
-
     try {
       await memberAPI.deleteWallet(id);
+      showSuccess('Wallet deleted successfully');
       await loadWallets();
-    } catch (error) {
-      alert('Failed to delete wallet');
+    } catch (err) {
+      showError('Failed to delete wallet');
     }
   };
 
-  const getNetworkBadge = (network) => (
-    <span style={{
-      padding: '0.25rem 0.5rem',
-      background: network === 'TRC20' ? 'rgba(255, 68, 68, 0.2)' : network === 'ERC20' ? 'rgba(98, 126, 234, 0.2)' : 'rgba(243, 186, 47, 0.2)',
-      color: network === 'TRC20' ? '#ff4444' : network === 'ERC20' ? '#627eea' : '#f3ba2f',
-      borderRadius: '6px',
-      fontSize: '0.75rem',
-      fontWeight: '700'
-    }}>
-      {network}
-    </span>
-  );
+  const copyAddress = (address) => {
+    navigator.clipboard.writeText(address);
+    showSuccess('Address copied to clipboard');
+  };
+
+  const getNetworkInfo = (network) => {
+    const networkMap = {
+      TRC20: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'TRC20' },
+      ERC20: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', label: 'ERC20' },
+      BEP20: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'BEP20' }
+    };
+    return networkMap[network] || networkMap.TRC20;
+  };
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading wallets...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="300px" />
+          <LoadingSkeleton variant="text" width="500px" />
+        </div>
+        <div className="flex gap-3">
+          <LoadingSkeleton variant="button" width="200px" />
+          <LoadingSkeleton variant="button" width="200px" />
+        </div>
+        <div className="space-y-4">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>My Wallets</h1>
-        <p style={{ color: '#a0aec0' }}>Manage your cryptocurrency wallet addresses</p>
-      </div>
-
-      {/* Connect Buttons */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        {metaMaskAvailable && (
-          <Button
-            onClick={connectMetaMask}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: 'linear-gradient(135deg, #f6851b, #e2761b)'
-            }}
-          >
-            <span style={{ fontSize: '1.25rem' }}>🦊</span>
-            Connect MetaMask
-          </Button>
-        )}
-
-        <Button onClick={() => setShowForm(true)} variant="secondary">
-          + Add Manual Address
-        </Button>
-      </div>
-
-      {/* Wallet Form */}
-      {showForm && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>
-            {formData.wallet_type === 'metamask' ? 'Add MetaMask Wallet' : 'Add Wallet Address'}
-          </h3>
-
-          {error && (
-            <div style={{
-              padding: '1rem',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ef4444',
-              borderRadius: '6px',
-              marginBottom: '1rem',
-              color: '#ef4444'
-            }}>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Wallet Address
-              </label>
-              <input
-                type="text"
-                value={formData.wallet_address}
-                onChange={(e) => setFormData(prev => ({ ...prev, wallet_address: e.target.value }))}
-                placeholder="Enter wallet address..."
-                required
-                readOnly={formData.wallet_type === 'metamask'}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: formData.wallet_type === 'metamask' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem',
-                  fontFamily: 'monospace'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Network
-              </label>
-              <select
-                value={formData.network}
-                onChange={(e) => setFormData(prev => ({ ...prev, network: e.target.value }))}
-                disabled={formData.wallet_type === 'metamask'}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="TRC20">TRC20 (TRON)</option>
-                <option value="ERC20">ERC20 (Ethereum)</option>
-                <option value="BEP20">BEP20 (BSC)</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Label (Optional)
-              </label>
-              <input
-                type="text"
-                value={formData.label}
-                onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
-                placeholder="e.g., My Main Wallet"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <Button type="submit">Add Wallet</Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowForm(false);
-                  setError(null);
-                  setFormData({ wallet_address: '', wallet_type: 'manual', network: 'TRC20', label: '' });
-                }}
-              >
-                Cancel
+  if (error) {
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Wallets</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadWallets} variant="primary" size="sm">
+                Try Again
               </Button>
             </div>
-          </form>
+          </div>
         </Card>
-      )}
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20"
+          >
+            <Wallet className="w-8 h-8 text-purple-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">My Wallets</h1>
+            <p className="text-lg text-text-muted">Manage your cryptocurrency wallet addresses</p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 flex-wrap">
+          {metaMaskAvailable && (
+            <Button
+              onClick={connectMetaMask}
+              variant="primary"
+              className="bg-gradient-to-r from-orange-500 to-orange-600"
+            >
+              <span className="text-xl mr-2">🦊</span>
+              Connect MetaMask
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              setFormData({ wallet_address: '', wallet_type: 'manual', network: 'TRC20', label: '' });
+              setShowModal(true);
+            }}
+            variant="outline"
+            icon={<Plus className="w-5 h-5" />}
+          >
+            Add Manual Address
+          </Button>
+        </div>
+      </motion.div>
 
       {/* Wallet List */}
       {wallets.length === 0 ? (
-        <Card style={{ textAlign: 'center', padding: '3rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👛</div>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No Wallets Added</h3>
-          <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>
-            Add your first wallet address to enable withdrawals
-          </p>
-          <Button onClick={() => setShowForm(true)}>Add Wallet Address</Button>
-        </Card>
+        <motion.div variants={fadeInUp} initial="hidden" animate="visible" transition={{ delay: 0.2 }}>
+          <EmptyState
+            icon={Wallet}
+            title="No Wallets Added"
+            description="Add your first wallet address to enable withdrawals and receive payments."
+            actionLabel="Add Wallet"
+            onAction={() => setShowModal(true)}
+          />
+        </motion.div>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {wallets.map((wallet) => (
-            <Card key={wallet.id}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h4 style={{ fontSize: '1.125rem', fontWeight: '600' }}>
-                      {wallet.label || wallet.wallet_type}
-                    </h4>
-                    {getNetworkBadge(wallet.network)}
-                    {wallet.is_primary && (
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        color: '#10b981',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: '700'
-                      }}>
-                        ⭐ PRIMARY
-                      </span>
-                    )}
-                    {wallet.wallet_type === 'metamask' && (
-                      <span style={{ fontSize: '1.25rem' }}>🦊</span>
-                    )}
-                  </div>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
+          {wallets.map((wallet, index) => {
+            const networkInfo = getNetworkInfo(wallet.network);
+            return (
+              <motion.div key={wallet.id} variants={itemVariants}>
+                <Card variant={wallet.is_primary ? 'glass-strong' : 'glass'} padding="lg" glow={wallet.is_primary ? 'gold' : undefined}>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        <h4 className="text-xl font-semibold">
+                          {wallet.label || wallet.wallet_type}
+                        </h4>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${networkInfo.bg} ${networkInfo.color} border ${networkInfo.border}`}>
+                          {networkInfo.label}
+                        </span>
+                        {wallet.is_primary && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gold-400/10 text-gold-400 border border-gold-400/30"
+                          >
+                            <Star className="w-3 h-3 fill-current" />
+                            PRIMARY
+                          </motion.span>
+                        )}
+                        {wallet.wallet_type === 'metamask' && (
+                          <span className="text-xl">🦊</span>
+                        )}
+                      </div>
 
-                  <div style={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                    color: '#a0aec0',
-                    marginBottom: '0.5rem',
-                    wordBreak: 'break-all'
-                  }}>
-                    {wallet.wallet_address}
-                  </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <code className="text-sm text-text-muted font-mono break-all">
+                          {wallet.wallet_address}
+                        </code>
+                        <button
+                          onClick={() => copyAddress(wallet.wallet_address)}
+                          className="p-1 hover:bg-glass-light rounded transition-colors flex-shrink-0"
+                        >
+                          <Copy className="w-4 h-4 text-text-dimmed" />
+                        </button>
+                      </div>
 
-                  {wallet.last_used_at && (
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      Last used: {new Date(wallet.last_used_at).toLocaleDateString()}
+                      {wallet.last_used_at && (
+                        <p className="text-xs text-text-dimmed">
+                          Last used: {new Date(wallet.last_used_at).toLocaleDateString()}
+                        </p>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
-                  {!wallet.is_primary && (
-                    <button
-                      onClick={() => handleSetPrimary(wallet.id)}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        border: '1px solid #10b981',
-                        color: '#10b981',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      Set Primary
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => handleDelete(wallet.id)}
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid #ef4444',
-                      color: '#ef4444',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      {!wallet.is_primary && (
+                        <Button
+                          onClick={() => handleSetPrimary(wallet.id)}
+                          variant="success"
+                          size="sm"
+                          icon={<Star className="w-4 h-4" />}
+                        >
+                          Set Primary
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => handleDelete(wallet.id)}
+                        variant="danger"
+                        size="sm"
+                        icon={<Trash2 className="w-4 h-4" />}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       )}
 
       {/* Info Card */}
-      <Card style={{ marginTop: '2rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-        <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', color: '#3b82f6' }}>
-          ℹ️ Wallet Information
-        </h4>
-        <ul style={{ color: '#a0aec0', fontSize: '0.875rem', paddingLeft: '1.5rem', margin: 0 }}>
-          <li>Your primary wallet will be pre-selected for withdrawals</li>
-          <li>Make sure to use the correct network for your wallet address</li>
-          <li>TRC20 = TRON, ERC20 = Ethereum, BEP20 = Binance Smart Chain</li>
-          <li>Double-check addresses before adding - incorrect addresses may result in loss of funds</li>
-          <li>MetaMask wallets are automatically set to ERC20 (Ethereum)</li>
-        </ul>
-      </Card>
-    </div>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.4 }}
+      >
+        <Card variant="glass-strong" padding="lg">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-lg font-semibold mb-3 text-blue-400">Wallet Information</h4>
+              <ul className="space-y-2 text-sm text-text-muted">
+                <li>• Your primary wallet will be pre-selected for withdrawals</li>
+                <li>• Make sure to use the correct network for your wallet address</li>
+                <li>• TRC20 = TRON, ERC20 = Ethereum, BEP20 = Binance Smart Chain</li>
+                <li>• Double-check addresses before adding - incorrect addresses may result in loss of funds</li>
+                <li>• MetaMask wallets are automatically set to ERC20 (Ethereum)</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Add Wallet Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setFormError(null);
+        }}
+        title={formData.wallet_type === 'metamask' ? 'Add MetaMask Wallet' : 'Add Wallet Address'}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <AnimatePresence>
+            {formError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4 rounded-xl bg-error/10 border border-error/30 flex items-start gap-3"
+              >
+                <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-error">{formError}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <Input
+            type="text"
+            label="Wallet Address"
+            placeholder="Enter wallet address..."
+            value={formData.wallet_address}
+            onChange={(e) => setFormData(prev => ({ ...prev, wallet_address: e.target.value }))}
+            required
+            readOnly={formData.wallet_type === 'metamask'}
+            className="font-mono"
+            helperText={formData.wallet_type === 'metamask' ? 'Address from MetaMask' : undefined}
+          />
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Network</label>
+            <select
+              value={formData.network}
+              onChange={(e) => setFormData(prev => ({ ...prev, network: e.target.value }))}
+              disabled={formData.wallet_type === 'metamask'}
+              required
+              className="w-full px-4 py-3 bg-glass-medium border border-glass-border rounded-xl focus:outline-none focus:border-gold-400 transition-colors disabled:opacity-50"
+            >
+              <option value="TRC20">TRC20 (TRON)</option>
+              <option value="ERC20">ERC20 (Ethereum)</option>
+              <option value="BEP20">BEP20 (BSC)</option>
+            </select>
+          </div>
+
+          <Input
+            type="text"
+            label="Label (Optional)"
+            placeholder="e.g., My Main Wallet"
+            value={formData.label}
+            onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
+            helperText="Give your wallet a memorable name"
+          />
+
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={submitting}
+              fullWidth
+              variant="primary"
+            >
+              Add Wallet
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowModal(false);
+                setFormError(null);
+              }}
+              fullWidth
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </motion.div>
   );
 };
 
