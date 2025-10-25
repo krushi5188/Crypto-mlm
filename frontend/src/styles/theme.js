@@ -1,37 +1,37 @@
 export const theme = {
   colors: {
     primary: {
-      start: '#667eea',
-      end: '#764ba2',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      start: '#ffffff',
+      end: '#f5f5f5',
+      gradient: 'linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)'
     },
     secondary: {
-      gold: '#f59e0b',
-      yellow: '#fbbf24'
+      gray: '#404040',
+      lightGray: '#737373'
     },
     success: {
-      light: '#10b981',
-      dark: '#059669',
-      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+      light: '#ffffff',
+      dark: '#f5f5f5',
+      gradient: 'linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)'
     },
     background: {
-      dark: '#1a202c',
+      dark: '#0d0d0d',
       light: '#ffffff',
-      card: '#2d3748'
+      card: '#171717'
     },
     text: {
       primary: '#ffffff',
-      secondary: '#a0aec0',
-      dark: '#1a202c'
+      secondary: '#a3a3a3',
+      dark: '#000000'
     },
     border: {
-      light: '#e2e8f0',
-      dark: '#4a5568'
+      light: '#e5e5e5',
+      dark: '#404040'
     },
     status: {
-      profited: '#10b981',
-      brokeEven: '#f59e0b',
-      loss: '#ef4444'
+      profited: '#ffffff',
+      brokeEven: '#737373',
+      loss: '#525252'
     }
   },
   fonts: {
