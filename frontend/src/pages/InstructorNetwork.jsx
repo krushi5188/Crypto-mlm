@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Network, Users, TrendingUp, Wallet, AlertCircle, 
+  ChevronDown, ChevronRight, Shield, Mail, User,
+  Trophy, Target, X, Layers
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import AnimatedNumber from '../components/AnimatedNumber';
+import { 
+  pageVariants, 
+  pageTransition, 
+  containerVariants, 
+  itemVariants,
+  fadeInUp 
+} from '../utils/animations';
 import { formatCurrency } from '../utils/formatters';
 
 const InstructorNetwork = () => {
+  const { error: showError } = useToast();
   const [networkData, setNetworkData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [collapsedNodes, setCollapsedNodes] = useState(new Set());
 
   useEffect(() => {
     loadNetwork();
@@ -16,218 +36,415 @@ const InstructorNetwork = () => {
 
   const loadNetwork = async () => {
     try {
+      setLoading(true);
       const response = await instructorAPI.getNetworkGraph();
       setNetworkData(response.data.data);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load network:', error);
-      setError(error.response?.data?.error || 'Failed to load network data');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to load network data';
+      setError(errorMsg);
+      showError(errorMsg);
+      console.error('Failed to load network:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleNodeCollapse = (nodeId) => {
+    setCollapsedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleNodeClick = (node) => {
+    setSelectedNode(node);
+    setShowDetailsModal(true);
+  };
+
+  const getDepthColor = (level) => {
+    const colors = [
+      'from-gold-400 to-yellow-500',
+      'from-blue-400 to-cyan-500',
+      'from-purple-400 to-pink-500',
+      'from-green-400 to-emerald-500',
+      'from-red-400 to-orange-500'
+    ];
+    return colors[level % colors.length];
+  };
+
   const renderNode = (node, level = 0) => {
     const isInstructor = node.role === 'instructor';
     const hasChildren = node.children && node.children.length > 0;
-
-    const nodeStyle = {
-      marginLeft: level > 0 ? '2rem' : '0',
-      marginTop: level > 0 ? '1rem' : '0'
-    };
-
-    const cardStyle = {
-      padding: '1rem',
-      background: isInstructor
-        ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))'
-        : 'rgba(255, 255, 255, 0.05)',
-      border: isInstructor
-        ? '2px solid #fbbf24'
-        : '1px solid rgba(255, 255, 255, 0.2)',
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      position: 'relative'
-    };
+    const isCollapsed = collapsedNodes.has(node.id);
 
     return (
-      <div key={node.id} style={nodeStyle}>
-        <div
-          style={cardStyle}
-          onClick={() => setSelectedNode(node)}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      <motion.div
+        key={node.id}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: level * 0.05 }}
+        className={`${level > 0 ? 'ml-8 mt-4' : 'mt-4'}`}
+      >
+        <motion.div
+          whileHover={{ scale: 1.02, x: 5 }}
+          whileTap={{ scale: 0.98 }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: '700' }}>
-                  {isInstructor ? '👨‍🏫' : '👤'} {node.username}
-                </span>
-                {isInstructor && (
-                  <span style={{
-                    padding: '0.25rem 0.5rem',
-                    background: '#fbbf24',
-                    color: '#1a1a1a',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: '700'
-                  }}>
-                    INSTRUCTOR
-                  </span>
+          <Card
+            variant={isInstructor ? "glass-strong" : "glass"}
+            padding="lg"
+            interactive
+            glow={isInstructor ? "gold" : undefined}
+            className="cursor-pointer"
+            onClick={() => handleNodeClick(node)}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                {hasChildren && (
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleNodeCollapse(node.id);
+                    }}
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="p-1 hover:bg-glass-medium rounded-lg transition-colors"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="w-5 h-5 text-text-dimmed" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-text-dimmed" />
+                    )}
+                  </motion.button>
                 )}
+
+                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getDepthColor(level)} flex items-center justify-center font-bold text-white text-lg`}>
+                  {node.username.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-lg">{node.username}</span>
+                    {isInstructor && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-gold-400/20 text-gold-400 border border-gold-400/30">
+                        <Shield className="w-3 h-3" />
+                        INSTRUCTOR
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-text-muted">
+                    <Mail className="w-3 h-3" />
+                    {node.email}
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#a0aec0', marginTop: '0.25rem' }}>
-                {node.email}
+
+              <div className="text-right">
+                <div className="text-2xl font-display font-bold text-gold-400 mb-1">
+                  {formatCurrency(node.balance)} USDT
+                </div>
+                <div className="text-sm text-text-muted">
+                  <span className="text-green-400 font-semibold">{node.directRecruits}</span> direct • 
+                  <span className="text-blue-400 font-semibold ml-1">{node.networkSize}</span> total
+                </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fbbf24' }}>
-                {formatCurrency(node.balance)} USDT
+
+            {hasChildren && (
+              <div className="mt-2 pt-2 border-t border-glass-border">
+                <div className="flex items-center gap-2 text-xs text-text-dimmed">
+                  <Users className="w-3 h-3" />
+                  {node.children.length} direct referral{node.children.length !== 1 ? 's' : ''}
+                </div>
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
-                {node.directRecruits} direct • {node.networkSize} total
-              </div>
-            </div>
-          </div>
-        </div>
+            )}
+          </Card>
+        </motion.div>
 
         {/* Children */}
-        {hasChildren && (
-          <div style={{
-            marginLeft: '1rem',
-            paddingLeft: '1rem',
-            borderLeft: '2px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            {node.children.map(child => renderNode(child, level + 1))}
-          </div>
-        )}
-      </div>
+        <AnimatePresence>
+          {hasChildren && !isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="ml-4 pl-4 border-l-2 border-glass-border"
+            >
+              {node.children.map(child => renderNode(child, level + 1))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     );
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spin" style={{ fontSize: '3rem' }}>⏳</div>
-        <p style={{ marginTop: '1rem', color: '#a0aec0' }}>Loading network...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LoadingSkeleton variant="card" count={3} />
+        </div>
+        <LoadingSkeleton variant="card" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Card>
-          <div style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Error Loading Network</h2>
-            <p style={{ color: '#a0aec0', marginBottom: '1.5rem' }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <div className="flex items-start gap-3 text-error">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Failed to Load Network</h3>
+              <p className="text-text-muted mb-4">{error}</p>
+              <Button onClick={loadNetwork} variant="primary" size="sm">
+                Try Again
+              </Button>
+            </div>
           </div>
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
-  const containerStyles = {
-    maxWidth: '1600px',
-    margin: '0 auto',
-    padding: '2rem'
-  };
-
   return (
-    <div style={containerStyles}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Network Visualization</h1>
-        <p style={{ color: '#a0aec0' }}>Complete MLM network structure</p>
-      </div>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20"
+          >
+            <Network className="w-8 h-8 text-purple-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Network Visualization</h1>
+            <p className="text-lg text-text-muted">Complete MLM network structure and hierarchy</p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Network Stats */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{networkData?.totalNodes || 0}</div>
-          <div style={{ color: '#a0aec0' }}>Total Members</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{networkData?.maxDepth || 0}</div>
-          <div style={{ color: '#a0aec0' }}>Max Depth</div>
-        </Card>
-        <Card style={{ textAlign: 'center', padding: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fbbf24' }}>
-            {formatCurrency(networkData?.totalBalance || 0)} USDT
-          </div>
-          <div style={{ color: '#a0aec0' }}>Total Balance</div>
-        </Card>
-      </div>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="blue">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Total Members</p>
+                <p className="text-5xl font-display font-bold text-blue-400">
+                  <AnimatedNumber value={networkData?.totalNodes || 0} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="p-4 rounded-2xl bg-blue-500/10"
+              >
+                <Users className="w-8 h-8 text-blue-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="purple">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Max Depth</p>
+                <p className="text-5xl font-display font-bold text-purple-400">
+                  <AnimatedNumber value={networkData?.maxDepth || 0} />
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: -5 }}
+                className="p-4 rounded-2xl bg-purple-500/10"
+              >
+                <Layers className="w-8 h-8 text-purple-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card variant="glass-strong" padding="xl" interactive glow="gold">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-dimmed mb-2">Total Balance</p>
+                <p className="text-3xl font-display font-bold text-gold-400">
+                  <AnimatedNumber value={networkData?.totalBalance || 0} decimals={2} />
+                  <span className="text-xl ml-1">USDT</span>
+                </p>
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="p-4 rounded-2xl bg-gold-400/10"
+              >
+                <Wallet className="w-8 h-8 text-gold-400" />
+              </motion.div>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Network Tree */}
-      <Card>
-        <div style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Network Hierarchy</h3>
-          {networkData && networkData.tree && renderNode(networkData.tree)}
-          {(!networkData || !networkData.tree) && (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0aec0' }}>
-              No network data available
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="xl">
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp className="w-6 h-6 text-purple-400" />
+            <h2 className="text-2xl font-semibold">Network Hierarchy</h2>
+          </div>
+
+          {networkData && networkData.tree ? (
+            <div className="space-y-2">
+              {renderNode(networkData.tree)}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Network className="w-16 h-16 text-text-dimmed mx-auto mb-4 opacity-50" />
+              <p className="text-text-muted">No network data available</p>
             </div>
           )}
-        </div>
-      </Card>
-
-      {/* Selected Node Details */}
-      {selectedNode && (
-        <Card style={{ marginTop: '2rem', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid #fbbf24' }}>
-          <div style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.5rem' }}>Selected: {selectedNode.username}</h3>
-              <button
-                onClick={() => setSelectedNode(null)}
-                style={{
-                  padding: '0.5rem',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '1.5rem'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Email</div>
-                <div>{selectedNode.email}</div>
-              </div>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Balance</div>
-                <div style={{ color: '#fbbf24', fontWeight: '700' }}>{formatCurrency(selectedNode.balance)} USDT</div>
-              </div>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Direct Recruits</div>
-                <div>{selectedNode.directRecruits}</div>
-              </div>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Network Size</div>
-                <div>{selectedNode.networkSize}</div>
-              </div>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Earned</div>
-                <div style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(selectedNode.totalEarned || 0)} USDT</div>
-              </div>
-              <div>
-                <div style={{ color: '#a0aec0', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Referral Code</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{selectedNode.referralCode}</div>
-              </div>
-            </div>
-          </div>
         </Card>
+      </motion.div>
+
+      {/* Node Details Modal */}
+      {selectedNode && (
+        <Modal
+          isOpen={showDetailsModal}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedNode(null);
+          }}
+          title={selectedNode.username}
+          size="lg"
+        >
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-3xl font-bold text-white">
+                {selectedNode.username.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-display font-bold">{selectedNode.username}</h3>
+                <p className="text-text-muted">{selectedNode.email}</p>
+                {selectedNode.role === 'instructor' && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gold-400/20 text-gold-400 border border-gold-400/30 mt-2">
+                    <Shield className="w-3 h-3" />
+                    INSTRUCTOR
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <Card variant="glass-medium" padding="lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="w-4 h-4 text-gold-400" />
+                    <span className="text-sm text-text-dimmed">Balance</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-gold-400">
+                    {formatCurrency(selectedNode.balance)} USDT
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Trophy className="w-4 h-4 text-green-400" />
+                    <span className="text-sm text-text-dimmed">Total Earned</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-green-400">
+                    {formatCurrency(selectedNode.totalEarned || 0)} USDT
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm text-text-dimmed">Direct Recruits</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-blue-400">
+                    <AnimatedNumber value={selectedNode.directRecruits} />
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-text-dimmed">Network Size</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-purple-400">
+                    <AnimatedNumber value={selectedNode.networkSize} />
+                  </p>
+                </div>
+
+                <div className="col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-4 h-4 text-yellow-400" />
+                    <span className="text-sm text-text-dimmed">Referral Code</span>
+                  </div>
+                  <p className="font-mono text-lg font-bold text-yellow-400 tracking-wider">
+                    {selectedNode.referralCode}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Button
+              onClick={() => {
+                setShowDetailsModal(false);
+                setSelectedNode(null);
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Close
+            </Button>
+          </div>
+        </Modal>
       )}
-    </div>
+    </motion.div>
   );
 };
 
