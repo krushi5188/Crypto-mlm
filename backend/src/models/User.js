@@ -109,7 +109,7 @@ class User {
     return result.rowCount > 0;
   }
 
-  // Count total students
+  // Count total members
   static async countStudents() {
     const result = await pool.query(
       "SELECT COUNT(*) as count FROM users WHERE role = 'member'"
