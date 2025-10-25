@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Shield, AlertTriangle, Users, Activity, Eye, Flag,
+  UserX, Globe, Smartphone, MapPin, Clock, Search, X
+} from 'lucide-react';
 import { instructorAPI } from '../services/api';
-import HelpTooltip from '../components/HelpTooltip';
+import { useToast } from '../context/ToastContext';
+import Card from '../components/common/Card';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import Modal from '../components/Modal';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AnimatedNumber from '../components/AnimatedNumber';
+import {
+  pageVariants,
+  pageTransition,
+  containerVariants,
+  itemVariants,
+  fadeInUp
+} from '../utils/animations';
 
 const InstructorFraudDetection = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState(null);
   const [flaggedUsers, setFlaggedUsers] = useState([]);
@@ -11,6 +31,17 @@ const InstructorFraudDetection = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [error, setError] = useState(null);
+
+  // Flag/Unflag modals
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [showUnflagModal, setShowUnflagModal] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
+  const [unflagNotes, setUnflagNotes] = useState('');
+  const [pendingUserId, setPendingUserId] = useState(null);
+  const [processing, setProcessing] = useState(false);
+
+  // User details modal
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -34,35 +65,58 @@ const InstructorFraudDetection = () => {
     } catch (err) {
       console.error('Failed to load fraud detection data:', err);
       setError('Failed to load fraud detection data');
+      showError('Failed to load fraud detection data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFlagUser = async (userId) => {
-    const reason = prompt('Enter reason for flagging:');
-    if (!reason) return;
+  const handleFlagUser = (userId) => {
+    setPendingUserId(userId);
+    setFlagReason('');
+    setShowFlagModal(true);
+  };
 
+  const confirmFlagUser = async () => {
+    if (!flagReason.trim()) {
+      showError('Please provide a reason for flagging');
+      return;
+    }
+
+    setProcessing(true);
     try {
-      await instructorAPI.flagUser(userId, reason);
+      await instructorAPI.flagUser(pendingUserId, flagReason);
       await loadData();
-      alert('User flagged successfully');
+      showSuccess('User flagged successfully');
+      setShowFlagModal(false);
+      setPendingUserId(null);
+      setFlagReason('');
     } catch (err) {
-      console.error('Failed to flag user:', err);
-      alert('Failed to flag user');
+      showError(err.response?.data?.error || 'Failed to flag user');
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const handleUnflagUser = async (userId) => {
-    const notes = prompt('Enter review notes (optional):') || '';
+  const handleUnflagUser = (userId) => {
+    setPendingUserId(userId);
+    setUnflagNotes('');
+    setShowUnflagModal(true);
+  };
 
+  const confirmUnflagUser = async () => {
+    setProcessing(true);
     try {
-      await instructorAPI.unflagUser(userId, notes);
+      await instructorAPI.unflagUser(pendingUserId, unflagNotes);
       await loadData();
-      alert('User unflagged successfully');
+      showSuccess('User unflagged successfully');
+      setShowUnflagModal(false);
+      setPendingUserId(null);
+      setUnflagNotes('');
     } catch (err) {
-      console.error('Failed to unflag user:', err);
-      alert('Failed to unflag user');
+      showError(err.response?.data?.error || 'Failed to unflag user');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -70,917 +124,747 @@ const InstructorFraudDetection = () => {
     try {
       const response = await instructorAPI.getUserFraudDetails(userId);
       setSelectedUser(response.data.data);
+      setShowDetailsModal(true);
     } catch (err) {
-      console.error('Failed to load user details:', err);
-      alert('Failed to load user details');
+      showError('Failed to load user details');
     }
   };
 
-  const getRiskBadgeColor = (level) => {
-    switch (level) {
-      case 'critical':
-        return { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' };
-      case 'high':
-        return { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', color: '#f59e0b' };
-      case 'medium':
-        return { bg: 'rgba(251, 191, 36, 0.1)', border: 'rgba(251, 191, 36, 0.3)', color: '#fbbf24' };
-      default:
-        return { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', color: '#10b981' };
-    }
+  const getRiskConfig = (level) => {
+    const configs = {
+      critical: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', icon: AlertTriangle },
+      high: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: AlertTriangle },
+      medium: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', icon: Activity },
+      low: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', icon: Shield }
+    };
+    return configs[level] || configs.low;
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner}>⏳</div>
-          <p style={styles.loadingText}>Loading fraud detection data...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <LoadingSkeleton variant="title" width="400px" />
+          <LoadingSkeleton variant="text" width="600px" />
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <LoadingSkeleton variant="card" count={4} />
+        </div>
+        <LoadingSkeleton variant="card" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.container}>
-        <div style={styles.errorContainer}>
-          <p style={styles.errorText}>{error}</p>
-          <button onClick={loadData} style={styles.retryButton}>Retry</button>
-        </div>
-      </div>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="p-6"
+      >
+        <Card variant="glass" padding="xl">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to Load Fraud Detection Data"
+            description={error}
+            actionLabel="Try Again"
+            onAction={loadData}
+          />
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Fraud Detection</h1>
-        <p style={styles.subtitle}>Monitor and manage suspicious activity</p>
-      </div>
-
-      {/* Overview Stats */}
-      {activeTab === 'overview' && dashboard && (
-        <div style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <div style={styles.statIcon}>🚨</div>
-            <div style={styles.statContent}>
-              <div style={styles.statValue}>{dashboard.totalFlagged || 0}</div>
-              <div style={styles.statLabel}>
-                Flagged Users
-                <HelpTooltip content="Users manually flagged by administrators for review due to suspicious activity or policy violations." position="top" />
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statIcon}>⚠️</div>
-            <div style={styles.statContent}>
-              <div style={styles.statValue}>{dashboard.highRiskCount || 0}</div>
-              <div style={styles.statLabel}>
-                High Risk
-                <HelpTooltip content="Users with risk scores above 51/100. System automatically monitors these accounts for suspicious patterns." position="top" />
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statIcon}>🔍</div>
-            <div style={styles.statContent}>
-              <div style={styles.statValue}>{dashboard.recentAlertsCount || 0}</div>
-              <div style={styles.statLabel}>
-                Recent Alerts
-                <HelpTooltip content="Automated alerts triggered by suspicious activity in the last 24 hours." position="top" />
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.statCard}>
-            <div style={styles.statIcon}>👥</div>
-            <div style={styles.statContent}>
-              <div style={styles.statValue}>{dashboard.multiAccountGroups || 0}</div>
-              <div style={styles.statLabel}>
-                Multi-Account Groups
-                <HelpTooltip content="Groups of accounts sharing the same IP address or device fingerprint, indicating possible multi-accounting." position="top" />
-              </div>
-            </div>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={pageTransition}
+      className="p-6 space-y-8"
+    >
+      {/* Header */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-red-500/20 to-purple-500/20"
+          >
+            <Shield className="w-8 h-8 text-red-400" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-display font-bold">Fraud Detection</h1>
+            <p className="text-lg text-text-muted">Monitor and manage suspicious activity</p>
           </div>
         </div>
+      </motion.div>
+
+      {/* Stats */}
+      {dashboard && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive glow="red">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">Flagged Users</p>
+                  <p className="text-5xl font-display font-bold text-red-400">
+                    <AnimatedNumber value={dashboard.totalFlagged || 0} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="p-4 rounded-2xl bg-red-500/10"
+                >
+                  <Flag className="w-8 h-8 text-red-400" />
+                </motion.div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive glow="orange">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">High Risk</p>
+                  <p className="text-5xl font-display font-bold text-orange-400">
+                    <AnimatedNumber value={dashboard.highRiskCount || 0} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: -5 }}
+                  className="p-4 rounded-2xl bg-orange-500/10"
+                >
+                  <AlertTriangle className="w-8 h-8 text-orange-400" />
+                </motion.div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive glow="yellow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">Recent Alerts</p>
+                  <p className="text-5xl font-display font-bold text-yellow-400">
+                    <AnimatedNumber value={dashboard.recentAlertsCount || 0} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="p-4 rounded-2xl bg-yellow-500/10"
+                >
+                  <Activity className="w-8 h-8 text-yellow-400" />
+                </motion.div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card variant="glass-strong" padding="xl" interactive glow="purple">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-dimmed mb-2">Multi-Account Groups</p>
+                  <p className="text-5xl font-display font-bold text-purple-400">
+                    <AnimatedNumber value={dashboard.multiAccountGroups || 0} />
+                  </p>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: -5 }}
+                  className="p-4 rounded-2xl bg-purple-500/10"
+                >
+                  <Users className="w-8 h-8 text-purple-400" />
+                </motion.div>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Tabs */}
-      <div style={styles.tabs}>
-        <button
-          onClick={() => setActiveTab('overview')}
-          style={activeTab === 'overview' ? styles.tabActive : styles.tab}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('flagged')}
-          style={activeTab === 'flagged' ? styles.tabActive : styles.tab}
-        >
-          Flagged Users ({flaggedUsers.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('multi')}
-          style={activeTab === 'multi' ? styles.tabActive : styles.tab}
-        >
-          Multi-Accounts ({multiAccounts.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('alerts')}
-          style={activeTab === 'alerts' ? styles.tabActive : styles.tab}
-        >
-          Alerts ({alerts.length})
-        </button>
-      </div>
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card variant="glass-strong" padding="none">
+          <div className="flex gap-3 overflow-x-auto pb-2 px-4 pt-4">
+            {[
+              { value: 'overview', label: 'Overview' },
+              { value: 'flagged', label: `Flagged (${flaggedUsers.length})` },
+              { value: 'multi', label: `Multi-Accounts (${multiAccounts.length})` },
+              { value: 'alerts', label: `Alerts (${alerts.length})` }
+            ].map((tab) => (
+              <motion.button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative whitespace-nowrap ${
+                  activeTab === tab.value ? 'text-gold-400' : 'text-text-dimmed hover:text-text-primary'
+                }`}
+                whileHover={{ y: -2 }}
+                whileTap={{ y: 0 }}
+              >
+                <span>{tab.label}</span>
+                {activeTab === tab.value && (
+                  <motion.div
+                    layoutId="activeFraudTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-400"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Tab Content */}
-      <div style={styles.tabContent}>
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div style={styles.overviewContent}>
-            <h2 style={styles.sectionTitle}>High Risk Users</h2>
-            {dashboard?.highRiskUsers?.length > 0 ? (
-              <div style={styles.userList}>
-                {dashboard.highRiskUsers.map(user => (
-                  <div key={user.userId} style={styles.userCard}>
-                    <div style={styles.userInfo}>
-                      <div style={styles.userHeader}>
-                        <span style={styles.userName}>{user.email}</span>
-                        <span style={{
-                          ...styles.badge,
-                          ...getRiskBadgeColor(user.riskLevel)
-                        }}>
-                          Risk: {user.riskScore}/100
-                        </span>
-                      </div>
-                      <div style={styles.userDetails}>
-                        <span style={styles.userDetail}>🆔 ID: {user.userId}</span>
-                        {user.isFlagged && <span style={styles.flaggedBadge}>⚠️ Flagged</span>}
-                      </div>
-                    </div>
-                    <div style={styles.userActions}>
-                      <button
-                        onClick={() => handleViewUserDetails(user.userId)}
-                        style={styles.actionButton}
+          <div className="space-y-6">
+            {/* High Risk Users */}
+            <Card variant="glass-strong" padding="xl">
+              <h2 className="text-2xl font-semibold mb-6">High Risk Users</h2>
+              {dashboard?.highRiskUsers?.length > 0 ? (
+                <div className="space-y-4">
+                  {dashboard.highRiskUsers.map((user, index) => {
+                    const riskConfig = getRiskConfig(user.riskLevel);
+                    return (
+                      <motion.div
+                        key={user.userId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
                       >
-                        View Details
-                      </button>
-                      {!user.isFlagged && (
-                        <button
-                          onClick={() => handleFlagUser(user.userId)}
-                          style={styles.flagButton}
-                        >
-                          Flag User
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.emptyState}>
-                <p style={styles.emptyText}>No high-risk users detected</p>
-              </div>
-            )}
+                        <Card variant="glass" padding="lg" interactive>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="font-semibold text-lg">{user.email}</span>
+                                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${riskConfig.bg} ${riskConfig.color} border ${riskConfig.border}`}>
+                                  Risk: {user.riskScore}/100
+                                </span>
+                                {user.isFlagged && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                                    <Flag className="w-3 h-3" />
+                                    Flagged
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-text-muted">
+                                ID: {user.userId}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleViewUserDetails(user.userId)}
+                                variant="ghost"
+                                size="sm"
+                                icon={<Eye className="w-4 h-4" />}
+                              >
+                                View
+                              </Button>
+                              {!user.isFlagged && (
+                                <Button
+                                  onClick={() => handleFlagUser(user.userId)}
+                                  variant="danger"
+                                  size="sm"
+                                  icon={<Flag className="w-4 h-4" />}
+                                >
+                                  Flag
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Shield}
+                  title="No High-Risk Users"
+                  description="All users have acceptable risk scores"
+                />
+              )}
+            </Card>
 
-            <h2 style={styles.sectionTitle}>Recent Events</h2>
-            {dashboard?.recentEvents?.length > 0 ? (
-              <div style={styles.eventsList}>
-                {dashboard.recentEvents.map((event, index) => (
-                  <div key={index} style={styles.eventCard}>
-                    <div style={styles.eventIcon}>📌</div>
-                    <div style={styles.eventContent}>
-                      <div style={styles.eventTitle}>{event.eventType}</div>
-                      <div style={styles.eventDetails}>
-                        User #{event.userId} • {new Date(event.timestamp).toLocaleString()}
+            {/* Recent Events */}
+            <Card variant="glass-strong" padding="xl">
+              <h2 className="text-2xl font-semibold mb-6">Recent Events</h2>
+              {dashboard?.recentEvents?.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboard.recentEvents.map((event, index) => (
+                    <Card key={index} variant="glass-medium" padding="md">
+                      <div className="flex items-center gap-3">
+                        <Activity className="w-5 h-5 text-blue-400" />
+                        <div className="flex-1">
+                          <div className="font-semibold">{event.eventType}</div>
+                          <div className="text-sm text-text-muted">
+                            User #{event.userId} • {new Date(event.timestamp).toLocaleString()}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.emptyState}>
-                <p style={styles.emptyText}>No recent events</p>
-              </div>
-            )}
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Activity}
+                  title="No Recent Events"
+                  description="No suspicious activity detected"
+                />
+              )}
+            </Card>
           </div>
         )}
 
         {/* Flagged Users Tab */}
         {activeTab === 'flagged' && (
-          <div>
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6">Flagged Users</h2>
             {flaggedUsers.length > 0 ? (
-              <div style={styles.userList}>
-                {flaggedUsers.map(user => (
-                  <div key={user.id} style={styles.userCard}>
-                    <div style={styles.userInfo}>
-                      <div style={styles.userHeader}>
-                        <span style={styles.userName}>{user.email}</span>
-                        <span style={{
-                          ...styles.badge,
-                          ...getRiskBadgeColor(user.riskLevel)
-                        }}>
-                          Risk: {user.riskScore}/100
-                        </span>
-                      </div>
-                      <div style={styles.userDetails}>
-                        <span style={styles.userDetail}>🚩 Reason: {user.flaggedReason}</span>
-                        <span style={styles.userDetail}>
-                          📅 Flagged: {new Date(user.flaggedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={styles.userActions}>
-                      <button
-                        onClick={() => handleViewUserDetails(user.id)}
-                        style={styles.actionButton}
-                      >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleUnflagUser(user.id)}
-                        style={styles.unflagButton}
-                      >
-                        Unflag
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyIcon}>✅</div>
-                <p style={styles.emptyText}>No flagged users</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Multi-Accounts Tab */}
-        {activeTab === 'multi' && (
-          <div>
-            {multiAccounts.length > 0 ? (
-              <div style={styles.groupsList}>
-                {multiAccounts.map((group, index) => (
-                  <div key={index} style={styles.groupCard}>
-                    <div style={styles.groupHeader}>
-                      <h3 style={styles.groupTitle}>
-                        {group.type === 'ip' ? '🌐 Shared IP Address' : '📱 Shared Device'}
-                      </h3>
-                      <span style={styles.groupCount}>{group.userCount} accounts</span>
-                    </div>
-                    <div style={styles.groupDetails}>
-                      <p style={styles.groupInfo}>
-                        <strong>Identifier:</strong> {group.identifier}
-                      </p>
-                      <p style={styles.groupInfo}>
-                        <strong>Users:</strong> {group.users.map(u => u.email).join(', ')}
-                      </p>
-                      <p style={styles.groupInfo}>
-                        <strong>First Seen:</strong> {new Date(group.firstSeen).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div style={styles.groupActions}>
-                      {group.users.map(user => (
-                        <button
-                          key={user.id}
-                          onClick={() => handleViewUserDetails(user.id)}
-                          style={styles.actionButton}
-                        >
-                          View {user.email}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyIcon}>✅</div>
-                <p style={styles.emptyText}>No multi-account patterns detected</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Alerts Tab */}
-        {activeTab === 'alerts' && (
-          <div>
-            {alerts.length > 0 ? (
-              <div style={styles.alertsList}>
-                {alerts.map(alert => {
-                  const colors = getRiskBadgeColor(alert.severity);
+              <div className="space-y-4">
+                {flaggedUsers.map((user, index) => {
+                  const riskConfig = getRiskConfig(user.riskLevel);
                   return (
-                    <div key={alert.id} style={{
-                      ...styles.alertCard,
-                      borderLeft: `4px solid ${colors.color}`
-                    }}>
-                      <div style={styles.alertHeader}>
-                        <span style={styles.alertType}>{alert.alertType}</span>
-                        <span style={{
-                          ...styles.badge,
-                          ...colors
-                        }}>
-                          {alert.severity}
-                        </span>
-                      </div>
-                      <p style={styles.alertMessage}>{alert.message}</p>
-                      <div style={styles.alertFooter}>
-                        <span style={styles.alertUser}>User #{alert.userId}</span>
-                        <span style={styles.alertTime}>
-                          {new Date(alert.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
+                    <motion.div
+                      key={user.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Card variant="glass" padding="lg" interactive>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-semibold text-lg">{user.email}</span>
+                              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${riskConfig.bg} ${riskConfig.color} border ${riskConfig.border}`}>
+                                Risk: {user.riskScore}/100
+                              </span>
+                            </div>
+                            <div className="text-sm text-text-muted space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Flag className="w-4 h-4 text-red-400" />
+                                Reason: {user.flaggedReason}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                Flagged: {new Date(user.flaggedAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handleViewUserDetails(user.id)}
+                              variant="ghost"
+                              size="sm"
+                              icon={<Eye className="w-4 h-4" />}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              onClick={() => handleUnflagUser(user.id)}
+                              variant="success"
+                              size="sm"
+                              icon={<UserX className="w-4 h-4" />}
+                            >
+                              Unflag
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
                   );
                 })}
               </div>
             ) : (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyIcon}>✅</div>
-                <p style={styles.emptyText}>No alerts</p>
-              </div>
+              <EmptyState
+                icon={Shield}
+                title="No Flagged Users"
+                description="All users are in good standing"
+              />
             )}
-          </div>
+          </Card>
         )}
-      </div>
+
+        {/* Multi-Accounts Tab */}
+        {activeTab === 'multi' && (
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6">Multi-Account Groups</h2>
+            {multiAccounts.length > 0 ? (
+              <div className="space-y-6">
+                {multiAccounts.map((group, index) => (
+                  <Card key={index} variant="glass" padding="lg">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          {group.type === 'ip' ? (
+                            <>
+                              <Globe className="w-5 h-5 text-blue-400" />
+                              Shared IP Address
+                            </>
+                          ) : (
+                            <>
+                              <Smartphone className="w-5 h-5 text-purple-400" />
+                              Shared Device
+                            </>
+                          )}
+                        </h3>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                          {group.userCount} accounts
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="text-text-dimmed">Identifier:</span>
+                          <span className="ml-2 font-mono text-text-primary">{group.identifier}</span>
+                        </div>
+                        <div>
+                          <span className="text-text-dimmed">First Seen:</span>
+                          <span className="ml-2 text-text-primary">{new Date(group.firstSeen).toLocaleDateString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-text-dimmed">Users:</span>
+                          <span className="ml-2 text-text-primary">{group.users.map(u => u.email).join(', ')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        {group.users.map(user => (
+                          <Button
+                            key={user.id}
+                            onClick={() => handleViewUserDetails(user.id)}
+                            variant="outline"
+                            size="sm"
+                            icon={<Eye className="w-4 h-4" />}
+                          >
+                            {user.email}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Shield}
+                title="No Multi-Account Patterns"
+                description="No suspicious account groupings detected"
+              />
+            )}
+          </Card>
+        )}
+
+        {/* Alerts Tab */}
+        {activeTab === 'alerts' && (
+          <Card variant="glass-strong" padding="xl">
+            <h2 className="text-2xl font-semibold mb-6">Fraud Alerts</h2>
+            {alerts.length > 0 ? (
+              <div className="space-y-4">
+                {alerts.map((alert) => {
+                  const riskConfig = getRiskConfig(alert.severity);
+                  return (
+                    <Card
+                      key={alert.id}
+                      variant="glass"
+                      padding="lg"
+                      className={`border-l-4 ${riskConfig.border}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="font-semibold text-lg">{alert.alertType}</div>
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${riskConfig.bg} ${riskConfig.color} border ${riskConfig.border}`}>
+                          {alert.severity}
+                        </span>
+                      </div>
+                      <p className="text-text-muted mb-3">{alert.message}</p>
+                      <div className="flex items-center justify-between text-sm text-text-dimmed">
+                        <span>User #{alert.userId}</span>
+                        <span>{new Date(alert.createdAt).toLocaleString()}</span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Shield}
+                title="No Alerts"
+                description="No fraud alerts have been triggered"
+              />
+            )}
+          </Card>
+        )}
+      </motion.div>
+
+      {/* Flag User Modal */}
+      <Modal
+        isOpen={showFlagModal}
+        onClose={() => {
+          setShowFlagModal(false);
+          setPendingUserId(null);
+          setFlagReason('');
+        }}
+        title="Flag User"
+        size="md"
+      >
+        <div className="space-y-6">
+          <p className="text-text-muted">
+            Please provide a reason for flagging this user. This will help track suspicious activity patterns.
+          </p>
+
+          <Input
+            type="textarea"
+            label="Reason for Flagging"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+            placeholder="Enter detailed reason..."
+            rows={4}
+            required
+          />
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowFlagModal(false);
+                setPendingUserId(null);
+                setFlagReason('');
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmFlagUser}
+              variant="danger"
+              fullWidth
+              disabled={processing || !flagReason.trim()}
+              icon={<Flag className="w-5 h-5" />}
+            >
+              {processing ? 'Flagging...' : 'Flag User'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Unflag User Modal */}
+      <Modal
+        isOpen={showUnflagModal}
+        onClose={() => {
+          setShowUnflagModal(false);
+          setPendingUserId(null);
+          setUnflagNotes('');
+        }}
+        title="Unflag User"
+        size="md"
+      >
+        <div className="space-y-6">
+          <p className="text-text-muted">
+            Remove the flag from this user. Optionally add review notes for future reference.
+          </p>
+
+          <Input
+            type="textarea"
+            label="Review Notes (Optional)"
+            value={unflagNotes}
+            onChange={(e) => setUnflagNotes(e.target.value)}
+            placeholder="Enter review notes..."
+            rows={4}
+          />
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setShowUnflagModal(false);
+                setPendingUserId(null);
+                setUnflagNotes('');
+              }}
+              variant="outline"
+              fullWidth
+              icon={<X className="w-5 h-5" />}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmUnflagUser}
+              variant="success"
+              fullWidth
+              disabled={processing}
+              icon={<UserX className="w-5 h-5" />}
+            >
+              {processing ? 'Unflagging...' : 'Unflag User'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* User Details Modal */}
       {selectedUser && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedUser(null)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>User Fraud Details</h2>
-              <button onClick={() => setSelectedUser(null)} style={styles.closeButton}>
-                ✕
-              </button>
-            </div>
-            <div style={styles.modalContent}>
-              <div style={styles.detailSection}>
-                <h3 style={styles.detailTitle}>User Information</h3>
-                <p style={styles.detailText}>
-                  <strong>Email:</strong> {selectedUser.user?.email}
-                </p>
-                <p style={styles.detailText}>
-                  <strong>Username:</strong> {selectedUser.user?.username}
-                </p>
-                <p style={styles.detailText}>
-                  <strong>Risk Score:</strong> {selectedUser.riskScore}/100 ({selectedUser.riskLevel})
-                </p>
+        <Modal
+          isOpen={showDetailsModal}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedUser(null);
+          }}
+          title="User Fraud Details"
+          size="lg"
+        >
+          <div className="space-y-6">
+            {/* User Info */}
+            <Card variant="glass-medium" padding="lg">
+              <h3 className="text-lg font-semibold mb-4">User Information</h3>
+              <div className="space-y-2 text-sm">
+                <div><span className="text-text-dimmed">Email:</span> <span className="ml-2 font-semibold">{selectedUser.user?.email}</span></div>
+                <div><span className="text-text-dimmed">Username:</span> <span className="ml-2 font-semibold">{selectedUser.user?.username}</span></div>
+                <div>
+                  <span className="text-text-dimmed">Risk Score:</span>
+                  <span className="ml-2 font-semibold">
+                    {selectedUser.riskScore}/100
+                    <span className={`ml-2 text-xs ${getRiskConfig(selectedUser.riskLevel).color}`}>
+                      ({selectedUser.riskLevel})
+                    </span>
+                  </span>
+                </div>
                 {selectedUser.user?.isFlagged && (
-                  <p style={styles.detailText}>
-                    <strong>Flagged:</strong> {selectedUser.user.flaggedReason}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <Flag className="w-4 h-4 text-red-400" />
+                    <span className="text-red-400 font-semibold">Flagged: {selectedUser.user.flaggedReason}</span>
+                  </div>
                 )}
               </div>
+            </Card>
 
-              {selectedUser.evidence && selectedUser.evidence.length > 0 && (
-                <div style={styles.detailSection}>
-                  <h3 style={styles.detailTitle}>Risk Evidence</h3>
-                  <ul style={styles.evidenceList}>
-                    {selectedUser.evidence.map((item, index) => (
-                      <li key={index} style={styles.evidenceItem}>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+            {/* Evidence */}
+            {selectedUser.evidence && selectedUser.evidence.length > 0 && (
+              <Card variant="glass-medium" padding="lg">
+                <h3 className="text-lg font-semibold mb-4">Risk Evidence</h3>
+                <div className="space-y-2">
+                  {selectedUser.evidence.map((item, index) => (
+                    <div key={index} className="flex items-start gap-2 text-sm">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-text-muted">{item}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </Card>
+            )}
 
-              {selectedUser.devices && selectedUser.devices.length > 0 && (
-                <div style={styles.detailSection}>
-                  <h3 style={styles.detailTitle}>Devices</h3>
+            {/* Devices */}
+            {selectedUser.devices && selectedUser.devices.length > 0 && (
+              <Card variant="glass-medium" padding="lg">
+                <h3 className="text-lg font-semibold mb-4">Devices</h3>
+                <div className="space-y-3">
                   {selectedUser.devices.map((device, index) => (
-                    <div key={index} style={styles.deviceCard}>
-                      <p style={styles.detailText}>
-                        <strong>Browser:</strong> {device.browser || 'Unknown'}
-                      </p>
-                      <p style={styles.detailText}>
-                        <strong>OS:</strong> {device.os || 'Unknown'}
-                      </p>
-                      <p style={styles.detailText}>
-                        <strong>Logins:</strong> {device.loginCount}
-                      </p>
-                    </div>
+                    <Card key={index} variant="glass" padding="md">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="w-5 h-5 text-purple-400" />
+                        <div className="flex-1 space-y-1 text-sm">
+                          <div><span className="text-text-dimmed">Browser:</span> <span className="ml-2">{device.browser || 'Unknown'}</span></div>
+                          <div><span className="text-text-dimmed">OS:</span> <span className="ml-2">{device.os || 'Unknown'}</span></div>
+                          <div><span className="text-text-dimmed">Logins:</span> <span className="ml-2 font-semibold">{device.loginCount}</span></div>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
-              )}
+              </Card>
+            )}
 
-              {selectedUser.ipAddresses && selectedUser.ipAddresses.length > 0 && (
-                <div style={styles.detailSection}>
-                  <h3 style={styles.detailTitle}>IP Addresses</h3>
+            {/* IP Addresses */}
+            {selectedUser.ipAddresses && selectedUser.ipAddresses.length > 0 && (
+              <Card variant="glass-medium" padding="lg">
+                <h3 className="text-lg font-semibold mb-4">IP Addresses</h3>
+                <div className="space-y-3">
                   {selectedUser.ipAddresses.map((ip, index) => (
-                    <div key={index} style={styles.ipCard}>
-                      <p style={styles.detailText}>
-                        <strong>IP:</strong> {ip.ipAddress}
-                      </p>
-                      <p style={styles.detailText}>
-                        <strong>Location:</strong> {ip.location || 'Unknown'}
-                      </p>
-                      <p style={styles.detailText}>
-                        <strong>Logins:</strong> {ip.loginCount}
-                      </p>
-                    </div>
+                    <Card key={index} variant="glass" padding="md">
+                      <div className="flex items-center gap-3">
+                        <Globe className="w-5 h-5 text-blue-400" />
+                        <div className="flex-1 space-y-1 text-sm">
+                          <div><span className="text-text-dimmed">IP:</span> <span className="ml-2 font-mono">{ip.ipAddress}</span></div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3 h-3" />
+                            <span className="text-text-dimmed">Location:</span>
+                            <span className="ml-1">{ip.location || 'Unknown'}</span>
+                          </div>
+                          <div><span className="text-text-dimmed">Logins:</span> <span className="ml-2 font-semibold">{ip.loginCount}</span></div>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
-              )}
-            </div>
-            <div style={styles.modalActions}>
+              </Card>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
               {!selectedUser.user?.isFlagged ? (
-                <button
+                <Button
                   onClick={() => {
+                    setShowDetailsModal(false);
                     handleFlagUser(selectedUser.user.id);
-                    setSelectedUser(null);
                   }}
-                  style={styles.flagButton}
+                  variant="danger"
+                  fullWidth
+                  icon={<Flag className="w-5 h-5" />}
                 >
                   Flag User
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   onClick={() => {
+                    setShowDetailsModal(false);
                     handleUnflagUser(selectedUser.user.id);
-                    setSelectedUser(null);
                   }}
-                  style={styles.unflagButton}
+                  variant="success"
+                  fullWidth
+                  icon={<UserX className="w-5 h-5" />}
                 >
                   Unflag User
-                </button>
+                </Button>
               )}
-              <button onClick={() => setSelectedUser(null)} style={styles.cancelButton}>
+              <Button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedUser(null);
+                }}
+                variant="outline"
+                fullWidth
+                icon={<X className="w-5 h-5" />}
+              >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
-    </div>
+    </motion.div>
   );
-};
-
-const styles = {
-  container: {
-    padding: 'var(--space-lg)',
-    maxWidth: '1400px',
-    margin: '0 auto'
-  },
-  header: {
-    marginBottom: 'var(--space-lg)'
-  },
-  title: {
-    fontSize: 'var(--text-4xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-xs)'
-  },
-  subtitle: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-muted)'
-  },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '400px',
-    gap: 'var(--space-md)'
-  },
-  spinner: {
-    fontSize: '3rem',
-    animation: 'pulse 2s ease-in-out infinite'
-  },
-  loadingText: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-muted)'
-  },
-  errorContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-3xl)'
-  },
-  errorText: {
-    fontSize: 'var(--text-base)',
-    color: '#ef4444'
-  },
-  retryButton: {
-    padding: '0.75rem 1.5rem',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--text-primary)',
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 'var(--space-md)',
-    marginBottom: 'var(--space-lg)'
-  },
-  statCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    transition: 'all var(--transition-base)'
-  },
-  statIcon: {
-    fontSize: '2.5rem'
-  },
-  statContent: {
-    flex: 1
-  },
-  statValue: {
-    fontSize: 'var(--text-3xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: '0.25rem'
-  },
-  statLabel: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)',
-    fontWeight: '500',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-xs)'
-  },
-  tabs: {
-    display: 'flex',
-    gap: 'var(--space-xs)',
-    marginBottom: 'var(--space-lg)',
-    borderBottom: '2px solid var(--glass-border)'
-  },
-  tab: {
-    padding: 'var(--space-md) var(--space-lg)',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    color: 'var(--text-muted)',
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)',
-    marginBottom: '-2px'
-  },
-  tabActive: {
-    padding: 'var(--space-md) var(--space-lg)',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid var(--primary-gold)',
-    color: 'var(--primary-gold)',
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    marginBottom: '-2px'
-  },
-  tabContent: {
-    minHeight: '400px'
-  },
-  overviewContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-xl)'
-  },
-  sectionTitle: {
-    fontSize: 'var(--text-2xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-md)'
-  },
-  userList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-md)'
-  },
-  userCard: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)',
-    transition: 'all var(--transition-base)'
-  },
-  userInfo: {
-    flex: 1
-  },
-  userHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-md)',
-    marginBottom: 'var(--space-sm)'
-  },
-  userName: {
-    fontSize: 'var(--text-lg)',
-    fontWeight: '600',
-    color: 'var(--text-primary)'
-  },
-  badge: {
-    padding: '0.25rem 0.75rem',
-    borderRadius: 'var(--radius-sm)',
-    fontSize: 'var(--text-xs)',
-    fontWeight: '700',
-    border: '1px solid'
-  },
-  userDetails: {
-    display: 'flex',
-    gap: 'var(--space-md)',
-    flexWrap: 'wrap'
-  },
-  userDetail: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)'
-  },
-  flaggedBadge: {
-    fontSize: 'var(--text-sm)',
-    color: '#ef4444',
-    fontWeight: '600'
-  },
-  userActions: {
-    display: 'flex',
-    gap: 'var(--space-sm)'
-  },
-  actionButton: {
-    padding: '0.5rem 1rem',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--text-primary)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)'
-  },
-  flagButton: {
-    padding: '0.5rem 1rem',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
-    borderRadius: 'var(--radius-md)',
-    color: '#ef4444',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)'
-  },
-  unflagButton: {
-    padding: '0.5rem 1rem',
-    background: 'rgba(16, 185, 129, 0.1)',
-    border: '1px solid rgba(16, 185, 129, 0.3)',
-    borderRadius: 'var(--radius-md)',
-    color: '#10b981',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)'
-  },
-  emptyState: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 'var(--space-3xl)',
-    textAlign: 'center'
-  },
-  emptyIcon: {
-    fontSize: '3rem',
-    marginBottom: 'var(--space-md)'
-  },
-  emptyText: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-muted)'
-  },
-  eventsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-sm)'
-  },
-  eventCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-md)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)'
-  },
-  eventIcon: {
-    fontSize: '1.5rem'
-  },
-  eventContent: {
-    flex: 1
-  },
-  eventTitle: {
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-    marginBottom: '0.25rem'
-  },
-  eventDetails: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)'
-  },
-  groupsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-md)'
-  },
-  groupCard: {
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)'
-  },
-  groupHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 'var(--space-md)'
-  },
-  groupTitle: {
-    fontSize: 'var(--text-lg)',
-    fontWeight: '700',
-    color: 'var(--text-primary)'
-  },
-  groupCount: {
-    padding: '0.25rem 0.75rem',
-    background: 'rgba(245, 158, 11, 0.1)',
-    border: '1px solid rgba(245, 158, 11, 0.3)',
-    borderRadius: 'var(--radius-sm)',
-    color: '#f59e0b',
-    fontSize: 'var(--text-sm)',
-    fontWeight: '700'
-  },
-  groupDetails: {
-    marginBottom: 'var(--space-md)'
-  },
-  groupInfo: {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)',
-    marginBottom: '0.5rem'
-  },
-  groupActions: {
-    display: 'flex',
-    gap: 'var(--space-sm)',
-    flexWrap: 'wrap'
-  },
-  alertsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-md)'
-  },
-  alertCard: {
-    padding: 'var(--space-lg)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-lg)'
-  },
-  alertHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 'var(--space-sm)'
-  },
-  alertType: {
-    fontSize: 'var(--text-base)',
-    fontWeight: '700',
-    color: 'var(--text-primary)'
-  },
-  alertMessage: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-secondary)',
-    marginBottom: 'var(--space-sm)'
-  },
-  alertFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-muted)'
-  },
-  alertUser: {},
-  alertTime: {},
-  modalOverlay: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.8)',
-    backdropFilter: 'blur(4px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10000,
-    padding: 'var(--space-md)'
-  },
-  modal: {
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-xl)',
-    maxWidth: '800px',
-    width: '100%',
-    maxHeight: '90vh',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 'var(--space-lg)',
-    borderBottom: '1px solid var(--glass-border)'
-  },
-  modalTitle: {
-    fontSize: 'var(--text-2xl)',
-    fontWeight: '700',
-    color: 'var(--text-primary)'
-  },
-  closeButton: {
-    background: 'transparent',
-    border: 'none',
-    fontSize: 'var(--text-2xl)',
-    color: 'var(--text-muted)',
-    cursor: 'pointer',
-    padding: '0',
-    width: '32px',
-    height: '32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'var(--radius-sm)',
-    transition: 'all var(--transition-fast)'
-  },
-  modalContent: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: 'var(--space-lg)'
-  },
-  detailSection: {
-    marginBottom: 'var(--space-lg)'
-  },
-  detailTitle: {
-    fontSize: 'var(--text-lg)',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: 'var(--space-sm)'
-  },
-  detailText: {
-    fontSize: 'var(--text-base)',
-    color: 'var(--text-secondary)',
-    marginBottom: '0.5rem'
-  },
-  evidenceList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0
-  },
-  evidenceItem: {
-    padding: 'var(--space-sm)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    marginBottom: 'var(--space-sm)',
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-secondary)'
-  },
-  deviceCard: {
-    padding: 'var(--space-md)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    marginBottom: 'var(--space-sm)'
-  },
-  ipCard: {
-    padding: 'var(--space-md)',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    marginBottom: 'var(--space-sm)'
-  },
-  modalActions: {
-    display: 'flex',
-    gap: 'var(--space-sm)',
-    justifyContent: 'flex-end',
-    padding: 'var(--space-lg)',
-    borderTop: '1px solid var(--glass-border)'
-  },
-  cancelButton: {
-    padding: '0.75rem 1.5rem',
-    background: 'var(--glass-bg)',
-    border: '1px solid var(--glass-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--text-primary)',
-    fontSize: 'var(--text-base)',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all var(--transition-base)'
-  }
 };
 
 export default InstructorFraudDetection;
