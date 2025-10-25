@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { participantAPI, systemAPI } from '../services/api';
+import { memberAPI, systemAPI } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -39,7 +39,7 @@ const MemberDashboard = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const response = await participantAPI.getDashboard();
+      const response = await memberAPI.getDashboard();
       setDashboard(response.data.data);
       setError(null);
     } catch (err) {
