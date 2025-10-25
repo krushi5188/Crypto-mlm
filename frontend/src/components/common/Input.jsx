@@ -19,7 +19,7 @@ const Input = ({
     borderRadius: '8px',
     border: error ? '2px solid #ef4444' : '2px solid rgba(255, 255, 255, 0.2)',
     background: 'rgba(255, 255, 255, 0.1)',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     transition: 'all 0.2s'
   };
 
@@ -33,7 +33,7 @@ const Input = ({
             marginBottom: '0.5rem',
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: '#ffffff'
+            color: 'var(--text-primary)'
           }}
         >
           {label} {required && <span style={{ color: '#ef4444' }}>*</span>}
