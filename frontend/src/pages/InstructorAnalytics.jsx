@@ -141,10 +141,10 @@ const InstructorAnalytics = () => {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
         <motion.div variants={itemVariants}>
-          <Card variant="glass-strong" padding="xl" interactive glow="blue">
+          <Card variant="glass-strong" padding="xl" interactive glow="blue" className="min-h-[180px]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-dimmed mb-2">Total Participants</p>
+                <p className="text-sm text-gray-400 mb-2">Total Members</p>
                 <p className="text-5xl font-display font-bold text-blue-400">
                   <AnimatedNumber value={analytics.overview.totalParticipants} />
                 </p>
@@ -160,10 +160,10 @@ const InstructorAnalytics = () => {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card variant="glass-strong" padding="xl" interactive glow={analytics.overview.simulationStatus === 'active' ? 'green' : 'red'}>
+          <Card variant="glass-strong" padding="xl" interactive glow={analytics.overview.simulationStatus === 'active' ? 'green' : 'red'} className="min-h-[180px]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-dimmed mb-2">Platform Status</p>
+                <p className="text-sm text-gray-400 mb-2">Platform Status</p>
                 <p className={`text-3xl font-display font-bold uppercase ${
                   analytics.overview.simulationStatus === 'active' ? 'text-green-400' : 'text-red-400'
                 }`}>
@@ -187,10 +187,10 @@ const InstructorAnalytics = () => {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card variant="glass-strong" padding="xl" interactive glow="purple">
+          <Card variant="glass-strong" padding="xl" interactive glow="purple" className="min-h-[180px]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-dimmed mb-2">Days Active</p>
+                <p className="text-sm text-gray-400 mb-2">Days Active</p>
                 <p className="text-5xl font-display font-bold text-purple-400">
                   <AnimatedNumber value={analytics.overview.daysRemaining} />
                 </p>
@@ -206,10 +206,10 @@ const InstructorAnalytics = () => {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card variant="glass-strong" padding="xl" interactive glow="gold">
+          <Card variant="glass-strong" padding="xl" interactive glow="gold" className="min-h-[180px]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-dimmed mb-2">Coins Distributed</p>
+                <p className="text-sm text-gray-400 mb-2">Coins Distributed</p>
                 <p className="text-3xl font-display font-bold text-gold-400">
                   <AnimatedNumber value={analytics.systemTotals.totalCoinsDistributed} decimals={2} />
                   <span className="text-xl ml-1">USDT</span>
@@ -236,13 +236,13 @@ const InstructorAnalytics = () => {
         <Card variant="glass-strong" padding="xl">
           <div className="flex items-center gap-3 mb-6">
             <TrendingUp className="w-6 h-6 text-blue-400" />
-            <h2 className="text-2xl font-semibold">Participant Distribution</h2>
+            <h2 className="text-2xl font-semibold">Member Distribution</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card variant="glass-medium" padding="xl" glow="red">
+            <Card variant="glass-medium" padding="xl" glow="red" className="min-h-[200px] flex flex-col justify-center">
               <div className="text-center">
-                <p className="text-sm text-text-dimmed mb-2">Zero Balance</p>
+                <p className="text-sm text-gray-400 mb-2">Zero Balance</p>
                 <p className="text-5xl font-display font-bold text-red-400 mb-2">
                   <AnimatedNumber value={analytics.distribution.zeroBalance} />
                 </p>
@@ -252,9 +252,9 @@ const InstructorAnalytics = () => {
               </div>
             </Card>
 
-            <Card variant="glass-medium" padding="xl" glow="yellow">
+            <Card variant="glass-medium" padding="xl" glow="yellow" className="min-h-[200px] flex flex-col justify-center">
               <div className="text-center">
-                <p className="text-sm text-text-dimmed mb-2">Broke Even</p>
+                <p className="text-sm text-gray-400 mb-2">Broke Even</p>
                 <p className="text-5xl font-display font-bold text-yellow-400 mb-2">
                   <AnimatedNumber value={analytics.distribution.brokeEven} />
                 </p>
@@ -264,9 +264,9 @@ const InstructorAnalytics = () => {
               </div>
             </Card>
 
-            <Card variant="glass-medium" padding="xl" glow="green">
+            <Card variant="glass-medium" padding="xl" glow="green" className="min-h-[200px] flex flex-col justify-center">
               <div className="text-center">
-                <p className="text-sm text-text-dimmed mb-2">Profited</p>
+                <p className="text-sm text-gray-400 mb-2">Profited</p>
                 <p className="text-5xl font-display font-bold text-green-400 mb-2">
                   <AnimatedNumber value={analytics.distribution.profited} />
                 </p>
@@ -291,34 +291,34 @@ const InstructorAnalytics = () => {
             <TrendingDown className="w-6 h-6 text-red-400" />
             <h2 className="text-2xl font-semibold">Wealth Concentration</h2>
           </div>
-          <p className="text-sm text-text-dimmed mb-6">
+          <p className="text-sm text-gray-400 mb-6">
             Demonstrates MLM inequality: how wealth is distributed across participants
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card variant="glass-medium" padding="lg">
-              <p className="text-sm text-text-dimmed mb-2">Top 10% Control</p>
+            <Card variant="glass-medium" padding="lg" className="min-h-[140px] flex flex-col justify-center">
+              <p className="text-sm text-gray-400 mb-2">Top 10% Control</p>
               <p className="text-4xl font-display font-bold text-red-400">
                 {formatPercentage(analytics.wealth.top10Percent)}
               </p>
             </Card>
 
-            <Card variant="glass-medium" padding="lg">
-              <p className="text-sm text-text-dimmed mb-2">Middle 20% Control</p>
+            <Card variant="glass-medium" padding="lg" className="min-h-[140px] flex flex-col justify-center">
+              <p className="text-sm text-gray-400 mb-2">Middle 20% Control</p>
               <p className="text-4xl font-display font-bold text-yellow-400">
                 {formatPercentage(analytics.wealth.middle20Percent)}
               </p>
             </Card>
 
-            <Card variant="glass-medium" padding="lg">
-              <p className="text-sm text-text-dimmed mb-2">Bottom 70% Control</p>
+            <Card variant="glass-medium" padding="lg" className="min-h-[140px] flex flex-col justify-center">
+              <p className="text-sm text-gray-400 mb-2">Bottom 70% Control</p>
               <p className="text-4xl font-display font-bold text-green-400">
                 {formatPercentage(analytics.wealth.bottom70Percent)}
               </p>
             </Card>
 
-            <Card variant="glass-medium" padding="lg">
-              <p className="text-sm text-text-dimmed mb-2">Gini Coefficient</p>
+            <Card variant="glass-medium" padding="lg" className="min-h-[140px] flex flex-col justify-center">
+              <p className="text-sm text-gray-400 mb-2">Gini Coefficient</p>
               <p className="text-4xl font-display font-bold text-purple-400">
                 {analytics.wealth.giniCoefficient}
               </p>
