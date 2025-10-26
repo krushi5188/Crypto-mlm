@@ -184,6 +184,17 @@ class FraudDetection {
    */
   static async calculateRiskScore(userId) {
     try {
+      // Check if tables exist
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        // Return default safe score if tables don't exist
+        return {
+          riskScore: 0,
+          level: 'low',
+          evidence: []
+        };
+      }
+
       let riskScore = 0;
       const evidence = [];
 
