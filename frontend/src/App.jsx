@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage'
 
 // Member Pages
 import MemberDashboard from './pages/MemberDashboard'
+import WithdrawalsPage from './pages/WithdrawalsPage'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -47,6 +48,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <MemberDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/withdrawals"
+        element={
+          <ProtectedRoute>
+            <WithdrawalsPage />
           </ProtectedRoute>
         }
       />
