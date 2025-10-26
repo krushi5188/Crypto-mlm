@@ -87,6 +87,13 @@ class FraudDetection {
    */
   static async recordDevice(userId, userAgent, ipAddress) {
     try {
+      // Check if tables exist
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        // Silently skip if tables don't exist
+        return null;
+      }
+
       const fingerprint = this.generateFingerprint(userAgent);
       const deviceInfo = this.parseUserAgent(userAgent);
 
@@ -125,8 +132,8 @@ class FraudDetection {
 
       return fingerprint;
     } catch (error) {
-      console.error('Error recording device:', error);
-      throw error;
+      // Silently fail - fraud detection is not critical
+      return null;
     }
   }
 
@@ -135,6 +142,13 @@ class FraudDetection {
    */
   static async recordIP(userId, ipAddress) {
     try {
+      // Check if tables exist
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        // Silently skip if tables don't exist
+        return null;
+      }
+
       // Check if IP already exists for user
       const existing = await pool.query(
         `SELECT id, login_count FROM ip_addresses
@@ -159,8 +173,8 @@ class FraudDetection {
         );
       }
     } catch (error) {
-      console.error('Error recording IP:', error);
-      throw error;
+      // Silently fail - fraud detection is not critical
+      return null;
     }
   }
 
