@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import Button from '../components/base/Button'
 import {
   TrendingUp, Users, DollarSign, Shield, Zap, Lock,
@@ -9,6 +10,31 @@ import {
 const LandingPage = () => {
   const navigate = useNavigate()
   const [activeFaq, setActiveFaq] = useState(null)
+
+  // Animation Variants
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0 }
+  }
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+
+  const scaleIn = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.3 }
+    }
+  }
 
   // Compelling Features
   const features = [
@@ -110,7 +136,12 @@ const LandingPage = () => {
   return (
     <div className="bg-black text-white min-h-screen">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-black bg-opacity-90 backdrop-blur-sm border-b border-white border-opacity-10">
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="fixed top-0 w-full z-50 bg-black bg-opacity-90 backdrop-blur-sm border-b border-white border-opacity-10"
+      >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
@@ -122,28 +153,50 @@ const LandingPage = () => {
             Sign In
           </Button>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-6xl md:text-7xl font-display font-bold mb-6 leading-tight">
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-6xl md:text-7xl font-display font-bold mb-6 leading-tight"
+          >
             Build Wealth Through<br />Your Network
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto">
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto"
+          >
             Earn USDT cryptocurrency through unlimited-depth commission structure. Transparent, instant, and verified on the blockchain.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
             <Button size="lg" onClick={() => navigate('/login')}>
               Get Started <ArrowRight className="w-5 h-5" />
             </Button>
             <Button variant="secondary" size="lg" onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })}>
               How It Works
             </Button>
-          </div>
+          </motion.div>
 
           {/* Live Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
+          >
             <div>
               <div className="text-3xl font-bold font-display">Real-Time</div>
               <div className="text-gray-400 text-sm mt-1">USDT Payouts</div>
@@ -156,46 +209,73 @@ const LandingPage = () => {
               <div className="text-3xl font-bold font-display">100%</div>
               <div className="text-gray-400 text-sm mt-1">Transparent</div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
       <section id="features" className="py-20 px-6 bg-gradient-to-b from-black to-gray-900">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-5xl font-display font-bold mb-4">Why Atlas Network?</h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               The most advanced and transparent network marketing platform powered by blockchain technology
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
             {features.map((feature, index) => (
-              <div
+              <motion.div
                 key={index}
+                variants={fadeInUp}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
                 className="p-8 bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 hover:border-opacity-20 transition-all"
               >
                 <div className="text-white mb-4">{feature.icon}</div>
                 <h3 className="text-2xl font-display font-bold mb-3">{feature.title}</h3>
                 <p className="text-gray-300 leading-relaxed">{feature.description}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-5xl font-display font-bold mb-4">How It Works</h2>
             <p className="text-xl text-gray-300">Three simple steps to start earning</p>
-          </div>
+          </motion.div>
 
           <div className="space-y-16">
             {steps.map((step, index) => (
-              <div key={index} className="flex flex-col md:flex-row gap-8 items-center">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="flex flex-col md:flex-row gap-8 items-center"
+              >
                 <div className="flex-shrink-0">
                   <div className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center text-3xl font-display font-bold">
                     {step.number}
@@ -205,7 +285,7 @@ const LandingPage = () => {
                   <h3 className="text-3xl font-display font-bold mb-3">{step.title}</h3>
                   <p className="text-xl text-gray-300 leading-relaxed">{step.description}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -214,38 +294,72 @@ const LandingPage = () => {
       {/* FAQs Section */}
       <section id="faqs" className="py-20 px-6 bg-gradient-to-b from-black to-gray-900">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-5xl font-display font-bold mb-4">Frequently Asked Questions</h2>
             <p className="text-xl text-gray-300">Everything you need to know</p>
-          </div>
+          </motion.div>
 
-          <div className="space-y-4">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="space-y-4"
+          >
             {faqs.map((faq, index) => (
-              <div
+              <motion.div
                 key={index}
+                variants={scaleIn}
                 className="border border-white border-opacity-10 rounded-xl overflow-hidden"
               >
-                <button
+                <motion.button
                   onClick={() => setActiveFaq(activeFaq === index ? null : index)}
-                  className="w-full text-left p-6 hover:bg-white hover:bg-opacity-5 transition-all flex items-center justify-between"
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                  className="w-full text-left p-6 transition-all flex items-center justify-between"
                 >
                   <span className="text-xl font-display font-semibold pr-8">{faq.question}</span>
-                  <span className="text-2xl flex-shrink-0">{activeFaq === index ? '−' : '+'}</span>
-                </button>
-                {activeFaq === index && (
+                  <motion.span
+                    animate={{ rotate: activeFaq === index ? 45 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-2xl flex-shrink-0"
+                  >
+                    +
+                  </motion.span>
+                </motion.button>
+                <motion.div
+                  initial={false}
+                  animate={{
+                    height: activeFaq === index ? 'auto' : 0,
+                    opacity: activeFaq === index ? 1 : 0
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
                   <div className="px-6 pb-6 text-gray-300 leading-relaxed text-lg">
                     {faq.answer}
                   </div>
-                )}
-              </div>
+                </motion.div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto text-center"
+        >
           <h2 className="text-5xl font-display font-bold mb-6">Ready to Start Building?</h2>
           <p className="text-xl text-gray-300 mb-8">
             Join thousands of members already earning through Atlas Network
@@ -256,7 +370,7 @@ const LandingPage = () => {
           <p className="text-sm text-gray-400 mt-6">
             Invitation-only. Requires referral link from existing member.
           </p>
-        </div>
+        </motion.div>
       </section>
 
       {/* Footer */}
