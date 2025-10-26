@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 // Pages
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -34,8 +35,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-      {/* More routes will be added here */}
+      {/* Protected routes will be added here */}
     </Routes>
   )
 }
