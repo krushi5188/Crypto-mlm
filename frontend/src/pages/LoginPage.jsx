@@ -72,7 +72,10 @@ const LoginPage = () => {
         >
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-white hover:text-gold-400 transition-colors"
+            className="inline-flex items-center gap-2 transition-colors"
+            style={{ color: '#ffffff' }}
+            onMouseEnter={(e) => e.target.style.color = '#fbbf24'}
+            onMouseLeave={(e) => e.target.style.color = '#ffffff'}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
