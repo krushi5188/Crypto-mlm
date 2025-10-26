@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Card from '../../components/base/Card'
 import Button from '../../components/base/Button'
-import { memberAPI } from '../../services/api'
+import { adminAPI } from '../../services/api'
 import {
   AlertTriangle, Shield, Eye, Ban, Users, DollarSign,
   Activity, Clock, CheckCircle, XCircle, TrendingUp
@@ -20,7 +20,7 @@ const AdminFraud = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await memberAPI.getFraudAlerts({ severity: severityFilter })
+      const response = await adminAPI.getFraudAlerts({ severity: severityFilter })
       setAlerts(response.data)
     } catch (error) {
       console.error('Error fetching fraud alerts:', error)
@@ -31,7 +31,11 @@ const AdminFraud = () => {
 
   const handleResolve = async (alertId, action) => {
     try {
-      await memberAPI.resolveFraudAlert(alertId, { action })
+      if (action === 'ban') {
+        await adminAPI.flagUser(alertId, 'Flagged for suspicious activity')
+      } else if (action === 'dismiss') {
+        await adminAPI.unflagUser(alertId, 'False positive')
+      }
       fetchAlerts()
     } catch (error) {
       console.error('Error resolving alert:', error)
