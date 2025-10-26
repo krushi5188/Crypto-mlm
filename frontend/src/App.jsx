@@ -16,6 +16,12 @@ import WalletsPage from './pages/WalletsPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 
+// Admin Pages
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminMembers from './pages/admin/AdminMembers'
+import AdminDeposits from './pages/admin/AdminDeposits'
+import AdminFraud from './pages/admin/AdminFraud'
+
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user, loading } = useAuth()
@@ -105,7 +111,39 @@ function AppRoutes() {
         }
       />
 
-      {/* More protected routes will be added here */}
+      {/* Admin Routes */}
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminAnalytics />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/members"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminMembers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/deposits"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminDeposits />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/fraud"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminFraud />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }
