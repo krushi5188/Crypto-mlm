@@ -175,85 +175,85 @@ export const memberAPI = {
   updatePassword: (data) => api.put('/member/profile', data)
 };
 
-// Instructor API (renamed to adminAPI for frontend consistency)
+// Admin API (routes point to /api/v1/admin)
 export const adminAPI = {
-  getAnalytics: () => api.get('/instructor/analytics'),
-  getParticipants: (params) => api.get('/instructor/participants', { params }),
-  getParticipant: (id) => api.get(`/instructor/participants/${id}`),
-  approveParticipant: (id) => api.post(`/instructor/participants/${id}/approve`),
-  rejectParticipant: (id, data) => api.post(`/instructor/participants/${id}/reject`, data),
-  addMember: (data) => api.post('/instructor/add-member', data),
-  getNetworkGraph: () => api.get('/instructor/network-graph'),
-  injectCoins: (data) => api.post('/instructor/inject-coins', data),
-  pause: () => api.post('/instructor/pause'),
-  resume: () => api.post('/instructor/resume'),
-  reset: (data) => api.post('/instructor/reset', data),
-  export: (data) => api.post('/instructor/export', data, { responseType: 'blob' }),
-  updateConfig: (data) => api.put('/instructor/config', data),
+  getAnalytics: () => api.get('/admin/analytics'),
+  getParticipants: (params) => api.get('/admin/participants', { params }),
+  getParticipant: (id) => api.get(`/admin/participants/${id}`),
+  approveParticipant: (id) => api.post(`/admin/participants/${id}/approve`),
+  rejectParticipant: (id, data) => api.post(`/admin/participants/${id}/reject`, data),
+  addMember: (data) => api.post('/admin/add-member', data),
+  getNetworkGraph: () => api.get('/admin/network-graph'),
+  injectCoins: (data) => api.post('/admin/inject-coins', data),
+  pause: () => api.post('/admin/pause'),
+  resume: () => api.post('/admin/resume'),
+  reset: (data) => api.post('/admin/reset', data),
+  export: (data) => api.post('/admin/export', data, { responseType: 'blob' }),
+  updateConfig: (data) => api.put('/admin/config', data),
 
   // Fraud Detection
-  getFraudDashboard: () => api.get('/instructor/fraud-detection/dashboard'),
-  getFlaggedUsers: () => api.get('/instructor/fraud-detection/flagged-users'),
-  getUserFraudDetails: (id) => api.get(`/instructor/fraud-detection/user/${id}`),
-  flagUser: (id, reason) => api.post(`/instructor/fraud-detection/flag/${id}`, { reason }),
-  unflagUser: (id, notes) => api.post(`/instructor/fraud-detection/unflag/${id}`, { notes }),
-  getMultiAccounts: () => api.get('/instructor/fraud-detection/multi-accounts'),
-  getFraudAlerts: (params) => api.get('/instructor/fraud-detection/alerts', { params }),
+  getFraudDashboard: () => api.get('/admin/fraud-detection/dashboard'),
+  getFlaggedUsers: () => api.get('/admin/fraud-detection/flagged-users'),
+  getUserFraudDetails: (id) => api.get(`/admin/fraud-detection/user/${id}`),
+  flagUser: (id, reason) => api.post(`/admin/fraud-detection/flag/${id}`, { reason }),
+  unflagUser: (id, notes) => api.post(`/admin/fraud-detection/unflag/${id}`, { notes }),
+  getMultiAccounts: () => api.get('/admin/fraud-detection/multi-accounts'),
+  getFraudAlerts: (params) => api.get('/admin/fraud-detection/alerts', { params }),
 
   // Business Intelligence
-  getBIRetention: () => api.get('/instructor/bi/retention'),
-  getBIConversion: () => api.get('/instructor/bi/conversion'),
-  getBINetworkDepth: () => api.get('/instructor/bi/network-depth'),
-  getBIEarningsDistribution: () => api.get('/instructor/bi/earnings-distribution'),
-  getBIGrowthPredictions: () => api.get('/instructor/bi/growth-predictions'),
+  getBIRetention: () => api.get('/admin/bi/retention'),
+  getBIConversion: () => api.get('/admin/bi/conversion'),
+  getBINetworkDepth: () => api.get('/admin/bi/network-depth'),
+  getBIEarningsDistribution: () => api.get('/admin/bi/earnings-distribution'),
+  getBIGrowthPredictions: () => api.get('/admin/bi/growth-predictions'),
 
   // Bulk Operations
-  bulkApprove: (userIds) => api.post('/instructor/bulk-approve', { userIds }),
-  bulkReject: (userIds, reason) => api.post('/instructor/bulk-reject', { userIds, reason }),
-  bulkFreeze: (userIds, reason) => api.post('/instructor/bulk-freeze', { userIds, reason }),
-  bulkUnfreeze: (userIds) => api.post('/instructor/bulk-unfreeze', { userIds }),
+  bulkApprove: (userIds) => api.post('/admin/bulk-approve', { userIds }),
+  bulkReject: (userIds, reason) => api.post('/admin/bulk-reject', { userIds, reason }),
+  bulkFreeze: (userIds, reason) => api.post('/admin/bulk-freeze', { userIds, reason }),
+  bulkUnfreeze: (userIds) => api.post('/admin/bulk-unfreeze', { userIds }),
 
   // Freeze/Unfreeze Individual Accounts
-  freezeAccount: (id, reason) => api.post(`/instructor/participants/${id}/freeze`, { reason }),
-  unfreezeAccount: (id) => api.post(`/instructor/participants/${id}/unfreeze`),
+  freezeAccount: (id, reason) => api.post(`/admin/participants/${id}/freeze`, { reason }),
+  unfreezeAccount: (id) => api.post(`/admin/participants/${id}/unfreeze`),
 
   // Commission Rate Adjustments
   adjustCommissionRate: (id, commissionRate, useDefault = false) =>
-    api.put(`/instructor/participants/${id}/commission-rate`, { commissionRate, useDefault }),
+    api.put(`/admin/participants/${id}/commission-rate`, { commissionRate, useDefault }),
 
   // Manual Transactions
-  createTransaction: (data) => api.post('/instructor/transactions/create', data),
-  reverseTransaction: (id, reason) => api.post(`/instructor/transactions/${id}/reverse`, { reason }),
+  createTransaction: (data) => api.post('/admin/transactions/create', data),
+  reverseTransaction: (id, reason) => api.post(`/admin/transactions/${id}/reverse`, { reason }),
 
   // Deposits
-  getDeposits: (params) => api.get('/instructor/deposits', { params }),
-  getDepositStats: () => api.get('/instructor/deposits/stats'),
-  confirmDeposit: (id) => api.post(`/instructor/deposits/${id}/confirm`),
-  rejectDeposit: (id, reason) => api.post(`/instructor/deposits/${id}/reject`, { reason }),
+  getDeposits: (params) => api.get('/admin/deposits', { params }),
+  getDepositStats: () => api.get('/admin/deposits/stats'),
+  confirmDeposit: (id) => api.post(`/admin/deposits/${id}/confirm`),
+  rejectDeposit: (id, reason) => api.post(`/admin/deposits/${id}/reject`, { reason }),
 
   // Campaigns
-  getCampaigns: (params) => api.get('/instructor/campaigns', { params }),
-  getCampaign: (id) => api.get(`/instructor/campaigns/${id}`),
-  createCampaign: (data) => api.post('/instructor/campaigns', data),
-  updateCampaign: (id, data) => api.put(`/instructor/campaigns/${id}`, data),
-  deleteCampaign: (id) => api.delete(`/instructor/campaigns/${id}`),
-  updateCampaignStatus: (id, status) => api.put(`/instructor/campaigns/${id}/status`, { status }),
-  executeCampaign: (id) => api.post(`/instructor/campaigns/${id}/execute`),
-  getCampaignStats: (id) => api.get(`/instructor/campaigns/${id}/stats`),
-  addDripStep: (id, data) => api.post(`/instructor/campaigns/${id}/drip-step`, data),
-  getCampaignRecipients: (id, params) => api.get(`/instructor/campaigns/${id}/recipients`, { params }),
+  getCampaigns: (params) => api.get('/admin/campaigns', { params }),
+  getCampaign: (id) => api.get(`/admin/campaigns/${id}`),
+  createCampaign: (data) => api.post('/admin/campaigns', data),
+  updateCampaign: (id, data) => api.put(`/admin/campaigns/${id}`, data),
+  deleteCampaign: (id) => api.delete(`/admin/campaigns/${id}`),
+  updateCampaignStatus: (id, status) => api.put(`/admin/campaigns/${id}/status`, { status }),
+  executeCampaign: (id) => api.post(`/admin/campaigns/${id}/execute`),
+  getCampaignStats: (id) => api.get(`/admin/campaigns/${id}/stats`),
+  addDripStep: (id, data) => api.post(`/admin/campaigns/${id}/drip-step`, data),
+  getCampaignRecipients: (id, params) => api.get(`/admin/campaigns/${id}/recipients`, { params }),
 
   // A/B Testing
-  getExperiments: (params) => api.get('/instructor/ab-experiments', { params }),
-  getExperiment: (id) => api.get(`/instructor/ab-experiments/${id}`),
-  getExperimentResults: (id) => api.get(`/instructor/ab-experiments/${id}/results`),
-  getExperimentsSummary: () => api.get('/instructor/ab-experiments/summary'),
-  createExperiment: (data) => api.post('/instructor/ab-experiments', data),
-  updateExperiment: (id, data) => api.put(`/instructor/ab-experiments/${id}`, data),
-  updateExperimentStatus: (id, status) => api.put(`/instructor/ab-experiments/${id}/status`, { status }),
-  setExperimentWinner: (id, winnerVariant) => api.post(`/instructor/ab-experiments/${id}/winner`, { winnerVariant }),
-  deleteExperiment: (id) => api.delete(`/instructor/ab-experiments/${id}`),
-  trackExperimentEvent: (id, data) => api.post(`/instructor/ab-experiments/${id}/track`, data)
+  getExperiments: (params) => api.get('/admin/ab-experiments', { params }),
+  getExperiment: (id) => api.get(`/admin/ab-experiments/${id}`),
+  getExperimentResults: (id) => api.get(`/admin/ab-experiments/${id}/results`),
+  getExperimentsSummary: () => api.get('/admin/ab-experiments/summary'),
+  createExperiment: (data) => api.post('/admin/ab-experiments', data),
+  updateExperiment: (id, data) => api.put(`/admin/ab-experiments/${id}`, data),
+  updateExperimentStatus: (id, status) => api.put(`/admin/ab-experiments/${id}/status`, { status }),
+  setExperimentWinner: (id, winnerVariant) => api.post(`/admin/ab-experiments/${id}/winner`, { winnerVariant }),
+  deleteExperiment: (id) => api.delete(`/admin/ab-experiments/${id}`),
+  trackExperimentEvent: (id, data) => api.post(`/admin/ab-experiments/${id}/track`, data)
 };
 
 // Keep instructorAPI as alias for backwards compatibility
