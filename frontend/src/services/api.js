@@ -175,8 +175,8 @@ export const memberAPI = {
   updatePassword: (data) => api.put('/member/profile', data)
 };
 
-// Instructor API
-export const instructorAPI = {
+// Instructor API (renamed to adminAPI for frontend consistency)
+export const adminAPI = {
   getAnalytics: () => api.get('/instructor/analytics'),
   getParticipants: (params) => api.get('/instructor/participants', { params }),
   getParticipant: (id) => api.get(`/instructor/participants/${id}`),
@@ -255,6 +255,9 @@ export const instructorAPI = {
   deleteExperiment: (id) => api.delete(`/instructor/ab-experiments/${id}`),
   trackExperimentEvent: (id, data) => api.post(`/instructor/ab-experiments/${id}/track`, data)
 };
+
+// Keep instructorAPI as alias for backwards compatibility
+export const instructorAPI = adminAPI;
 
 // System API
 export const systemAPI = {
