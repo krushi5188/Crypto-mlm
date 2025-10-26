@@ -20,30 +20,31 @@ const trackLogin = async (req, res, next) => {
     const deviceInfo = FraudDetection.parseUserAgent(userAgent);
     const fingerprint = FraudDetection.generateFingerprint(userAgent);
 
-    // Record in login_history (if table exists)
-    try {
-      await pool.query(
-        `INSERT INTO login_history
-         (user_id, ip_address, user_agent, device_info, login_method, success)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, ipAddress, userAgent, JSON.stringify(deviceInfo), 'password', true]
-      );
-    } catch (err) {
-      // Table might not exist yet, silently continue
-      console.log('Login history tracking skipped:', err.message);
-    }
+    // Record in login_history (if table exists) - non-blocking
+    Promise.resolve().then(async () => {
+      try {
+        await pool.query(
+          `INSERT INTO login_history
+           (user_id, ip_address, user_agent, device_info, login_method, success)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, ipAddress, userAgent, JSON.stringify(deviceInfo), 'password', true]
+        );
+      } catch (err) {
+        // Table might not exist yet, silently continue
+      }
+    });
 
     // Record device and IP (background task - don't block response)
     Promise.all([
       FraudDetection.recordDevice(userId, userAgent, ipAddress),
       FraudDetection.recordIP(userId, ipAddress)
     ]).catch(err => {
-      console.error('Error recording fraud detection data:', err);
+      // Silently fail - fraud detection is not critical
     });
 
     // Calculate risk score (background task)
     FraudDetection.calculateRiskScore(userId).catch(err => {
-      console.error('Error calculating risk score:', err);
+      // Silently fail - fraud detection is not critical
     });
 
     next();
@@ -72,20 +73,24 @@ const trackFailedLogin = async (email, ipAddress, userAgent, reason) => {
     const userId = userResult.rows[0].id;
     const deviceInfo = FraudDetection.parseUserAgent(userAgent);
 
-    // Record failed login
-    await pool.query(
-      `INSERT INTO login_history
-       (user_id, ip_address, user_agent, device_info, login_method, success, failure_reason)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [userId, ipAddress, userAgent, JSON.stringify(deviceInfo), 'password', false, reason]
-    );
+    // Record failed login (non-blocking, handle missing table)
+    try {
+      await pool.query(
+        `INSERT INTO login_history
+         (user_id, ip_address, user_agent, device_info, login_method, success, failure_reason)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, ipAddress, userAgent, JSON.stringify(deviceInfo), 'password', false, reason]
+      );
+    } catch (err) {
+      // Table might not exist, silently fail
+    }
 
     // Recalculate risk score after failed attempt
     FraudDetection.calculateRiskScore(userId).catch(err => {
-      console.error('Error calculating risk score after failed login:', err);
+      // Silently fail - fraud detection is not critical
     });
   } catch (error) {
-    console.error('Error tracking failed login:', error);
+    // Silently fail - fraud detection is not critical
   }
 };
 
