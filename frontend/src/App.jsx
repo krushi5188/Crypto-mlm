@@ -9,7 +9,12 @@ import RegisterPage from './pages/RegisterPage'
 
 // Member Pages
 import MemberDashboard from './pages/MemberDashboard'
+import NetworkPage from './pages/NetworkPage'
+import EarningsPage from './pages/EarningsPage'
 import WithdrawalsPage from './pages/WithdrawalsPage'
+import WalletsPage from './pages/WalletsPage'
+import ProfilePage from './pages/ProfilePage'
+import SettingsPage from './pages/SettingsPage'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -52,10 +57,50 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/network"
+        element={
+          <ProtectedRoute>
+            <NetworkPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/earnings"
+        element={
+          <ProtectedRoute>
+            <EarningsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/withdrawals"
         element={
           <ProtectedRoute>
             <WithdrawalsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wallets"
+        element={
+          <ProtectedRoute>
+            <WalletsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />
