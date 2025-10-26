@@ -20,8 +20,15 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
 
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser))
+    if (token && savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch (error) {
+        console.error('Failed to parse saved user:', error)
+        // Clear invalid data
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     }
 
     setLoading(false)
