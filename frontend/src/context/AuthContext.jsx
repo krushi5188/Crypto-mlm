@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials)
-      const { token, user, require2FA } = response.data
+      const { token, user, require2FA } = response.data.data || response.data
 
       if (require2FA) {
         return { success: true, require2FA: true }
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     try {
       const response = await authAPI.register(data)
-      const { token, user } = response.data
+      const { token, user } = response.data.data || response.data
 
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
