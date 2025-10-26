@@ -45,7 +45,7 @@ const Input = ({
       {/* Input Field */}
       <div className="relative">
         {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 z-10">
             {icon}
           </div>
         )}
@@ -60,7 +60,7 @@ const Input = ({
           disabled={disabled}
           required={required}
           className={`
-            w-full px-4 py-3 bg-white bg-opacity-5 border rounded-xl
+            w-full px-4 pt-6 pb-2 bg-white bg-opacity-5 border rounded-xl
             text-white placeholder-transparent
             transition-all duration-200
             ${icon ? 'pl-12' : ''}
@@ -75,13 +75,12 @@ const Input = ({
         {/* Floating Label */}
         <label
           className={`
-            absolute left-4 transition-all duration-200 pointer-events-none
-            ${icon ? 'left-12' : 'left-4'}
+            absolute transition-all duration-200 pointer-events-none
             ${isFloating
-              ? 'top-0 -translate-y-1/2 text-xs px-2 bg-black'
-              : 'top-1/2 -translate-y-1/2 text-base'
+              ? `${icon ? 'left-12' : 'left-4'} top-2 text-xs text-gray-400`
+              : `${icon ? 'left-12' : 'left-4'} top-1/2 -translate-y-1/2 text-base ${isFocused ? 'text-white' : 'text-gray-400'}`
             }
-            ${error ? 'text-red-400' : success ? 'text-green-400' : isFocused ? 'text-white' : 'text-gray-400'}
+            ${error ? 'text-red-400' : success ? 'text-green-400' : ''}
           `}
         >
           {label}
@@ -93,7 +92,7 @@ const Input = ({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors z-10"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
