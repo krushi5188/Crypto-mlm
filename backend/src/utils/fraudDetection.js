@@ -7,6 +7,38 @@ const { pool } = require('../config/database');
  */
 
 class FraudDetection {
+  // Cache for table existence check
+  static tablesExist = null;
+
+  /**
+   * Check if fraud detection tables exist in database
+   */
+  static async checkTablesExist() {
+    // Return cached result if available
+    if (this.tablesExist !== null) {
+      return this.tablesExist;
+    }
+
+    try {
+      const result = await pool.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name IN ('device_fingerprints', 'ip_addresses', 'fraud_rules', 'fraud_alerts')
+      `);
+      
+      // Check if all required tables exist
+      const tableNames = result.rows.map(r => r.table_name);
+      this.tablesExist = tableNames.length === 4;
+      
+      return this.tablesExist;
+    } catch (error) {
+      // On error, assume tables don't exist
+      this.tablesExist = false;
+      return false;
+    }
+  }
+
   /**
    * Generate device fingerprint hash from user agent and other device info
    */
