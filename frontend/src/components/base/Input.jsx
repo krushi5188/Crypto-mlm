@@ -35,6 +35,11 @@ const Input = ({
 
   const inputType = type === 'password' && showPassword ? 'text' : type
 
+  const handleBlur = (e) => {
+    setIsFocused(false)
+    onBlur?.(e)
+  }
+
   return (
     <div className={`relative ${className}`}>
       {/* Input Field */}
@@ -50,12 +55,8 @@ const Input = ({
           name={name}
           value={value}
           onChange={onChange}
-          onBlur={onBlur}
           onFocus={() => setIsFocused(true)}
-          onBlur={(e) => {
-            setIsFocused(false)
-            onBlur?.(e)
-          }}
+          onBlur={handleBlur}
           disabled={disabled}
           required={required}
           className={`
