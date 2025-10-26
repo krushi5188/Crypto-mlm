@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Card from '../../components/base/Card'
-import { instructorAPI } from '../../services/api'
+import { adminAPI } from '../../services/api'
 import {
   Users, DollarSign, TrendingUp, Activity, UserPlus, Wallet,
   ArrowUpRight, AlertTriangle, CheckCircle, Clock
@@ -19,7 +19,7 @@ const AdminAnalytics = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await instructorAPI.getAnalytics()
+      const response = await adminAPI.getAnalytics()
       setAnalytics(response.data)
     } catch (error) {
       console.error('Error fetching analytics:', error)
