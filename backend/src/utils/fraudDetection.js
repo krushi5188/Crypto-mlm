@@ -447,6 +447,12 @@ class FraudDetection {
    */
   static async findRelatedAccounts(userId) {
     try {
+      // Check if tables exist
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        return [];
+      }
+
       const related = [];
 
       // Find by shared IPs
@@ -486,7 +492,7 @@ class FraudDetection {
       return related;
     } catch (error) {
       console.error('Error finding related accounts:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -495,6 +501,18 @@ class FraudDetection {
    */
   static async getDashboardStats() {
     try {
+      // Check if tables exist
+      const tablesExist = await this.checkTablesExist();
+      if (!tablesExist) {
+        // Return zeros if tables don't exist
+        return {
+          flaggedUsers: 0,
+          highRiskUsers: 0,
+          recentAlerts: 0,
+          pendingAlerts: 0
+        };
+      }
+
       const flaggedCount = await pool.query(
         'SELECT COUNT(*) as count FROM users WHERE is_flagged = true'
       );
@@ -520,7 +538,13 @@ class FraudDetection {
       };
     } catch (error) {
       console.error('Error getting dashboard stats:', error);
-      throw error;
+      // Return zeros on error
+      return {
+        flaggedUsers: 0,
+        highRiskUsers: 0,
+        recentAlerts: 0,
+        pendingAlerts: 0
+      };
     }
   }
 }
