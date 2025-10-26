@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Card from '../../components/base/Card'
 import Button from '../../components/base/Button'
-import { memberAPI } from '../../services/api'
+import { adminAPI } from '../../services/api'
 import {
   Database, Clock, CheckCircle, XCircle, AlertTriangle, DollarSign,
   Calendar, User, Copy, Check, Search, Filter
@@ -21,7 +21,7 @@ const AdminDeposits = () => {
 
   const fetchDeposits = async () => {
     try {
-      const response = await memberAPI.getAdminDeposits({ status: statusFilter })
+      const response = await adminAPI.getDeposits({ status: statusFilter })
       setDeposits(response.data)
     } catch (error) {
       console.error('Error fetching deposits:', error)
@@ -32,7 +32,11 @@ const AdminDeposits = () => {
 
   const handleStatusUpdate = async (depositId, newStatus) => {
     try {
-      await memberAPI.updateDepositStatus(depositId, { status: newStatus })
+      if (newStatus === 'confirmed') {
+        await adminAPI.confirmDeposit(depositId)
+      } else if (newStatus === 'rejected') {
+        await adminAPI.rejectDeposit(depositId, 'Rejected by admin')
+      }
       fetchDeposits()
     } catch (error) {
       console.error('Error updating deposit:', error)
