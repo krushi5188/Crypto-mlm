@@ -24,6 +24,7 @@ const loginLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false } // Disable trust proxy validation for Render/Vercel deployment
 });
 
 // Registration rate limiter - 3 requests per hour
@@ -36,6 +37,7 @@ const registerLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false } // Disable trust proxy validation for Render/Vercel deployment
 });
 
 // General API rate limiter - 100 requests per 15 minutes
@@ -48,6 +50,7 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false } // Disable trust proxy validation for Render/Vercel deployment
 });
 
 // Database-backed rate limiter with in-memory fallback
