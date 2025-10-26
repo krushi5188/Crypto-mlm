@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import Card from '../../components/base/Card'
 import Button from '../../components/base/Button'
 import Input from '../../components/base/Input'
-import { memberAPI } from '../../services/api'
+import { adminAPI } from '../../services/api'
 import {
   Users, Search, Filter, Eye, Ban, CheckCircle, AlertTriangle,
   Mail, Calendar, DollarSign, TrendingUp, UserCheck
@@ -24,7 +24,7 @@ const AdminMembers = () => {
 
   const fetchMembers = async () => {
     try {
-      const response = await memberAPI.getAdminMembers({ status: statusFilter })
+      const response = await adminAPI.getParticipants({ status: statusFilter })
       setMembers(response.data)
     } catch (error) {
       console.error('Error fetching members:', error)
@@ -40,7 +40,11 @@ const AdminMembers = () => {
 
   const handleStatusChange = async (memberId, newStatus) => {
     try {
-      await memberAPI.updateMemberStatus(memberId, { status: newStatus })
+      if (newStatus === 'suspended') {
+        await adminAPI.freezeAccount(memberId, 'Admin action')
+      } else {
+        await adminAPI.unfreezeAccount(memberId)
+      }
       fetchMembers()
     } catch (error) {
       console.error('Error updating member status:', error)
