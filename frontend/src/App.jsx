@@ -2,10 +2,13 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
-// Pages
+// Public Pages
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+
+// Member Pages
+import MemberDashboard from './pages/MemberDashboard'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -33,11 +36,22 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Protected routes will be added here */}
+      {/* Member Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <MemberDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* More protected routes will be added here */}
     </Routes>
   )
 }
