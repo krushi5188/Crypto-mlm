@@ -506,7 +506,7 @@ const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/member', memberRoutes);
-app.use('/api/v1/admin', instructorRoutes);
+app.use('/api/v1/instructor', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/gamification', gamificationRoutes);
 
