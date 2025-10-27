@@ -348,7 +348,7 @@ const AdminMembers = () => {
 
                     <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
                       <span className="text-gray-400 text-sm">Last Active</span>
-                      <span className="text-white">{selectedMember.lastActive}</span>
+                      <span className="text-white">{selectedMember.lastLogin ? new Date(selectedMember.lastLogin).toLocaleString() : 'Never'}</span>
                     </div>
                   </div>
 
