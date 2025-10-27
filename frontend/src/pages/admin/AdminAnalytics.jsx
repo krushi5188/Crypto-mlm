@@ -20,7 +20,7 @@ const AdminAnalytics = () => {
   const fetchAnalytics = async () => {
     try {
       const response = await adminAPI.getAnalytics()
-      setAnalytics(response.data)
+      setAnalytics(response.data.data || response.data || {})
     } catch (error) {
       console.error('Error fetching analytics:', error)
     } finally {
