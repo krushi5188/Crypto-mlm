@@ -20,8 +20,10 @@ const AdminFraud = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await adminAPI.getFraudAlerts({ status: statusFilter })
-      setAlerts(response.data.data || response.data || [])
+      const response = await adminAPI.getFraudAlerts({ severity: severityFilter })
+      // Backend returns: { success, data: { alerts: [...] } }
+      const responseData = response.data.data || response.data || {}
+      setAlerts(responseData.alerts || responseData || [])
     } catch (error) {
       console.error('Error fetching fraud alerts:', error)
     } finally {
