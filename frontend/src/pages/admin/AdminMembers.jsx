@@ -222,26 +222,6 @@ const AdminMembers = () => {
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-
-                    {member.status === 'active' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleStatusChange(member.id, 'suspended')}
-                      >
-                        <Ban className="w-4 h-4 text-red-400" />
-                      </Button>
-                    )}
-
-                    {member.status === 'suspended' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleStatusChange(member.id, 'active')}
-                      >
-                        <CheckCircle className="w-4 h-4 text-green-400" />
-                      </Button>
-                    )}
                   </div>
                 </motion.div>
               ))}
