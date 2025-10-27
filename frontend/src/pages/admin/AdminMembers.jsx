@@ -339,10 +339,12 @@ const AdminMembers = () => {
                       <span className="text-white">{selectedMember.joinedAt ? new Date(selectedMember.joinedAt).toLocaleDateString() : 'Unknown'}</span>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
-                      <span className="text-gray-400 text-sm">Referral Code</span>
-                      <span className="text-white font-mono">{selectedMember.referralCode}</span>
-                    </div>
+                    {selectedMember.referralCode && (
+                      <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
+                        <span className="text-gray-400 text-sm">Referral Code</span>
+                        <span className="text-white font-mono">{selectedMember.referralCode}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
                       <span className="text-gray-400 text-sm">Last Active</span>
