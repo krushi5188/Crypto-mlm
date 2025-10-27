@@ -170,13 +170,13 @@ const AdminMembers = () => {
                 >
                   {/* Member Avatar */}
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    member.status === 'active' ? 'bg-green-500' :
-                    member.status === 'suspended' ? 'bg-red-500' :
+                    member.approvalStatus === 'approved' ? 'bg-green-500' :
+                    member.approvalStatus === 'rejected' ? 'bg-red-500' :
                     'bg-gray-500'
                   } bg-opacity-20`}>
                     <Users className={`w-6 h-6 ${
-                      member.status === 'active' ? 'text-green-400' :
-                      member.status === 'suspended' ? 'text-red-400' :
+                      member.approvalStatus === 'approved' ? 'text-green-400' :
+                      member.approvalStatus === 'rejected' ? 'text-red-400' :
                       'text-gray-400'
                     }`} />
                   </div>
