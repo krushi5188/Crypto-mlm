@@ -351,23 +351,6 @@ const AdminMembers = () => {
                       <span className="text-white">{selectedMember.lastLogin ? new Date(selectedMember.lastLogin).toLocaleString() : 'Never'}</span>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3">
-                    <Button
-                      variant={selectedMember.status === 'active' ? 'secondary' : 'primary'}
-                      fullWidth
-                      onClick={() => {
-                        handleStatusChange(
-                          selectedMember.id,
-                          selectedMember.status === 'active' ? 'suspended' : 'active'
-                        )
-                        setShowDetails(false)
-                      }}
-                    >
-                      {selectedMember.status === 'active' ? 'Suspend Account' : 'Activate Account'}
-                    </Button>
-                  </div>
                 </div>
               </Card>
             </motion.div>
