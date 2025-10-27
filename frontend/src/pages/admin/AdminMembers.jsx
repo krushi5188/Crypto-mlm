@@ -25,7 +25,9 @@ const AdminMembers = () => {
   const fetchMembers = async () => {
     try {
       const response = await adminAPI.getParticipants({ status: statusFilter })
-      setMembers(response.data.data || response.data || [])
+      // Backend returns: { success, data: { participants: [...], pagination: {...} } }
+      const responseData = response.data.data || response.data || {}
+      setMembers(responseData.participants || responseData || [])
     } catch (error) {
       console.error('Error fetching members:', error)
     } finally {
