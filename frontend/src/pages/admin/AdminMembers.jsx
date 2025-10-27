@@ -53,10 +53,21 @@ const AdminMembers = () => {
     }
   }
 
-  const filteredMembers = members.filter(member =>
-    member.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredMembers = members.filter(member => {
+    // Text search
+    const matchesSearch = member.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const matchesStatus =
+      statusFilter === 'all' ? true :
+      statusFilter === 'active' ? member.approvalStatus === 'approved' :
+      statusFilter === 'suspended' ? member.approvalStatus === 'rejected' :
+      statusFilter === 'flagged' ? member.flagged === true :
+      true;
+
+    return matchesSearch && matchesStatus;
+  })
 
   if (loading) {
     return (
