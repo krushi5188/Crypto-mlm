@@ -209,7 +209,7 @@ const AdminMembers = () => {
                   <div className="text-right">
                     <p className="text-gray-400 text-xs flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {member.joinedDate}
+                      {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'Unknown'}
                     </p>
                   </div>
 
