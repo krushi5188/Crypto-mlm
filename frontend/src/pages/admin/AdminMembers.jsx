@@ -20,7 +20,7 @@ const AdminMembers = () => {
 
   useEffect(() => {
     fetchMembers()
-  }, [statusFilter])
+  }, [])
 
   const fetchMembers = async () => {
     try {
