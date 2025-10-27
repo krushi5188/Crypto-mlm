@@ -22,7 +22,7 @@ const AdminDeposits = () => {
   const fetchDeposits = async () => {
     try {
       const response = await adminAPI.getDeposits({ status: statusFilter })
-      setDeposits(response.data)
+      setDeposits(response.data.data || response.data || [])
     } catch (error) {
       console.error('Error fetching deposits:', error)
     } finally {
