@@ -336,7 +336,7 @@ const AdminMembers = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
                       <span className="text-gray-400 text-sm">Joined Date</span>
-                      <span className="text-white">{selectedMember.joinedDate}</span>
+                      <span className="text-white">{selectedMember.joinedAt ? new Date(selectedMember.joinedAt).toLocaleDateString() : 'Unknown'}</span>
                     </div>
 
                     <div className="flex items-center justify-between p-3 bg-white bg-opacity-5 rounded-xl">
