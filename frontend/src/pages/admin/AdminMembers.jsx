@@ -107,7 +107,7 @@ const AdminMembers = () => {
               <p className="text-gray-400 text-sm">Suspended</p>
             </div>
             <p className="text-3xl font-display font-bold text-white">
-              {members.filter(m => m.status === 'suspended').length}
+              {members.filter(m => m.approvalStatus === 'rejected').length}
             </p>
           </Card>
 
