@@ -285,13 +285,15 @@ const AdminMembers = () => {
                     <p className="text-gray-400 text-sm mb-2">Account Status</p>
                     <div className="flex items-center gap-2">
                       <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                        selectedMember.status === 'active'
+                        selectedMember.approvalStatus === 'approved'
                           ? 'bg-green-500 bg-opacity-20 text-green-400'
+                          : selectedMember.approvalStatus === 'pending'
+                          ? 'bg-yellow-500 bg-opacity-20 text-yellow-400'
                           : 'bg-red-500 bg-opacity-20 text-red-400'
                       }`}>
-                        {selectedMember.status.charAt(0).toUpperCase() + selectedMember.status.slice(1)}
+                        {selectedMember.approvalStatus ? selectedMember.approvalStatus.charAt(0).toUpperCase() + selectedMember.approvalStatus.slice(1) : 'Unknown'}
                       </span>
-                      {selectedMember.flagged && (
+                      {selectedMember.flagged === true && (
                         <span className="px-3 py-1 rounded-lg text-sm font-medium bg-yellow-500 bg-opacity-20 text-yellow-400">
                           Flagged
                         </span>
