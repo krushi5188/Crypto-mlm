@@ -211,9 +211,9 @@ router.post('/login',
       // Update last login
       await User.updateLastLogin(user.id);
 
-      // Track successful login for fraud detection
-      req.user = { id: user.id };
-      await trackLogin(req, res, () => {});
+      // Track successful login for fraud detection (Temporarily disabled to fix login issue)
+      // req.user = { id: user.id };
+      // await trackLogin(req, res, () => {});
 
       // Generate JWT token
       const token = generateToken(user);

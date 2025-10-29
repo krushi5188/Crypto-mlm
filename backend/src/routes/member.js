@@ -296,12 +296,18 @@ router.get('/profile', async (req, res) => {
         id: user.id,
         email: user.email,
         username: user.username,
+        fullName: user.full_name || user.username, // Fallback to username
         referralCode: user.referral_code,
         balance: parseFloat(user.balance),
         totalEarned: parseFloat(user.total_earned),
         directRecruits: user.direct_recruits,
         networkSize: user.network_size,
         referredBy,
+        joinedDate: new Date(user.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
         createdAt: user.created_at,
         lastLogin: user.last_login
       }

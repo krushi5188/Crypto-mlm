@@ -30,11 +30,12 @@ const ProfilePage = () => {
   const fetchProfile = async () => {
     try {
       const response = await memberAPI.getProfile()
-      setProfileData(response.data)
+      const profile = response.data.data
+      setProfileData(profile)
       setFormData({
-        username: response.data.username,
-        email: response.data.email,
-        fullName: response.data.fullName || '',
+        username: profile.username,
+        email: profile.email,
+        fullName: profile.fullName || '',
       })
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -301,7 +302,7 @@ const ProfilePage = () => {
             <div>
               <p className="text-gray-400 text-sm mb-2">Your Referral Link</p>
               <div className="px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white text-sm break-all">
-                {window.location.origin}/register?ref={profileData?.referralCode}
+                {profileData ? `${window.location.origin}/register?ref=${profileData.referralCode}` : ''}
               </div>
             </div>
 
