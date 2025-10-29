@@ -36,6 +36,7 @@ const ProfilePage = () => {
         username: profile.username,
         email: profile.email,
         fullName: profile.fullName || '',
+        joinedDate: profile.joinedDate,
       })
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -314,7 +315,7 @@ const ProfilePage = () => {
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-white font-medium">{profileData.referredBy}</p>
+                    <p className="text-white font-medium">{profileData.referredBy.displayName}</p>
                     <p className="text-gray-400 text-sm">Your upline member</p>
                   </div>
                 </div>
