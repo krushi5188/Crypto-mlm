@@ -80,10 +80,29 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
   }
 
+  const web3Login = async (data) => {
+    try {
+      const response = await api.post('/auth/web3/login', data);
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Web3 login failed',
+      };
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
+    web3Login,
     register,
     logout,
     isAuthenticated: !!user,

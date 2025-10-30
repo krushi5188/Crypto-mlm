@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowLeft, AlertCircle, Wallet } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
+import { ethers } from 'ethers'
+import api from '../services/api'
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, web3Login } = useAuth()
 
   const [formData, setFormData] = useState({
     email: '',
@@ -74,6 +76,44 @@ const LoginPage = () => {
       setLoading(false)
     }
   }
+
+  const handleWeb3Login = async () => {
+    if (!window.ethereum) {
+      setGeneralError('MetaMask not detected. Please install the browser extension.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+
+      // 1. Get challenge
+      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${walletAddress}`);
+      const { challenge } = challengeResponse.data;
+
+      // 2. Sign challenge
+      const signature = await signer.signMessage(challenge);
+
+      // 3. Login
+      const loginResult = await web3Login({ walletAddress, signature });
+
+      if (loginResult.success) {
+        if (loginResult.user.role === 'instructor') {
+          navigate('/admin/analytics');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        setGeneralError(loginResult.error);
+        setLoading(false);
+      }
+    } catch (error) {
+      setGeneralError('Wallet login failed. Please try again.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12">
@@ -166,6 +206,25 @@ const LoginPage = () => {
               Sign In
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="my-6 flex items-center">
+            <div className="flex-grow border-t border-white border-opacity-10"></div>
+            <span className="mx-4 text-xs text-gray-400">OR</span>
+            <div className="flex-grow border-t border-white border-opacity-10"></div>
+          </div>
+
+          {/* Web3 Login */}
+          <Button
+            fullWidth
+            size="lg"
+            variant="secondary"
+            onClick={handleWeb3Login}
+            disabled={loading}
+            icon={<Wallet className="w-5 h-5" />}
+          >
+            Sign In with Wallet
+          </Button>
 
           {/* Invitation Notice */}
           <div className="mt-8 p-4 rounded-xl bg-white bg-opacity-5 border border-white border-opacity-10">

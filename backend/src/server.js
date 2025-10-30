@@ -499,12 +499,14 @@ if (process.env.NODE_ENV === 'production') {
 
 // Routes
 const authRoutes = require('./routes/auth');
+const web3AuthRoutes = require('./routes/web3auth');
 const memberRoutes = require('./routes/member');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
 const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth/web3', web3AuthRoutes);
 app.use('/api/v1/member', memberRoutes);
 app.use('/api/v1/admin', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);

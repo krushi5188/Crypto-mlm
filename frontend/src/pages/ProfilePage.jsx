@@ -6,7 +6,10 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { useAuth } from '../context/AuthContext'
 import { memberAPI } from '../services/api'
-import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy } from 'lucide-react'
+import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy, Wallet } from 'lucide-react'
+import { ethers } from 'ethers'
+import api from '../services/api'
+
 
 const ProfilePage = () => {
   const { user } = useAuth()
@@ -30,7 +33,7 @@ const ProfilePage = () => {
   const fetchProfile = async () => {
     try {
       const response = await memberAPI.getProfile()
-      const profile = response.data.data
+      const profile = response.data
       setProfileData(profile)
       setFormData({
         username: profile.username,
@@ -98,6 +101,30 @@ const ProfilePage = () => {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const handleLinkWallet = async () => {
+    if (!window.ethereum) {
+      setErrors({ general: 'MetaMask not detected. Please install the browser extension.' });
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+
+      // Simple message to sign for verification
+      const message = `Link wallet ${walletAddress} to my Atlas Network account.`;
+      const signature = await signer.signMessage(message);
+
+      // Send to backend to link
+      await memberAPI.updateProfile({ walletAddress, signature, message });
+      setSuccess('Wallet linked successfully!');
+      fetchProfile(); // Refresh profile data
+    } catch (error) {
+      setErrors({ general: 'Failed to link wallet. Please try again.' });
+    }
+  };
 
   if (loading) {
     return (
@@ -278,6 +305,34 @@ const ProfilePage = () => {
           )}
         </Card>
 
+        {/* Wallet Information */}
+        <Card padding="lg">
+          <h2 className="text-2xl font-display font-bold text-white mb-6">
+            Wallet Information
+          </h2>
+          {profileData?.walletAddress ? (
+            <div className="flex items-center gap-4 p-4 bg-white bg-opacity-5 rounded-xl">
+              <div className="p-3 bg-white bg-opacity-10 rounded-lg">
+                <Wallet className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Linked Wallet</p>
+                <p className="text-white font-medium break-all">{profileData.walletAddress}</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-400 mb-4">
+                Link your MetaMask wallet to enable signing in without a password.
+              </p>
+              <Button onClick={handleLinkWallet} icon={<Wallet className="w-5 h-5" />}>
+                Link Wallet
+              </Button>
+            </div>
+          )}
+        </Card>
+
+
         {/* Referral Information */}
         <Card padding="lg">
           <h2 className="text-2xl font-display font-bold text-white mb-6">
@@ -315,7 +370,7 @@ const ProfilePage = () => {
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-white font-medium">{profileData.referredBy.displayName}</p>
+                    <p className="text-white font-medium">{profileData.referredBy}</p>
                     <p className="text-gray-400 text-sm">Your upline member</p>
                   </div>
                 </div>

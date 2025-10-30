@@ -24,6 +24,15 @@ class User {
     return result.rows[0] || null;
   }
 
+  // Find user by wallet address
+  static async findByWalletAddress(walletAddress) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE lower(wallet_address) = lower($1)',
+      [walletAddress]
+    );
+    return result.rows[0] || null;
+  }
+
   // Find user by ID
   static async findById(id) {
     const result = await pool.query(
