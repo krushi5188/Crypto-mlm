@@ -9,10 +9,12 @@ import { memberAPI } from '../services/api'
 import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy, Wallet } from 'lucide-react'
 import { ethers } from 'ethers'
 import api from '../services/api'
+import { useWeb3Modal } from '@web3modal/ethers/react'
 
 
 const ProfilePage = () => {
   const { user } = useAuth()
+  const { open } = useWeb3Modal()
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -103,12 +105,8 @@ const ProfilePage = () => {
   }
 
   const handleLinkWallet = async () => {
-    if (!window.ethereum) {
-      setErrors({ general: 'MetaMask not detected. Please install the browser extension.' });
-      return;
-    }
-
     try {
+      await open();
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();

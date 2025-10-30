@@ -7,10 +7,13 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { ethers } from 'ethers'
 import api from '../services/api'
+import { useWeb3Modal } from '@web3modal/ethers/react'
+
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, web3Login } = useAuth()
+  const { open } = useWeb3Modal()
 
   const [formData, setFormData] = useState({
     email: '',
@@ -19,6 +22,17 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [generalError, setGeneralError] = useState('')
+  const [adminLoginVisible, setAdminLoginVisible] = useState(false)
+  const [logoClicks, setLogoClicks] = useState(0)
+
+
+  const handleLogoClick = () => {
+    const newClicks = logoClicks + 1;
+    setLogoClicks(newClicks);
+    if (newClicks >= 5) {
+      setAdminLoginVisible(true);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -78,13 +92,9 @@ const LoginPage = () => {
   }
 
   const handleWeb3Login = async () => {
-    if (!window.ethereum) {
-      setGeneralError('MetaMask not detected. Please install the browser extension.');
-      return;
-    }
-
     try {
       setLoading(true);
+      await open();
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
@@ -149,7 +159,10 @@ const LoginPage = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div
+              className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 cursor-pointer"
+              onClick={handleLogoClick}
+            >
               <span className="text-black font-bold text-2xl">A</span>
             </div>
             <h1 className="text-4xl font-display font-bold text-white mb-2">
@@ -172,59 +185,64 @@ const LoginPage = () => {
             </motion.div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              required
-              icon={<Mail className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              loading={loading}
-              disabled={loading}
-            >
-              Sign In
-            </Button>
-          </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-grow border-t border-white border-opacity-10"></div>
-            <span className="mx-4 text-xs text-gray-400">OR</span>
-            <div className="flex-grow border-t border-white border-opacity-10"></div>
-          </div>
-
-          {/* Web3 Login */}
+          {/* Web3 Login Button */}
           <Button
             fullWidth
             size="lg"
-            variant="secondary"
+            variant="primary"
             onClick={handleWeb3Login}
             disabled={loading}
             icon={<Wallet className="w-5 h-5" />}
           >
             Sign In with Wallet
           </Button>
+
+          {/* Admin Login Form (Hidden) */}
+          {adminLoginVisible && (
+            <>
+              {/* Divider */}
+              <div className="my-6 flex items-center">
+                <div className="flex-grow border-t border-white border-opacity-10"></div>
+                <span className="mx-4 text-xs text-gray-400">Admin Login</span>
+                <div className="flex-grow border-t border-white border-opacity-10"></div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="Email Address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  required
+                  icon={<Mail className="w-5 h-5" />}
+                />
+
+                <Input
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  required
+                  icon={<Lock className="w-5 h-5" />}
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  variant="secondary"
+                  loading={loading}
+                  disabled={loading}
+                >
+                  Admin Sign In
+                </Button>
+              </form>
+            </>
+          )}
 
           {/* Invitation Notice */}
           <div className="mt-8 p-4 rounded-xl bg-white bg-opacity-5 border border-white border-opacity-10">
