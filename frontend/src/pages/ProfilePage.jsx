@@ -34,7 +34,8 @@ const ProfilePage = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await memberAPI.getProfile()
+      const api = user.role === 'instructor' ? adminAPI : memberAPI;
+      const response = await api.getProfile()
       const profile = response.data
       setProfileData(profile)
       setFormData({

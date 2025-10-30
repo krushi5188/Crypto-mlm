@@ -17,6 +17,13 @@ const AdminMembers = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedMember, setSelectedMember] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [addMemberData, setAddMemberData] = useState({
+    email: '',
+    username: '',
+    password: ''
+  })
+  const [addMemberError, setAddMemberError] = useState('')
 
   useEffect(() => {
     fetchMembers()
@@ -53,6 +60,18 @@ const AdminMembers = () => {
     }
   }
 
+  const handleAddMemberSubmit = async (e) => {
+    e.preventDefault();
+    setAddMemberError('');
+    try {
+      await adminAPI.addMember(addMemberData);
+      setShowAddMember(false);
+      fetchMembers();
+    } catch (error) {
+      setAddMemberError(error.response?.data?.error || 'Failed to add member');
+    }
+  };
+
   const filteredMembers = members.filter(member => {
     // Text search
     const matchesSearch = member.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,13 +102,18 @@ const AdminMembers = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-4xl font-display font-bold text-white mb-2">
-            Members Management
-          </h1>
-          <p className="text-gray-400">
-            View and manage platform members
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-display font-bold text-white mb-2">
+              Members Management
+            </h1>
+            <p className="text-gray-400">
+              View and manage platform members
+            </p>
+          </div>
+          <Button onClick={() => setShowAddMember(true)}>
+            Add Member
+          </Button>
         </div>
 
         {/* Stats */}
@@ -343,6 +367,60 @@ const AdminMembers = () => {
                     </div>
                   </div>
                 </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Add Member Modal */}
+        {showAddMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Add New Member
+                    </h2>
+                    <p className="text-gray-400">Create a new member account</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowAddMember(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form onSubmit={handleAddMemberSubmit} className="space-y-4">
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={addMemberData.email}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, email: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Username"
+                    type="text"
+                    value={addMemberData.username}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, username: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Password"
+                    type="password"
+                    value={addMemberData.password}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, password: e.target.value })}
+                    required
+                  />
+                  {addMemberError && <p className="text-red-500 text-sm">{addMemberError}</p>}
+                  <Button type="submit" fullWidth>Create Member</Button>
+                </form>
               </Card>
             </motion.div>
           </div>
