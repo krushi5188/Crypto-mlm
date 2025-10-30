@@ -9,12 +9,12 @@ import { memberAPI } from '../services/api'
 import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy, Wallet } from 'lucide-react'
 import { ethers } from 'ethers'
 import api from '../services/api'
-import { useWeb3Modal } from '@web3modal/ethers/react'
+import { useAppKit } from '@reown/appkit/react'
 
 
 const ProfilePage = () => {
   const { user } = useAuth()
-  const { open } = useWeb3Modal()
+  const { open } = useAppKit()
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)

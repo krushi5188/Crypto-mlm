@@ -10,8 +10,9 @@
     "lint": "eslint src --ext js,jsx"
   },
   "dependencies": {
+    "@reown/appkit": "^1.8.12",
+    "@reown/appkit-adapter-ethers": "^1.8.12",
     "@vitejs/plugin-react": "^4.2.1",
-    "@web3modal/ethers": "^5.1.11",
     "axios": "^1.6.2",
     "chart.js": "^4.4.0",
     "d3": "^7.8.5",

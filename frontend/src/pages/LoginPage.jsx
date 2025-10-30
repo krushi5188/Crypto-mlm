@@ -7,13 +7,13 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { ethers } from 'ethers'
 import api from '../services/api'
-import { useWeb3Modal } from '@web3modal/ethers/react'
+import { useAppKit } from '@reown/appkit/react'
 
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, web3Login } = useAuth()
-  const { open } = useWeb3Modal()
+  const { open } = useAppKit()
 
   const [formData, setFormData] = useState({
     email: '',

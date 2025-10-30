@@ -1,32 +1,33 @@
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react'
+import { createAppKit } from '@reown/appkit/react'
+import { mainnet } from '@reown/appkit/networks'
+import { EthersAdapter } from '@reown/appkit-adapter-ethers'
 
-// 1. Get projectId from https://cloud.walletconnect.com
 const projectId = '06f48c91ff87fb6f45cd8128c23a3a28'
 
-// 2. Set chains
-const mainnet = {
-  chainId: 1,
-  name: 'Ethereum',
-  currency: 'ETH',
-  explorerUrl: 'https://etherscan.io',
-  rpcUrl: 'https://cloudflare-eth.com'
-}
-
-// 3. Create modal
 const metadata = {
   name: 'Atlas Network',
   description: 'Atlas Network - Multi-Level Marketing Platform',
-  url: 'https://atlas-network.com', // origin must match your domain & subdomain
+  url: 'https://atlas-network.com',
   icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
 
-createWeb3Modal({
-  ethersConfig: defaultConfig({ metadata }),
+const ethersAdapter = new EthersAdapter({
+  metadata,
   chains: [mainnet],
+  providers: {
+    injected: window.ethereum
+  }
+})
+
+createAppKit({
+  adapters: [ethersAdapter],
+  networks: [mainnet],
   projectId,
-  enableAnalytics: true // Optional - defaults to your Cloud configuration
+  features: {
+    analytics: true
+  }
 })
 
 export function Web3ModalProvider({ children }) {
-  return children;
+  return children
 }
