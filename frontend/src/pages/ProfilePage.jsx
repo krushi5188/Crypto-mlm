@@ -5,7 +5,7 @@ import Card from '../components/base/Card'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { useAuth } from '../context/AuthContext'
-import { memberAPI } from '../services/api'
+import { memberAPI, adminAPI } from '../services/api'
 import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy, Wallet } from 'lucide-react'
 import { ethers } from 'ethers'
 import api from '../services/api'
@@ -34,20 +34,21 @@ const ProfilePage = () => {
 
   const fetchProfile = async () => {
     try {
-      const api = user.role === 'instructor' ? adminAPI : memberAPI;
-      const response = await api.getProfile()
-      const profile = response.data
-      setProfileData(profile)
+      const apiToCall = user.role === 'instructor' ? adminAPI : memberAPI;
+      const response = await apiToCall.getProfile();
+      // Admin response is { success, data: {...} }, member is { ... }
+      const profile = user.role === 'instructor' ? response.data.data : response.data;
+      setProfileData(profile);
       setFormData({
         username: profile.username,
         email: profile.email,
         fullName: profile.fullName || '',
         joinedDate: profile.joinedDate,
-      })
+      });
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('Error fetching profile:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 

@@ -228,6 +228,12 @@ const AdminMembers = () => {
                       <Mail className="w-3 h-3" />
                       {member.email}
                     </p>
+                    {member.referredBy && (
+                      <p className="text-gray-400 text-sm flex items-center gap-2 mt-1">
+                        <TrendingUp className="w-3 h-3" />
+                        Referred by: {member.referredBy}
+                      </p>
+                    )}
                   </div>
 
                   {/* Stats */}

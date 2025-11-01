@@ -184,7 +184,7 @@ router.get('/participants', async (req, res) => {
           totalEarned: parseFloat(p.total_earned),
           directRecruits: p.direct_recruits,
           networkSize: p.network_size,
-          referredBy: p.referred_by_id,
+          referredBy: p.referred_by_username,
           approvalStatus: p.approval_status || 'approved',
           joinedAt: p.created_at,
           lastLogin: p.last_login

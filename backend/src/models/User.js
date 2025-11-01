@@ -129,15 +129,17 @@ class User {
   // Get all members with pagination
   static async getAllStudents(page = 1, limit = 50, sortBy = 'created_at', sortOrder = 'DESC', search = '') {
     const offset = (page - 1) * limit;
-    let query = `SELECT id, email, username, balance, total_earned, direct_recruits,
-                        network_size, referred_by_id, created_at, last_login
-                 FROM users
-                 WHERE role = 'member'`;
+    let query = `SELECT u.id, u.email, u.username, u.balance, u.total_earned, u.direct_recruits,
+                        u.network_size, u.referred_by_id, u.created_at, u.last_login,
+                        r.username as referred_by_username
+                 FROM users u
+                 LEFT JOIN users r ON u.referred_by_id = r.id
+                 WHERE u.role = 'member'`;
     const params = [];
     let paramIndex = 1;
 
     if (search) {
-      query += ` AND (username LIKE $${paramIndex} OR email LIKE $${paramIndex + 1})`;
+      query += ` AND (u.username LIKE $${paramIndex} OR u.email LIKE $${paramIndex + 1})`;
       params.push(`%${search}%`, `%${search}%`);
       paramIndex += 2;
     }
