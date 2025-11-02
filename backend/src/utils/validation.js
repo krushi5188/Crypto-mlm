@@ -6,27 +6,15 @@ const schemas = {
   register: Joi.object({
     email: Joi.string().email().required(),
     username: Joi.string().alphanum().min(3).max(20).required(),
-    password: Joi.string()
-      .min(8)
-      .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)'))
-      .required()
-      .messages({
-        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-      }),
+    walletAddress: Joi.string().required(),
     referralCode: Joi.string().pattern(/^ATN-[A-Z0-9]{6}$/).optional()
   }),
 
-  // Instructor adding member (simpler validation for temporary passwords)
+  // Instructor adding member
   instructorAddMember: Joi.object({
     email: Joi.string().email().required(),
     username: Joi.string().alphanum().min(3).max(20).required(),
-    password: Joi.string()
-      .min(8)
-      .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)'))
-      .required()
-      .messages({
-        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-      })
+    walletAddress: Joi.string().required(),
   }),
 
   // User login

@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
+import { Mail, User, ArrowLeft, AlertCircle, CheckCircle, Wallet } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
+import { useAppKit } from '@reown/appkit/react'
+import { ethers } from 'ethers'
 
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { register } = useAuth()
+  const { open } = useAppKit()
 
   const [formData, setFormData] = useState({
     email: '',
     username: '',
-    password: '',
-    confirmPassword: '',
+    walletAddress: '',
     referralCode: searchParams.get('ref') || '',
   })
   const [errors, setErrors] = useState({})
@@ -44,6 +46,18 @@ const RegisterPage = () => {
     }
   }
 
+  const handleConnectWallet = async () => {
+    try {
+      await open();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+      setFormData(prev => ({ ...prev, walletAddress }));
+    } catch (error) {
+      setGeneralError('Failed to connect wallet. Please try again.');
+    }
+  };
+
   const validate = () => {
     const newErrors = {}
 
@@ -61,18 +75,8 @@ const RegisterPage = () => {
       newErrors.username = 'Username can only contain letters and numbers'
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number'
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+    if (!formData.walletAddress) {
+      newErrors.walletAddress = 'Wallet connection is required'
     }
 
     if (!formData.referralCode) {
@@ -97,7 +101,7 @@ const RegisterPage = () => {
     const result = await register(formData)
 
     if (result.success) {
-      navigate('/dashboard')
+      navigate('/login') // Redirect to login after successful registration
     } else {
       setGeneralError(result.error)
       setLoading(false)
@@ -220,27 +224,28 @@ const RegisterPage = () => {
               icon={<User className="w-5 h-5" />}
             />
 
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Confirm Password"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              error={errors.confirmPassword}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
+            {formData.walletAddress ? (
+              <Input
+                label="Wallet Address"
+                type="text"
+                name="walletAddress"
+                value={formData.walletAddress}
+                readOnly
+                disabled
+                icon={<Wallet className="w-5 h-5" />}
+              />
+            ) : (
+              <Button
+                type="button"
+                fullWidth
+                size="lg"
+                variant="secondary"
+                onClick={handleConnectWallet}
+                icon={<Wallet className="w-5 h-5" />}
+              >
+                Connect Wallet
+              </Button>
+            )}
 
             <Input
               label="Referral Code"

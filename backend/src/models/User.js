@@ -3,13 +3,13 @@ const { pool } = require('../config/database');
 class User {
   // Create new user
   static async create(userData) {
-    const { email, username, password_hash, role, referral_code, referred_by_id, approval_status } = userData;
+    const { email, username, walletAddress, role, referral_code, referred_by_id, approval_status } = userData;
 
     const result = await pool.query(
-      `INSERT INTO users (email, username, password_hash, role, referral_code, referred_by_id, approval_status)
+      `INSERT INTO users (email, username, wallet_address, role, referral_code, referred_by_id, approval_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [email, username, password_hash, role, referral_code, referred_by_id || null, approval_status || 'approved']
+      [email, username, walletAddress, role, referral_code, referred_by_id || null, approval_status || 'approved']
     );
 
     return result.rows[0].id;
