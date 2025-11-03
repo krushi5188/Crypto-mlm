@@ -150,18 +150,26 @@ router.post('/login',
         });
       }
 
-      // Compare password
-      const isValidPassword = await comparePassword(password, user.password_hash);
+      // If user has a password_hash, it's a password-based account
+      if (user.password_hash) {
+        const isValidPassword = await comparePassword(password, user.password_hash);
 
-      if (!isValidPassword) {
-        // Track failed login
-        const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-        const userAgent = req.headers['user-agent'] || 'Unknown';
-        await trackFailedLogin(email, ipAddress, userAgent, 'Invalid password');
+        if (!isValidPassword) {
+          // Track failed login
+          const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+          const userAgent = req.headers['user-agent'] || 'Unknown';
+          await trackFailedLogin(email, ipAddress, userAgent, 'Invalid password');
 
+          return res.status(401).json({
+            error: 'Invalid credentials',
+            code: 'INVALID_CREDENTIALS'
+          });
+        }
+      } else {
+        // This is a wallet-only user trying to log in with a password
         return res.status(401).json({
-          error: 'Invalid credentials',
-          code: 'INVALID_CREDENTIALS'
+          error: 'This account is wallet-only. Please use the "Sign In with Wallet" option.',
+          code: 'WALLET_ONLY_ACCOUNT'
         });
       }
 
