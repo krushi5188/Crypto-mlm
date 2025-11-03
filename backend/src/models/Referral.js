@@ -1,62 +1,45 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class Referral {
   // Create referral record
-  static async create(userId, uplineId, level, connection = pool) {
-    await connection.query(
-      'INSERT INTO referrals (user_id, upline_id, level) VALUES ($1, $2, $3)',
-      [userId, uplineId, level]
-    );
+  static async create(userId, uplineId, level, connection = db) {
+    return connection('referrals').insert({ user_id: userId, upline_id: uplineId, level });
   }
 
   // Get all upline for a user (up to 5 levels)
   static async getUpline(userId) {
-    const result = await pool.query(
-      `SELECT r.upline_id, r.level, u.username, u.balance
-       FROM referrals r
-       JOIN users u ON r.upline_id = u.id
-       WHERE r.user_id = $1
-       ORDER BY r.level ASC`,
-      [userId]
-    );
-    return result.rows;
+    return db('referrals as r')
+      .select('r.upline_id', 'r.level', 'u.username', 'u.balance')
+      .join('users as u', 'r.upline_id', 'u.id')
+      .where('r.user_id', userId)
+      .orderBy('r.level', 'asc');
   }
 
   // Get downline by level for a user
   static async getDownlineByLevel(uplineId, level = null) {
-    let query = `
-      SELECT r.user_id, r.level, u.username, u.created_at, u.direct_recruits, u.is_active
-      FROM referrals r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.upline_id = $1
-    `;
-    const params = [uplineId];
+    const query = db('referrals as r')
+      .select('r.user_id', 'r.level', 'u.username', 'u.created_at', 'u.direct_recruits', 'u.is_active')
+      .join('users as u', 'r.user_id', 'u.id')
+      .where('r.upline_id', uplineId);
 
     if (level) {
-      query += ' AND r.level = $2';
-      params.push(level);
+      query.andWhere('r.level', level);
     }
 
-    query += ' ORDER BY r.level ASC, u.created_at ASC';
-
-    const result = await pool.query(query, params);
-    return result.rows;
+    return query.orderBy(['r.level', 'u.created_at'], ['asc', 'asc']);
   }
 
   // Get downline grouped by level
   static async getDownlineGrouped(uplineId) {
-    const result = await pool.query(
-      `SELECT r.level, COUNT(*) as count
-       FROM referrals r
-       WHERE r.upline_id = $1
-       GROUP BY r.level
-       ORDER BY r.level ASC`,
-      [uplineId]
-    );
+    const rows = await db('referrals as r')
+      .select('r.level')
+      .count('* as count')
+      .where('r.upline_id', uplineId)
+      .groupBy('r.level')
+      .orderBy('r.level', 'asc');
 
-    // Convert to object with levels 1-5
     const resultObj = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    result.rows.forEach(row => {
+    rows.forEach(row => {
       resultObj[row.level] = parseInt(row.count);
     });
 
@@ -65,19 +48,15 @@ class Referral {
 
   // Get complete network tree for visualization
   static async getCompleteNetwork() {
-    const edgesResult = await pool.query(
-      `SELECT user_id as from_id, upline_id as to_id, level
-       FROM referrals
-       WHERE level = 1`  // Only direct relationships for tree structure
-    );
+    const edges = await db('referrals')
+      .select('user_id as from_id', 'upline_id as to_id', 'level')
+      .where('level', 1);
 
-    const nodesResult = await pool.query(
-      `SELECT id, username, balance, direct_recruits, total_earned
-       FROM users
-       WHERE role = 'member'`
-    );
+    const nodes = await db('users')
+      .select('id', 'username', 'balance', 'direct_recruits', 'total_earned')
+      .where('role', 'member');
 
-    return { nodes: nodesResult.rows, edges: edgesResult.rows };
+    return { nodes, edges };
   }
 }
 

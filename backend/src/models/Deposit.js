@@ -1,203 +1,119 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 const Notification = require('./Notification');
 
 class Deposit {
   // Create new deposit request
   static async create(depositData) {
-    const {
-      user_id,
-      amount,
-      wallet_address,
-      network,
-      transaction_hash
-    } = depositData;
-
-    const result = await pool.query(
-      `INSERT INTO deposits (user_id, amount, wallet_address, network, transaction_hash)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [user_id, amount, wallet_address, network, transaction_hash]
-    );
-
-    return result.rows[0];
+    const [result] = await db('deposits').insert(depositData).returning('*');
+    return result;
   }
 
   // Get deposit by ID
   static async getById(depositId) {
-    const result = await pool.query(
-      'SELECT * FROM deposits WHERE id = $1',
-      [depositId]
-    );
-    return result.rows[0];
+    return db('deposits').where({ id: depositId }).first();
   }
 
   // Get user's deposits
   static async getUserDeposits(userId, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
+    const query = db('deposits').where({ user_id: userId });
 
-    const result = await pool.query(
-      `SELECT * FROM deposits
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
-    );
-
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as total FROM deposits WHERE user_id = $1',
-      [userId]
-    );
+    const total = await query.clone().count({ count: '*' }).first();
+    const deposits = await query.orderBy('created_at', 'desc').limit(limit).offset((page - 1) * limit);
 
     return {
-      deposits: result.rows,
-      total: parseInt(countResult.rows[0].total)
+      deposits,
+      total: parseInt(total.count)
     };
   }
 
   // Get all pending deposits (for admin/instructor)
   static async getPendingDeposits(limit = 50) {
-    const result = await pool.query(
-      `SELECT d.*, u.username, u.email
-       FROM deposits d
-       JOIN users u ON d.user_id = u.id
-       WHERE d.status = 'pending'
-       ORDER BY d.created_at ASC
-       LIMIT $1`,
-      [limit]
-    );
-    return result.rows;
+    return db('deposits as d')
+      .select('d.*', 'u.username', 'u.email')
+      .join('users as u', 'd.user_id', 'u.id')
+      .where('d.status', 'pending')
+      .orderBy('d.created_at', 'asc')
+      .limit(limit);
   }
 
   // Get all deposits (for admin/instructor)
   static async getAll(filters = {}, page = 1, limit = 50) {
-    const offset = (page - 1) * limit;
-    const conditions = [];
-    const values = [];
-    let valueIndex = 1;
+    const query = db('deposits as d').join('users as u', 'd.user_id', 'u.id');
 
     if (filters.status) {
-      conditions.push(`d.status = $${valueIndex}`);
-      values.push(filters.status);
-      valueIndex++;
+      query.where('d.status', filters.status);
     }
-
     if (filters.userId) {
-      conditions.push(`d.user_id = $${valueIndex}`);
-      values.push(filters.userId);
-      valueIndex++;
+      query.where('d.user_id', filters.userId);
     }
-
     if (filters.network) {
-      conditions.push(`d.network = $${valueIndex}`);
-      values.push(filters.network);
-      valueIndex++;
+      query.where('d.network', filters.network);
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    values.push(limit, offset);
-
-    const result = await pool.query(
-      `SELECT d.*, u.username, u.email
-       FROM deposits d
-       JOIN users u ON d.user_id = u.id
-       ${whereClause}
-       ORDER BY d.created_at DESC
-       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}`,
-      values
-    );
-
-    const countResult = await pool.query(
-      `SELECT COUNT(*) as total
-       FROM deposits d
-       ${whereClause}`,
-      values.slice(0, -2)
-    );
+    const total = await query.clone().count({ count: '*' }).first();
+    const deposits = await query.select('d.*', 'u.username', 'u.email').orderBy('d.created_at', 'desc').limit(limit).offset((page - 1) * limit);
 
     return {
-      deposits: result.rows,
-      total: parseInt(countResult.rows[0].total)
+      deposits,
+      total: parseInt(total.count)
     };
   }
 
   // Confirm deposit and credit user balance
   static async confirm(depositId, confirmedBy) {
-    // Get deposit details
     const deposit = await this.getById(depositId);
 
     if (!deposit) {
       throw new Error('Deposit not found');
     }
-
     if (deposit.status !== 'pending') {
       throw new Error('Deposit is not pending');
     }
 
-    // Start transaction
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    return db.transaction(async (trx) => {
+      await trx('deposits')
+        .where({ id: depositId })
+        .update({
+          status: 'confirmed',
+          confirmed_at: db.fn.now(),
+          confirmations: 1
+        });
 
-      // Update deposit status
-      await client.query(
-        `UPDATE deposits
-         SET status = 'confirmed', confirmed_at = CURRENT_TIMESTAMP, confirmations = 1
-         WHERE id = $1`,
-        [depositId]
-      );
+      await trx('users')
+        .where({ id: deposit.user_id })
+        .increment('balance', deposit.amount);
 
-      // Credit user balance
-      await client.query(
-        'UPDATE users SET balance = balance + $1 WHERE id = $2',
-        [deposit.amount, deposit.user_id]
-      );
+      const { balance } = await trx('users').select('balance').where({ id: deposit.user_id }).first();
 
-      // Create transaction record
-      await client.query(
-        `INSERT INTO transactions (user_id, type, amount, description, balance_after)
-         SELECT $1, 'deposit', $2, $3, balance
-         FROM users WHERE id = $1`,
-        [
-          deposit.user_id,
-          deposit.amount,
-          `Deposit confirmed: ${deposit.transaction_hash.substring(0, 10)}...`
-        ]
-      );
+      await trx('transactions').insert({
+        user_id: deposit.user_id,
+        type: 'deposit',
+        amount: deposit.amount,
+        description: `Deposit confirmed: ${deposit.transaction_hash.substring(0, 10)}...`,
+        balance_after: balance
+      });
 
-      await client.query('COMMIT');
-
-      // Send notification
       await Notification.create({
         user_id: deposit.user_id,
         type: 'system_message',
         title: 'Deposit Confirmed',
         message: `Your deposit of ${deposit.amount} AC has been confirmed and credited to your account.`
-      });
+      }, trx);
 
-      return await this.getById(depositId);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+      return this.getById(depositId);
+    });
   }
 
   // Reject deposit
   static async reject(depositId, reason) {
-    const result = await pool.query(
-      `UPDATE deposits
-       SET status = 'failed'
-       WHERE id = $1 AND status = 'pending'
-       RETURNING *`,
-      [depositId]
-    );
+    const [deposit] = await db('deposits')
+      .where({ id: depositId, status: 'pending' })
+      .update({ status: 'failed' })
+      .returning('*');
 
-    if (result.rows.length === 0) {
+    if (!deposit) {
       return null;
     }
-
-    const deposit = result.rows[0];
 
     // Send notification
     await Notification.create({
@@ -212,46 +128,38 @@ class Deposit {
 
   // Get deposit statistics for user
   static async getUserStats(userId) {
-    const result = await pool.query(
-      `SELECT
-        COUNT(*) as total_deposits,
-        COALESCE(SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END), 0) as total_deposited,
-        COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending_amount,
-        COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_count,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count
-       FROM deposits
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    return result.rows[0];
+    return db('deposits')
+      .where({ user_id: userId })
+      .select(
+        db.raw('COUNT(*) as total_deposits'),
+        db.raw(`COALESCE(SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END), 0) as total_deposited`),
+        db.raw(`COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending_amount`),
+        db.raw(`COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_count`),
+        db.raw(`COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count`),
+        db.raw(`COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count`)
+      )
+      .first();
   }
 
   // Get deposit statistics (admin/instructor)
   static async getStats() {
-    const result = await pool.query(
-      `SELECT
-        COUNT(*) as total_deposits,
-        COALESCE(SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END), 0) as total_confirmed,
-        COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as total_pending,
-        COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_count,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count,
-        COUNT(DISTINCT user_id) as unique_depositors
-       FROM deposits`
-    );
-
-    return result.rows[0];
+    return db('deposits')
+      .select(
+        db.raw('COUNT(*) as total_deposits'),
+        db.raw(`COALESCE(SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END), 0) as total_confirmed`),
+        db.raw(`COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as total_pending`),
+        db.raw(`COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_count`),
+        db.raw(`COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count`),
+        db.raw(`COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count`),
+        db.raw('COUNT(DISTINCT user_id) as unique_depositors')
+      )
+      .first();
   }
 
   // Check if transaction hash already exists
   static async existsByTxHash(transactionHash) {
-    const result = await pool.query(
-      'SELECT id FROM deposits WHERE transaction_hash = $1',
-      [transactionHash]
-    );
-    return result.rows.length > 0;
+    const result = await db('deposits').where({ transaction_hash: transactionHash }).first();
+    return !!result;
   }
 }
 

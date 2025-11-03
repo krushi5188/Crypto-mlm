@@ -50,6 +50,11 @@ const schemas = {
       .optional()
   }),
 
+  // Referral code update
+  referralCodeUpdate: Joi.object({
+    referralCode: Joi.string().alphanum().min(3).max(20).required(),
+  }),
+
   // Inject coins
   injectCoins: Joi.object({
     userId: Joi.number().integer().positive().required(),

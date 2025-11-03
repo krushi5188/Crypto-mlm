@@ -71,6 +71,7 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
+  web3Register: (data) => api.post('/auth/web3/register', data),
   login: (data) => api.post('/auth/login', data),
   setup2FA: () => api.post('/auth/2fa/setup'),
   enable2FA: (data) => api.post('/auth/2fa/enable', data),

@@ -1,108 +1,74 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class Notification {
   // Create notification
   static async create(notificationData) {
-    const { user_id, type, title, message, data = null } = notificationData;
-
-    const result = await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, data)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [user_id, type, title, message, data ? JSON.stringify(data) : null]
-    );
-
-    return result.rows[0];
+    const [result] = await db('notifications').insert(notificationData).returning('*');
+    return result;
   }
 
   // Get user's notifications
   static async getUserNotifications(userId, filters = {}) {
     const { unreadOnly = false, limit = 50, offset = 0 } = filters;
 
-    let query = `
-      SELECT * FROM notifications
-      WHERE user_id = $1
-    `;
-
-    const params = [userId];
-    let paramIndex = 2;
+    const query = db('notifications').where({ user_id: userId });
 
     if (unreadOnly) {
-      query += ` AND is_read = false`;
+      query.andWhere('is_read', false);
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
-    return result.rows;
+    return query.orderBy('created_at', 'desc').limit(limit).offset(offset);
   }
 
   // Get unread count
   static async getUnreadCount(userId) {
-    const result = await pool.query(
-      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
-      [userId]
-    );
-    return parseInt(result.rows[0].count);
+    const { count } = await db('notifications')
+      .where({ user_id: userId, is_read: false })
+      .count({ count: '*' })
+      .first();
+    return parseInt(count);
   }
 
   // Mark as read
   static async markAsRead(notificationId, userId) {
-    const result = await pool.query(
-      `UPDATE notifications
-       SET is_read = true, read_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND user_id = $2
-       RETURNING *`,
-      [notificationId, userId]
-    );
-    return result.rows[0];
+    const [result] = await db('notifications')
+      .where({ id: notificationId, user_id: userId })
+      .update({ is_read: true, read_at: db.fn.now() })
+      .returning('*');
+    return result;
   }
 
   // Mark all as read
   static async markAllAsRead(userId) {
-    await pool.query(
-      `UPDATE notifications
-       SET is_read = true, read_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND is_read = false`,
-      [userId]
-    );
+    return db('notifications')
+      .where({ user_id: userId, is_read: false })
+      .update({ is_read: true, read_at: db.fn.now() });
   }
 
   // Delete notification
   static async delete(notificationId, userId) {
-    const result = await pool.query(
-      'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING *',
-      [notificationId, userId]
-    );
-    return result.rows[0];
+    const [result] = await db('notifications')
+      .where({ id: notificationId, user_id: userId })
+      .del()
+      .returning('*');
+    return result;
   }
 
   // Delete all read notifications
   static async deleteAllRead(userId) {
-    await pool.query(
-      'DELETE FROM notifications WHERE user_id = $1 AND is_read = true',
-      [userId]
-    );
+    return db('notifications').where({ user_id: userId, is_read: true }).del();
   }
 
   // Create notification for multiple users
   static async createBulk(userIds, type, title, message, data = null) {
-    const values = userIds.map((userId, index) => {
-      const base = index * 5;
-      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
-    }).join(', ');
-
-    const params = [];
-    userIds.forEach(userId => {
-      params.push(userId, type, title, message, data ? JSON.stringify(data) : null);
-    });
-
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, data)
-       VALUES ${values}`,
-      params
-    );
+    const notifications = userIds.map(user_id => ({
+      user_id,
+      type,
+      title,
+      message,
+      data: data ? JSON.stringify(data) : null
+    }));
+    return db('notifications').insert(notifications);
   }
 
   // Helper: Create achievement unlocked notification

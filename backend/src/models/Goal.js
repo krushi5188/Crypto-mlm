@@ -1,53 +1,32 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class Goal {
   // Create a new goal
   static async create(goalData) {
-    const {
-      user_id,
-      goal_type,
-      target_value,
-      current_value = 0,
-      target_date = null
-    } = goalData;
-
-    const result = await pool.query(
-      `INSERT INTO user_goals
-       (user_id, goal_type, target_value, current_value, target_date)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [user_id, goal_type, target_value, current_value, target_date]
-    );
-
-    return result.rows[0];
+    const [result] = await db('user_goals').insert(goalData).returning('*');
+    return result;
   }
 
   // Get user's goals
   static async getUserGoals(userId, includeCompleted = true) {
-    let query = 'SELECT * FROM user_goals WHERE user_id = $1';
+    const query = db('user_goals').where({ user_id: userId });
 
     if (!includeCompleted) {
-      query += ' AND is_completed = false';
+      query.andWhere('is_completed', false);
     }
 
-    query += ' ORDER BY created_at DESC';
-
-    const result = await pool.query(query, [userId]);
-    return result.rows;
+    return query.orderBy('created_at', 'desc');
   }
 
   // Get goal by ID
   static async getById(goalId, userId = null) {
-    let query = 'SELECT * FROM user_goals WHERE id = $1';
-    const params = [goalId];
+    const query = db('user_goals').where({ id: goalId });
 
     if (userId) {
-      query += ' AND user_id = $2';
-      params.push(userId);
+      query.andWhere({ user_id: userId });
     }
 
-    const result = await pool.query(query, params);
-    return result.rows[0];
+    return query.first();
   }
 
   // Update goal progress
@@ -58,137 +37,95 @@ class Goal {
       throw new Error('Goal not found');
     }
 
-    // Check if goal is completed
     const isCompleted = currentValue >= goal.target_value;
 
-    let query = `UPDATE user_goals
-                 SET current_value = $1, is_completed = $2`;
-    const params = [currentValue, isCompleted, goalId];
+    const updates = {
+      current_value: currentValue,
+      is_completed: isCompleted
+    };
 
     if (isCompleted && !goal.is_completed) {
-      query += `, completed_at = CURRENT_TIMESTAMP`;
+      updates.completed_at = db.fn.now();
     }
 
-    query += ` WHERE id = $3`;
+    const query = db('user_goals').where({ id: goalId });
 
     if (userId) {
-      query += ` AND user_id = $4`;
-      params.push(userId);
+      query.andWhere({ user_id: userId });
     }
 
-    query += ` RETURNING *`;
-
-    const result = await pool.query(query, params);
-    return result.rows[0];
+    const [result] = await query.update(updates).returning('*');
+    return result;
   }
 
   // Update goal
   static async update(goalId, updates, userId = null) {
     const allowedFields = ['target_value', 'target_date', 'goal_type'];
-    const setClauses = [];
-    const params = [];
-    let paramCount = 1;
+    const filteredUpdates = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = updates[key];
+        return obj;
+      }, {});
 
-    Object.keys(updates).forEach(key => {
-      if (allowedFields.includes(key)) {
-        setClauses.push(`${key} = $${paramCount}`);
-        params.push(updates[key]);
-        paramCount++;
-      }
-    });
-
-    if (setClauses.length === 0) {
+    if (Object.keys(filteredUpdates).length === 0) {
       throw new Error('No valid fields to update');
     }
 
-    params.push(goalId);
-    let query = `UPDATE user_goals SET ${setClauses.join(', ')} WHERE id = $${paramCount}`;
+    const query = db('user_goals').where({ id: goalId });
 
     if (userId) {
-      paramCount++;
-      query += ` AND user_id = $${paramCount}`;
-      params.push(userId);
+      query.andWhere({ user_id: userId });
     }
 
-    query += ` RETURNING *`;
-
-    const result = await pool.query(query, params);
-    return result.rows[0];
+    const [result] = await query.update(filteredUpdates).returning('*');
+    return result;
   }
 
   // Delete goal
   static async delete(goalId, userId) {
-    const result = await pool.query(
-      'DELETE FROM user_goals WHERE id = $1 AND user_id = $2 RETURNING *',
-      [goalId, userId]
-    );
-
-    return result.rows[0];
+    const [result] = await db('user_goals').where({ id: goalId, user_id: userId }).del().returning('*');
+    return result;
   }
 
   // Auto-update goals based on user data
   static async syncGoalsWithUserData(userId) {
-    // Get user's current stats
-    const userResult = await pool.query(
-      'SELECT total_earned, direct_recruits, network_size FROM users WHERE id = $1',
-      [userId]
-    );
+    const user = await db('users').select('total_earned', 'direct_recruits', 'network_size').where({ id: userId }).first();
 
-    if (userResult.rows.length === 0) {
+    if (!user) {
       return;
     }
 
-    const user = userResult.rows[0];
+    await db('user_goals')
+      .where({ user_id: userId, goal_type: 'earnings', is_completed: false })
+      .update({ current_value: user.total_earned });
 
-    // Update earnings goals
-    await pool.query(
-      `UPDATE user_goals
-       SET current_value = $1
-       WHERE user_id = $2 AND goal_type = 'earnings' AND is_completed = false`,
-      [user.total_earned, userId]
-    );
+    await db('user_goals')
+      .where({ user_id: userId, goal_type: 'recruits', is_completed: false })
+      .update({ current_value: user.direct_recruits });
 
-    // Update recruits goals
-    await pool.query(
-      `UPDATE user_goals
-       SET current_value = $1
-       WHERE user_id = $2 AND goal_type = 'recruits' AND is_completed = false`,
-      [user.direct_recruits, userId]
-    );
+    await db('user_goals')
+      .where({ user_id: userId, goal_type: 'network_size', is_completed: false })
+      .update({ current_value: user.network_size });
 
-    // Update network size goals
-    await pool.query(
-      `UPDATE user_goals
-       SET current_value = $1
-       WHERE user_id = $2 AND goal_type = 'network_size' AND is_completed = false`,
-      [user.network_size, userId]
-    );
-
-    // Mark completed goals
-    await pool.query(
-      `UPDATE user_goals
-       SET is_completed = true, completed_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND is_completed = false AND current_value >= target_value`,
-      [userId]
-    );
+    await db('user_goals')
+      .where({ user_id: userId, is_completed: false })
+      .andWhere('current_value', '>=', db.raw('target_value'))
+      .update({ is_completed: true, completed_at: db.fn.now() });
   }
 
   // Get goal completion statistics
   static async getStats(userId) {
-    const result = await pool.query(
-      `SELECT
-        COUNT(*) as total_goals,
-        COUNT(CASE WHEN is_completed THEN 1 END) as completed_goals,
-        COUNT(CASE WHEN NOT is_completed THEN 1 END) as active_goals,
-        goal_type,
-        AVG(CASE WHEN is_completed THEN (current_value / NULLIF(target_value, 0)) * 100 END) as avg_completion_rate
-       FROM user_goals
-       WHERE user_id = $1
-       GROUP BY goal_type`,
-      [userId]
-    );
-
-    return result.rows;
+    return db('user_goals')
+      .where({ user_id: userId })
+      .select(
+        'goal_type',
+        db.raw('COUNT(*) as total_goals'),
+        db.raw('COUNT(CASE WHEN is_completed THEN 1 END) as completed_goals'),
+        db.raw('COUNT(CASE WHEN NOT is_completed THEN 1 END) as active_goals'),
+        db.raw('AVG(CASE WHEN is_completed THEN (current_value / NULLIF(target_value, 0)) * 100 END) as avg_completion_rate')
+      )
+      .groupBy('goal_type');
   }
 
   // Calculate projected completion date based on current progress
@@ -212,16 +149,11 @@ class Goal {
 
   // Get recommended goals based on user's current performance
   static async getRecommendedGoals(userId) {
-    const userResult = await pool.query(
-      'SELECT total_earned, direct_recruits, network_size FROM users WHERE id = $1',
-      [userId]
-    );
+    const user = await db('users').select('total_earned', 'direct_recruits', 'network_size').where({ id: userId }).first();
 
-    if (userResult.rows.length === 0) {
+    if (!user) {
       return [];
     }
-
-    const user = userResult.rows[0];
     const recommendations = [];
 
     // Recommend earnings milestone

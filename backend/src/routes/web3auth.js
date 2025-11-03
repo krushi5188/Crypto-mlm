@@ -28,6 +28,61 @@ router.get('/challenge', async (req, res) => {
     }
 });
 
+// POST /api/v1/auth/web3/register
+router.post('/register', async (req, res) => {
+    try {
+        const { walletAddress, signature, referralCode } = req.body;
+
+        if (!referralCode) {
+            return res.status(400).json({ error: 'Referral code is required' });
+        }
+
+        const referrer = await User.findByReferralCode(referralCode);
+        if (!referrer) {
+            return res.status(400).json({ error: 'Invalid referral code' });
+        }
+
+        const lowerCaseAddress = walletAddress.toLowerCase();
+        const challengeResult = await pool.query('SELECT challenge FROM web3_challenges WHERE wallet_address = $1', [lowerCaseAddress]);
+        const challenge = challengeResult.rows[0]?.challenge;
+
+        if (!challenge) {
+            return res.status(400).json({ error: 'No challenge found. Please try again' });
+        }
+
+        const recoveredAddress = ethers.verifyMessage(challenge, signature);
+
+        if (recoveredAddress.toLowerCase() !== lowerCaseAddress) {
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+
+        await pool.query('DELETE FROM web3_challenges WHERE wallet_address = $1', [lowerCaseAddress]);
+
+        let user = await User.findByWalletAddress(lowerCaseAddress);
+        if (user) {
+            return res.status(400).json({ error: 'A user with this wallet already exists' });
+        }
+
+        const newReferralCode = await User.generateReferralCode();
+        const userId = await User.create({
+            wallet_address: lowerCaseAddress,
+            username: `user_${lowerCaseAddress.slice(2, 8)}`,
+            email: `${lowerCaseAddress}@placeholder.email`,
+            password_hash: 'web3_user',
+            referral_code: newReferralCode,
+            referred_by: referrer.id,
+            role: 'member',
+        });
+
+        user = await User.findById(userId);
+        const token = generateToken(user);
+        res.status(201).json({ token, user });
+
+    } catch (error) {
+        res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
 // POST /api/v1/auth/web3/login
 router.post('/login', async (req, res) => {
     try {
@@ -49,21 +104,10 @@ router.post('/login', async (req, res) => {
 
         await pool.query('DELETE FROM web3_challenges WHERE wallet_address = $1', [lowerCaseAddress]);
 
-        let user = await User.findByWalletAddress(lowerCaseAddress);
+        const user = await User.findByWalletAddress(lowerCaseAddress);
 
         if (!user) {
-            // New user - create a placeholder account.
-            // The frontend should prompt them to complete their profile.
-            const referralCode = await generateReferralCode();
-            const userId = await User.create({
-                wallet_address: lowerCaseAddress,
-                username: `user_${lowerCaseAddress.slice(2, 8)}`,
-                email: `${lowerCaseAddress}@placeholder.email`, // Use a placeholder domain
-                password_hash: 'web3_user', // Not used for login
-                referral_code: referralCode,
-                role: 'member',
-            });
-            user = await User.findById(userId);
+            return res.status(404).json({ error: 'User not found. Please register' });
         }
 
         const token = generateToken(user);

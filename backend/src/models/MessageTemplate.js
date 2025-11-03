@@ -1,95 +1,56 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class MessageTemplate {
   // Get all templates
   static async getAll(type = null) {
-    let query = `SELECT * FROM message_templates`;
-    const params = [];
+    const query = db('message_templates');
 
     if (type) {
-      query += ` WHERE template_type = $1`;
-      params.push(type);
+      query.where({ template_type: type });
     }
 
-    query += ` ORDER BY is_default DESC, usage_count DESC, name ASC`;
-
-    const result = await pool.query(query, params);
-    return result.rows;
+    return query.orderBy(['is_default', 'usage_count', 'name'], ['desc', 'desc', 'asc']);
   }
 
   // Get template by ID
   static async getById(templateId) {
-    const result = await pool.query(
-      'SELECT * FROM message_templates WHERE id = $1',
-      [templateId]
-    );
-
-    return result.rows[0];
+    return db('message_templates').where({ id: templateId }).first();
   }
 
   // Create template
   static async create(templateData) {
-    const {
-      name,
-      template_type,
-      subject,
-      content,
-      variables,
-      is_default = false,
-      created_by
-    } = templateData;
-
-    const result = await pool.query(
-      `INSERT INTO message_templates
-       (name, template_type, subject, content, variables, is_default, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [name, template_type, subject, content, variables, is_default, created_by]
-    );
-
-    return result.rows[0];
+    const [result] = await db('message_templates').insert(templateData).returning('*');
+    return result;
   }
 
   // Update template
   static async update(templateId, updates) {
     const allowedFields = ['name', 'subject', 'content', 'variables'];
-    const setClauses = [];
-    const params = [];
-    let paramCount = 1;
+    const filteredUpdates = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = updates[key];
+        return obj;
+      }, {});
 
-    Object.keys(updates).forEach(key => {
-      if (allowedFields.includes(key)) {
-        setClauses.push(`${key} = $${paramCount}`);
-        params.push(updates[key]);
-        paramCount++;
-      }
-    });
-
-    if (setClauses.length === 0) {
+    if (Object.keys(filteredUpdates).length === 0) {
       throw new Error('No valid fields to update');
     }
 
-    params.push(templateId);
-
-    const result = await pool.query(
-      `UPDATE message_templates
-       SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      params
-    );
-
-    return result.rows[0];
+    const [result] = await db('message_templates')
+      .where({ id: templateId })
+      .update({ ...filteredUpdates, updated_at: db.fn.now() })
+      .returning('*');
+    return result;
   }
 
   // Delete template (only if not default)
   static async delete(templateId) {
-    const result = await pool.query(
-      'DELETE FROM message_templates WHERE id = $1 AND is_default = false RETURNING *',
-      [templateId]
-    );
-
-    return result.rows[0];
+    const [result] = await db('message_templates')
+      .where({ id: templateId, is_default: false })
+      .del()
+      .returning('*');
+    return result;
   }
 
   // Render template with variables
@@ -113,27 +74,17 @@ class MessageTemplate {
 
   // Increment usage count
   static async incrementUsage(templateId) {
-    await pool.query(
-      'UPDATE message_templates SET usage_count = usage_count + 1 WHERE id = $1',
-      [templateId]
-    );
+    return db('message_templates').where({ id: templateId }).increment('usage_count', 1);
   }
 
   // Get default templates
   static async getDefaults() {
-    const result = await pool.query(
-      'SELECT * FROM message_templates WHERE is_default = true ORDER BY template_type, name'
-    );
-
-    return result.rows;
+    return db('message_templates').where({ is_default: true }).orderBy(['template_type', 'name']);
   }
 
   // Log share activity
   static async logShare(userId, platform, templateId = null) {
-    await pool.query(
-      'INSERT INTO referral_shares (user_id, platform, template_id) VALUES ($1, $2, $3)',
-      [userId, platform, templateId]
-    );
+    await db('referral_shares').insert({ user_id: userId, platform, template_id: templateId });
 
     if (templateId) {
       await this.incrementUsage(templateId);
@@ -142,18 +93,12 @@ class MessageTemplate {
 
   // Get share statistics for user
   static async getShareStats(userId) {
-    const result = await pool.query(
-      `SELECT
-        COUNT(*) as total_shares,
-        COUNT(DISTINCT platform) as platforms_used,
-        platform,
-        COUNT(*) as share_count
-       FROM referral_shares
-       WHERE user_id = $1
-       GROUP BY platform
-       ORDER BY share_count DESC`,
-      [userId]
-    );
+    const rows = await db('referral_shares')
+      .select('platform')
+      .count('* as share_count')
+      .where({ user_id: userId })
+      .groupBy('platform')
+      .orderBy('share_count', 'desc');
 
     const stats = {
       total_shares: 0,
@@ -161,7 +106,7 @@ class MessageTemplate {
       by_platform: {}
     };
 
-    result.rows.forEach(row => {
+    rows.forEach(row => {
       stats.total_shares += parseInt(row.share_count);
       stats.by_platform[row.platform] = parseInt(row.share_count);
     });
@@ -173,14 +118,9 @@ class MessageTemplate {
 
   // Get trending templates
   static async getTrending(limit = 5) {
-    const result = await pool.query(
-      `SELECT * FROM message_templates
-       ORDER BY usage_count DESC, created_at DESC
-       LIMIT $1`,
-      [limit]
-    );
-
-    return result.rows;
+    return db('message_templates')
+      .orderBy(['usage_count', 'created_at'], ['desc', 'desc'])
+      .limit(limit);
   }
 }
 

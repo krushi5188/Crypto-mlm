@@ -98,11 +98,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const web3Register = async (data) => {
+    try {
+      const response = await authAPI.web3Register(data);
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Web3 registration failed',
+      };
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     web3Login,
+    web3Register,
     register,
     logout,
     isAuthenticated: !!user,

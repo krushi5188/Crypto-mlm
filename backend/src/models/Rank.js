@@ -1,64 +1,43 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 const Notification = require('./Notification');
 
 class Rank {
   // Get all ranks ordered by rank_order
   static async getAll() {
-    const result = await pool.query(
-      'SELECT * FROM user_ranks ORDER BY rank_order ASC'
-    );
-    return result.rows;
+    return db('user_ranks').orderBy('rank_order', 'asc');
   }
 
   // Get rank by ID
   static async getById(rankId) {
-    const result = await pool.query(
-      'SELECT * FROM user_ranks WHERE id = $1',
-      [rankId]
-    );
-    return result.rows[0];
+    return db('user_ranks').where({ id: rankId }).first();
   }
 
   // Get user's current rank with details
   static async getUserRank(userId) {
-    const result = await pool.query(
-      `SELECT u.current_rank_id, u.rank_achieved_at, r.*
-       FROM users u
-       LEFT JOIN user_ranks r ON u.current_rank_id = r.id
-       WHERE u.id = $1`,
-      [userId]
-    );
-    return result.rows[0];
+    return db('users as u')
+      .select('u.current_rank_id', 'u.rank_achieved_at', 'r.*')
+      .leftJoin('user_ranks as r', 'u.current_rank_id', 'r.id')
+      .where('u.id', userId)
+      .first();
   }
 
   // Check user's eligibility for rank and return next eligible rank
   static async checkEligibility(userId) {
-    // Get user stats
-    const userResult = await pool.query(
-      'SELECT direct_recruits, network_size, total_earned, current_rank_id FROM users WHERE id = $1',
-      [userId]
-    );
+    const user = await db('users').select('direct_recruits', 'network_size', 'total_earned', 'current_rank_id').where({ id: userId }).first();
 
-    if (userResult.rows.length === 0) {
+    if (!user) {
       throw new Error('User not found');
     }
 
-    const user = userResult.rows[0];
+    const ranks = await db('user_ranks').orderBy('rank_order', 'desc');
 
-    // Get all ranks
-    const ranksResult = await pool.query(
-      'SELECT * FROM user_ranks ORDER BY rank_order DESC'
-    );
-
-    // Find highest rank user qualifies for
     let eligibleRank = null;
-    for (const rank of ranksResult.rows) {
-      const meetsRequirements =
+    for (const rank of ranks) {
+      if (
         user.direct_recruits >= rank.min_direct_recruits &&
         user.network_size >= rank.min_network_size &&
-        parseFloat(user.total_earned) >= parseFloat(rank.min_total_earned);
-
-      if (meetsRequirements) {
+        parseFloat(user.total_earned) >= parseFloat(rank.min_total_earned)
+      ) {
         eligibleRank = rank;
         break;
       }
@@ -73,23 +52,21 @@ class Rank {
 
   // Update user's rank
   static async updateUserRank(userId, newRankId) {
-    const result = await pool.query(
-      `UPDATE users
-       SET current_rank_id = $1, rank_achieved_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING *`,
-      [newRankId, userId]
-    );
+    const [result] = await db('users')
+      .where({ id: userId })
+      .update({
+        current_rank_id: newRankId,
+        rank_achieved_at: db.fn.now()
+      })
+      .returning('*');
 
-    // Get rank details
     const rank = await this.getById(newRankId);
 
-    // Send notification
     if (rank) {
       await Notification.notifyRankUp(userId, rank.rank_name, rank.badge_icon);
     }
 
-    return result.rows[0];
+    return result;
   }
 
   // Check and auto-promote user if eligible
@@ -112,28 +89,23 @@ class Rank {
 
   // Get rank progression info for a user
   static async getUserProgress(userId) {
-    // Get user stats
-    const userResult = await pool.query(
-      `SELECT
-        u.id, u.direct_recruits, u.network_size, u.total_earned,
-        u.current_rank_id, u.rank_achieved_at,
-        r.rank_name as current_rank_name,
-        r.badge_icon as current_badge_icon,
-        r.badge_color as current_badge_color,
-        r.rank_order as current_rank_order
-       FROM users u
-       LEFT JOIN user_ranks r ON u.current_rank_id = r.id
-       WHERE u.id = $1`,
-      [userId]
-    );
+    const user = await db('users as u')
+      .select(
+        'u.id', 'u.direct_recruits', 'u.network_size', 'u.total_earned',
+        'u.current_rank_id', 'u.rank_achieved_at',
+        'r.rank_name as current_rank_name',
+        'r.badge_icon as current_badge_icon',
+        'r.badge_color as current_badge_color',
+        'r.rank_order as current_rank_order'
+      )
+      .leftJoin('user_ranks as r', 'u.current_rank_id', 'r.id')
+      .where('u.id', userId)
+      .first();
 
-    if (userResult.rows.length === 0) {
+    if (!user) {
       throw new Error('User not found');
     }
 
-    const user = userResult.rows[0];
-
-    // Get all ranks
     const allRanks = await this.getAll();
 
     // Find next rank
@@ -197,29 +169,28 @@ class Rank {
 
   // Get rank leaderboard
   static async getLeaderboard(limit = 20) {
-    const result = await pool.query(
-      `SELECT
-        u.id, u.username, u.current_rank_id,
-        u.direct_recruits, u.network_size, u.total_earned,
-        u.rank_achieved_at,
-        r.rank_name, r.badge_icon, r.badge_color, r.rank_order
-       FROM users u
-       LEFT JOIN user_ranks r ON u.current_rank_id = r.id
-       WHERE u.role = 'member'
-       ORDER BY r.rank_order DESC NULLS LAST, u.total_earned DESC, u.direct_recruits DESC
-       LIMIT $1`,
-      [limit]
-    );
-    return result.rows;
+    return db('users as u')
+      .select(
+        'u.id', 'u.username', 'u.current_rank_id',
+        'u.direct_recruits', 'u.network_size', 'u.total_earned',
+        'u.rank_achieved_at',
+        'r.rank_name', 'r.badge_icon', 'r.badge_color', 'r.rank_order'
+      )
+      .leftJoin('user_ranks as r', 'u.current_rank_id', 'r.id')
+      .where('u.role', 'member')
+      .orderBy('r.rank_order', 'desc')
+      .orderBy('u.total_earned', 'desc')
+      .orderBy('u.direct_recruits', 'desc')
+      .limit(limit);
   }
 
   // Update rank perks (admin function - could be added to instructor routes later)
   static async updatePerks(rankId, perks) {
-    const result = await pool.query(
-      'UPDATE user_ranks SET perks = $1 WHERE id = $2 RETURNING *',
-      [JSON.stringify(perks), rankId]
-    );
-    return result.rows[0];
+    const [result] = await db('user_ranks')
+      .where({ id: rankId })
+      .update({ perks: JSON.stringify(perks) })
+      .returning('*');
+    return result;
   }
 
   // Get rank-based commission multiplier

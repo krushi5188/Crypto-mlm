@@ -1,24 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, User, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
+import { Mail, Lock, User, ArrowLeft, AlertCircle, CheckCircle, Wallet } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
+import { ethers } from 'ethers'
+import api from '../services/api'
+import { useAppKit } from '@reown/appkit/react'
 
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { register } = useAuth()
+  const { web3Register } = useAuth()
+  const { open } = useAppKit()
 
-  const [formData, setFormData] = useState({
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    referralCode: searchParams.get('ref') || '',
-  })
-  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [generalError, setGeneralError] = useState('')
 
@@ -33,73 +29,30 @@ const RegisterPage = () => {
     }
   }, [searchParams, navigate])
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
-    }
-    if (generalError) {
-      setGeneralError('')
-    }
-  }
+  const handleWeb3Register = async () => {
+    try {
+      setLoading(true)
+      await open()
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      const walletAddress = await signer.getAddress()
+      const referralCode = searchParams.get('ref')
 
-  const validate = () => {
-    const newErrors = {}
+      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${walletAddress}`)
+      const { challenge } = challengeResponse.data
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid'
-    }
+      const signature = await signer.signMessage(challenge)
 
-    if (!formData.username) {
-      newErrors.username = 'Username is required'
-    } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters'
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.username)) {
-      newErrors.username = 'Username can only contain letters and numbers'
-    }
+      const registerResult = await web3Register({ walletAddress, signature, referralCode })
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number'
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
-    }
-
-    if (!formData.referralCode) {
-      newErrors.referralCode = 'Referral code is required'
-    }
-
-    return newErrors
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    const newErrors = validate()
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-
-    setLoading(true)
-    setGeneralError('')
-
-    const result = await register(formData)
-
-    if (result.success) {
-      navigate('/dashboard')
-    } else {
-      setGeneralError(result.error)
+      if (registerResult.success) {
+        navigate('/dashboard')
+      } else {
+        setGeneralError(registerResult.error)
+        setLoading(false)
+      }
+    } catch (error) {
+      setGeneralError('Wallet registration failed. Please try again.')
       setLoading(false)
     }
   }
@@ -196,73 +149,17 @@ const RegisterPage = () => {
             </motion.div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              required
-              icon={<Mail className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Username"
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              error={errors.username}
-              required
-              icon={<User className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Confirm Password"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              error={errors.confirmPassword}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Referral Code"
-              type="text"
-              name="referralCode"
-              value={formData.referralCode}
-              onChange={handleChange}
-              error={errors.referralCode}
-              required
-              disabled
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              loading={loading}
-              disabled={loading}
-            >
-              Create Account
-            </Button>
-          </form>
+          {/* Web3 Register Button */}
+          <Button
+            fullWidth
+            size="lg"
+            variant="primary"
+            onClick={handleWeb3Register}
+            disabled={loading}
+            icon={<Wallet className="w-5 h-5" />}
+          >
+            Sign Up with Wallet
+          </Button>
 
           {/* Login Link */}
           <div className="mt-6 text-center">

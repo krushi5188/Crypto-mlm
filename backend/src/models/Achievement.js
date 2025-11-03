@@ -1,85 +1,64 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 const Notification = require('./Notification');
 
 class Achievement {
   // Get all achievements
   static async getAll() {
-    const result = await pool.query(
-      'SELECT * FROM achievements ORDER BY points DESC, name ASC'
-    );
-    return result.rows;
+    return db('achievements').orderBy(['points', 'name'], ['desc', 'asc']);
   }
 
   // Get achievement by ID
   static async getById(achievementId) {
-    const result = await pool.query(
-      'SELECT * FROM achievements WHERE id = $1',
-      [achievementId]
-    );
-    return result.rows[0];
+    return db('achievements').where({ id: achievementId }).first();
   }
 
   // Get user's unlocked achievements
   static async getUserAchievements(userId) {
-    const result = await pool.query(
-      `SELECT a.*, ua.unlocked_at, ua.progress
-       FROM achievements a
-       JOIN user_achievements ua ON a.id = ua.achievement_id
-       WHERE ua.user_id = $1
-       ORDER BY ua.unlocked_at DESC`,
-      [userId]
-    );
-    return result.rows;
+    return db('achievements as a')
+      .select('a.*', 'ua.unlocked_at', 'ua.progress')
+      .join('user_achievements as ua', 'a.id', 'ua.achievement_id')
+      .where('ua.user_id', userId)
+      .orderBy('ua.unlocked_at', 'desc');
   }
 
   // Get user's achievement progress (all achievements with unlock status)
   static async getUserProgress(userId) {
-    const result = await pool.query(
-      `SELECT
-        a.*,
-        ua.unlocked_at,
-        ua.progress,
-        CASE WHEN ua.achievement_id IS NOT NULL THEN true ELSE false END as is_unlocked
-       FROM achievements a
-       LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
-       ORDER BY is_unlocked DESC, a.points DESC, a.name ASC`,
-      [userId]
-    );
-    return result.rows;
+    return db('achievements as a')
+      .select(
+        'a.*',
+        'ua.unlocked_at',
+        'ua.progress',
+        db.raw('CASE WHEN ua.achievement_id IS NOT NULL THEN true ELSE false END as is_unlocked')
+      )
+      .leftJoin('user_achievements as ua', function () {
+        this.on('a.id', '=', 'ua.achievement_id').andOn('ua.user_id', '=', userId);
+      })
+      .orderBy('is_unlocked', 'desc')
+      .orderBy('a.points', 'desc')
+      .orderBy('a.name', 'asc');
   }
 
   // Unlock achievement for user
   static async unlock(userId, achievementId, progress = null) {
-    // Check if already unlocked
-    const existing = await pool.query(
-      'SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2',
-      [userId, achievementId]
-    );
+    const existing = await db('user_achievements').where({ user_id: userId, achievement_id: achievementId }).first();
 
-    if (existing.rows.length > 0) {
+    if (existing) {
       return { alreadyUnlocked: true };
     }
 
-    // Get achievement details
     const achievement = await this.getById(achievementId);
     if (!achievement) {
       throw new Error('Achievement not found');
     }
 
-    // Unlock achievement
-    await pool.query(
-      `INSERT INTO user_achievements (user_id, achievement_id, progress)
-       VALUES ($1, $2, $3)`,
-      [userId, achievementId, progress]
-    );
+    await db('user_achievements').insert({
+      user_id: userId,
+      achievement_id: achievementId,
+      progress
+    });
 
-    // Update user's total points
-    await pool.query(
-      'UPDATE users SET achievement_points = achievement_points + $1 WHERE id = $2',
-      [achievement.points, userId]
-    );
+    await db('users').where({ id: userId }).increment('achievement_points', achievement.points);
 
-    // Create notification
     await Notification.notifyAchievementUnlocked(userId, achievement.name, achievement.points);
 
     return {
@@ -91,16 +70,11 @@ class Achievement {
 
   // Check all achievements for a user
   static async checkAchievements(userId) {
-    const user = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [userId]
-    );
+    const userData = await db('users').where({ id: userId }).first();
 
-    if (user.rows.length === 0) {
+    if (!userData) {
       throw new Error('User not found');
     }
-
-    const userData = user.rows[0];
     const unlockedAchievements = [];
 
     // Define achievement checking logic
@@ -205,26 +179,24 @@ class Achievement {
 
   // Get user's total achievement points
   static async getUserPoints(userId) {
-    const result = await pool.query(
-      'SELECT achievement_points FROM users WHERE id = $1',
-      [userId]
-    );
-    return result.rows[0]?.achievement_points || 0;
+    const result = await db('users').where({ id: userId }).select('achievement_points').first();
+    return result?.achievement_points || 0;
   }
 
   // Get leaderboard by achievement points
   static async getLeaderboard(limit = 10) {
-    const result = await pool.query(
-      `SELECT
-        id, username, achievement_points,
-        (SELECT COUNT(*) FROM user_achievements WHERE user_id = users.id) as achievements_count
-       FROM users
-       WHERE role = 'member' AND achievement_points > 0
-       ORDER BY achievement_points DESC, achievements_count DESC
-       LIMIT $1`,
-      [limit]
-    );
-    return result.rows;
+    return db('users')
+      .select(
+        'id',
+        'username',
+        'achievement_points',
+        db.raw('(SELECT COUNT(*) FROM user_achievements WHERE user_id = users.id) as achievements_count')
+      )
+      .where('role', 'member')
+      .andWhere('achievement_points', '>', 0)
+      .orderBy('achievement_points', 'desc')
+      .orderBy('achievements_count', 'desc')
+      .limit(limit);
   }
 
   // Seed initial achievements (run once)
@@ -254,17 +226,7 @@ class Achievement {
       { id: 15, name: 'Network Titan', description: 'Build a network of 250 people', points: 1500, icon: '🏔️', category: 'network' }
     ];
 
-    for (const achievement of achievements) {
-      await pool.query(
-        `INSERT INTO achievements (id, name, description, points, icon, category)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (id) DO UPDATE SET
-           name = $2, description = $3, points = $4, icon = $5, category = $6`,
-        [achievement.id, achievement.name, achievement.description, achievement.points, achievement.icon, achievement.category]
-      );
-    }
-
-    return achievements.length;
+    return db('achievements').insert(achievements).onConflict('id').merge();
   }
 }
 

@@ -76,6 +76,41 @@ router.get('/analytics', async (req, res) => {
 });
 
 /**
+ * PUT /api/v1/instructor/profile/referral-code
+ * Update instructor's referral code
+ */
+router.put('/profile/referral-code', validate('referralCodeUpdate'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { referralCode } = req.validatedBody;
+
+    const existingUser = await User.findByReferralCode(referralCode);
+    if (existingUser && existingUser.id !== userId) {
+      return res.status(400).json({
+        error: 'Referral code is already in use.',
+        code: 'REFERRAL_CODE_TAKEN',
+      });
+    }
+
+    await User.updateProfile(userId, { referral_code: referralCode });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Referral code updated successfully.',
+        referralCode,
+      },
+    });
+  } catch (error) {
+    console.error('Referral code update error:', error);
+    res.status(500).json({
+      error: 'Failed to update referral code',
+      code: 'DATABASE_ERROR',
+    });
+  }
+});
+
+/**
  * POST /api/v1/instructor/add-member
  * Instructor directly adds a new member (auto-approved, no approval needed)
  */

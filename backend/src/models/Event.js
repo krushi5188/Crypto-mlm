@@ -1,116 +1,64 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class Event {
   // Create new event
   static async create(eventData) {
-    const {
-      title,
-      description,
-      event_type,
-      start_time,
-      end_time,
-      timezone = 'UTC',
-      meeting_link,
-      is_recurring = false,
-      recurrence_pattern,
-      max_attendees,
-      is_public = true,
-      created_by
-    } = eventData;
-
-    const result = await pool.query(
-      `INSERT INTO team_events
-       (title, description, event_type, start_time, end_time, timezone, meeting_link,
-        is_recurring, recurrence_pattern, max_attendees, is_public, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING *`,
-      [title, description, event_type, start_time, end_time, timezone, meeting_link,
-       is_recurring, recurrence_pattern, max_attendees, is_public, created_by]
-    );
-
-    return result.rows[0];
+    const [result] = await db('team_events').insert(eventData).returning('*');
+    return result;
   }
 
   // Get all events with filters
   static async getAll(filters = {}) {
     const { type, upcoming = true, userId, page = 1, limit = 20 } = filters;
-    const offset = (page - 1) * limit;
 
-    let whereConditions = ['is_public = true'];
-    let params = [];
-    let paramCount = 1;
+    const query = db('team_events as e')
+      .select('e.*', 'u.username as creator_name', db.raw('(SELECT COUNT(*) FROM event_attendees WHERE event_id = e.id) as registered_count'))
+      .leftJoin('users as u', 'e.created_by', 'u.id')
+      .where('e.is_public', true)
+      .orderBy('e.start_time', 'asc')
+      .limit(limit)
+      .offset((page - 1) * limit);
 
     if (type) {
-      whereConditions.push(`event_type = $${paramCount}`);
-      params.push(type);
-      paramCount++;
+      query.andWhere('e.event_type', type);
     }
-
     if (upcoming) {
-      whereConditions.push(`start_time >= CURRENT_TIMESTAMP`);
+      query.andWhere('e.start_time', '>=', db.fn.now());
     }
 
-    params.push(limit, offset);
+    const events = await query;
 
-    const result = await pool.query(
-      `SELECT e.*, u.username as creator_name,
-              (SELECT COUNT(*) FROM event_attendees WHERE event_id = e.id) as registered_count
-       FROM team_events e
-       LEFT JOIN users u ON e.created_by = u.id
-       WHERE ${whereConditions.join(' AND ')}
-       ORDER BY start_time ASC
-       LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
-      params
-    );
-
-    // Get user's RSVP status if userId provided
     if (userId) {
-      for (let event of result.rows) {
-        const rsvpResult = await pool.query(
-          'SELECT rsvp_status FROM event_attendees WHERE event_id = $1 AND user_id = $2',
-          [event.id, userId]
-        );
-        event.user_rsvp_status = rsvpResult.rows[0]?.rsvp_status || null;
+      for (const event of events) {
+        const rsvp = await db('event_attendees').select('rsvp_status').where({ event_id: event.id, user_id: userId }).first();
+        event.user_rsvp_status = rsvp?.rsvp_status || null;
       }
     }
 
-    return result.rows;
+    return events;
   }
 
   // Get event by ID
   static async getById(eventId, userId = null) {
-    const result = await pool.query(
-      `SELECT e.*, u.username as creator_name,
-              (SELECT COUNT(*) FROM event_attendees WHERE event_id = e.id) as registered_count
-       FROM team_events e
-       LEFT JOIN users u ON e.created_by = u.id
-       WHERE e.id = $1`,
-      [eventId]
-    );
+    const event = await db('team_events as e')
+      .select('e.*', 'u.username as creator_name', db.raw('(SELECT COUNT(*) FROM event_attendees WHERE event_id = e.id) as registered_count'))
+      .leftJoin('users as u', 'e.created_by', 'u.id')
+      .where('e.id', eventId)
+      .first();
 
-    if (result.rows.length === 0) return null;
+    if (!event) {
+      return null;
+    }
 
-    const event = result.rows[0];
+    event.attendees = await db('event_attendees as ea')
+      .select('ea.*', 'u.username', 'u.email')
+      .join('users as u', 'ea.user_id', 'u.id')
+      .where('ea.event_id', eventId)
+      .orderBy('ea.registered_at', 'desc');
 
-    // Get attendee list
-    const attendeesResult = await pool.query(
-      `SELECT ea.*, u.username, u.email
-       FROM event_attendees ea
-       JOIN users u ON ea.user_id = u.id
-       WHERE ea.event_id = $1
-       ORDER BY ea.registered_at DESC`,
-      [eventId]
-    );
-
-    event.attendees = attendeesResult.rows;
-
-    // Get user's RSVP if userId provided
     if (userId) {
-      const rsvpResult = await pool.query(
-        'SELECT rsvp_status FROM event_attendees WHERE event_id = $1 AND user_id = $2',
-        [eventId, userId]
-      );
-      event.user_rsvp_status = rsvpResult.rows[0]?.rsvp_status || null;
+      const rsvp = await db('event_attendees').select('rsvp_status').where({ event_id: eventId, user_id: userId }).first();
+      event.user_rsvp_status = rsvp?.rsvp_status || null;
     }
 
     return event;
@@ -119,156 +67,114 @@ class Event {
   // Update event
   static async update(eventId, updates) {
     const allowedFields = ['title', 'description', 'start_time', 'end_time', 'meeting_link', 'max_attendees', 'is_public'];
-    const setClauses = [];
-    const params = [];
-    let paramCount = 1;
+    const filteredUpdates = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = updates[key];
+        return obj;
+      }, {});
 
-    Object.keys(updates).forEach(key => {
-      if (allowedFields.includes(key)) {
-        setClauses.push(`${key} = $${paramCount}`);
-        params.push(updates[key]);
-        paramCount++;
-      }
-    });
-
-    if (setClauses.length === 0) {
+    if (Object.keys(filteredUpdates).length === 0) {
       throw new Error('No valid fields to update');
     }
 
-    params.push(eventId);
-
-    const result = await pool.query(
-      `UPDATE team_events
-       SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      params
-    );
-
-    return result.rows[0];
+    const [result] = await db('team_events')
+      .where({ id: eventId })
+      .update({ ...filteredUpdates, updated_at: db.fn.now() })
+      .returning('*');
+    return result;
   }
 
   // Delete event
   static async delete(eventId) {
-    const result = await pool.query(
-      'DELETE FROM team_events WHERE id = $1 RETURNING *',
-      [eventId]
-    );
-
-    return result.rows[0];
+    const [result] = await db('team_events').where({ id: eventId }).del().returning('*');
+    return result;
   }
 
   // RSVP to event
   static async rsvp(eventId, userId, status = 'accepted') {
-    // Check if already registered
-    const existing = await pool.query(
-      'SELECT * FROM event_attendees WHERE event_id = $1 AND user_id = $2',
-      [eventId, userId]
-    );
+    const existing = await db('event_attendees').where({ event_id: eventId, user_id: userId }).first();
 
-    if (existing.rows.length > 0) {
-      // Update existing RSVP
-      const result = await pool.query(
-        `UPDATE event_attendees
-         SET rsvp_status = $1
-         WHERE event_id = $2 AND user_id = $3
-         RETURNING *`,
-        [status, eventId, userId]
-      );
-      return result.rows[0];
+    if (existing) {
+      const [result] = await db('event_attendees')
+        .where({ event_id: eventId, user_id: userId })
+        .update({ rsvp_status: status })
+        .returning('*');
+      return result;
     } else {
-      // Create new RSVP
-      const result = await pool.query(
-        `INSERT INTO event_attendees (event_id, user_id, rsvp_status)
-         VALUES ($1, $2, $3)
-         RETURNING *`,
-        [eventId, userId, status]
-      );
+      const [result] = await db('event_attendees')
+        .insert({ event_id: eventId, user_id: userId, rsvp_status: status })
+        .returning('*');
 
-      // Increment attendee count if accepted
       if (status === 'accepted') {
-        await pool.query(
-          'UPDATE team_events SET current_attendees = current_attendees + 1 WHERE id = $1',
-          [eventId]
-        );
+        await db('team_events').where({ id: eventId }).increment('current_attendees', 1);
       }
 
-      return result.rows[0];
+      return result;
     }
   }
 
   // Cancel RSVP
   static async cancelRsvp(eventId, userId) {
-    const result = await pool.query(
-      'DELETE FROM event_attendees WHERE event_id = $1 AND user_id = $2 RETURNING *',
-      [eventId, userId]
-    );
+    const [result] = await db('event_attendees')
+      .where({ event_id: eventId, user_id: userId })
+      .del()
+      .returning('*');
 
-    if (result.rows.length > 0 && result.rows[0].rsvp_status === 'accepted') {
-      await pool.query(
-        'UPDATE team_events SET current_attendees = current_attendees - 1 WHERE id = $1',
-        [eventId]
-      );
+    if (result && result.rsvp_status === 'accepted') {
+      await db('team_events').where({ id: eventId }).decrement('current_attendees', 1);
     }
 
-    return result.rows[0];
+    return result;
   }
 
   // Mark attendance
   static async markAttended(eventId, userId) {
-    const result = await pool.query(
-      `UPDATE event_attendees
-       SET rsvp_status = 'attended', attended_at = CURRENT_TIMESTAMP
-       WHERE event_id = $1 AND user_id = $2
-       RETURNING *`,
-      [eventId, userId]
-    );
-
-    return result.rows[0];
+    const [result] = await db('event_attendees')
+      .where({ event_id: eventId, user_id: userId })
+      .update({ rsvp_status: 'attended', attended_at: db.fn.now() })
+      .returning('*');
+    return result;
   }
 
   // Get user's events
   static async getUserEvents(userId, upcoming = true) {
-    const timeCondition = upcoming
-      ? 'AND e.start_time >= CURRENT_TIMESTAMP'
-      : 'AND e.start_time < CURRENT_TIMESTAMP';
+    const query = db('team_events as e')
+      .select('e.*', 'u.username as creator_name', 'ea.rsvp_status', 'ea.registered_at')
+      .leftJoin('users as u', 'e.created_by', 'u.id')
+      .join('event_attendees as ea', 'e.id', 'ea.event_id')
+      .where('ea.user_id', userId);
 
-    const result = await pool.query(
-      `SELECT e.*, u.username as creator_name, ea.rsvp_status, ea.registered_at
-       FROM team_events e
-       LEFT JOIN users u ON e.created_by = u.id
-       JOIN event_attendees ea ON e.id = ea.event_id
-       WHERE ea.user_id = $1 ${timeCondition}
-       ORDER BY e.start_time ${upcoming ? 'ASC' : 'DESC'}`,
-      [userId]
-    );
+    if (upcoming) {
+      query.andWhere('e.start_time', '>=', db.fn.now()).orderBy('e.start_time', 'asc');
+    } else {
+      query.andWhere('e.start_time', '<', db.fn.now()).orderBy('e.start_time', 'desc');
+    }
 
-    return result.rows;
+    return query;
   }
 
   // Get event statistics
   static async getStats(eventId) {
-    const result = await pool.query(
-      `SELECT
-        COUNT(*) as total_registered,
-        COUNT(CASE WHEN rsvp_status = 'accepted' THEN 1 END) as accepted_count,
-        COUNT(CASE WHEN rsvp_status = 'declined' THEN 1 END) as declined_count,
-        COUNT(CASE WHEN rsvp_status = 'attended' THEN 1 END) as attended_count
-       FROM event_attendees
-       WHERE event_id = $1`,
-      [eventId]
-    );
-
-    return result.rows[0];
+    return db('event_attendees')
+      .where({ event_id: eventId })
+      .select(
+        db.raw('COUNT(*) as total_registered'),
+        db.raw(`COUNT(CASE WHEN rsvp_status = 'accepted' THEN 1 END) as accepted_count`),
+        db.raw(`COUNT(CASE WHEN rsvp_status = 'declined' THEN 1 END) as declined_count`),
+        db.raw(`COUNT(CASE WHEN rsvp_status = 'attended' THEN 1 END) as attended_count`)
+      )
+      .first();
   }
 
   // Get upcoming events count
   static async getUpcomingCount() {
-    const result = await pool.query(
-      'SELECT COUNT(*) as count FROM team_events WHERE start_time >= CURRENT_TIMESTAMP AND is_public = true'
-    );
-
-    return parseInt(result.rows[0].count);
+    const { count } = await db('team_events')
+      .where('start_time', '>=', db.fn.now())
+      .andWhere('is_public', true)
+      .count({ count: '*' })
+      .first();
+    return parseInt(count);
   }
 }
 

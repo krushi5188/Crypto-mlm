@@ -1,26 +1,25 @@
-const { Pool } = require('pg');
+const knex = require('knex');
 require('dotenv').config();
 
-// Create connection pool for better performance
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'atlas_network_simulator',
-  max: process.env.NODE_ENV === 'production' ? 5 : 10, // Connection pool size
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  // SSL for production databases (Supabase requires SSL)
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+const db = knex({
+  client: process.env.DB_CLIENT || 'pg',
+  connection: process.env.DB_CLIENT === 'sqlite3'
+    ? { filename: process.env.DB_CONNECTION }
+    : {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+    },
+  useNullAsDefault: process.env.DB_CLIENT === 'sqlite3'
 });
 
-// Test database connection
 const testConnection = async () => {
   try {
-    const client = await pool.connect();
+    await db.raw('select 1+1 as result');
     console.log('✓ Database connected successfully');
-    client.release();
     return true;
   } catch (error) {
     console.error('✗ Database connection failed:', error.message);
@@ -28,4 +27,4 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { pool, testConnection };
+module.exports = { db, testConnection };

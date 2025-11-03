@@ -1,86 +1,62 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 class FraudAlert {
   // Get all fraud alerts with filters
   static async getAll(filters = {}) {
     const { status, severity, limit = 50, offset = 0 } = filters;
 
-    let query = `
-      SELECT
-        fa.*,
-        u.username, u.email, u.risk_score,
-        assigned.username as assigned_to_name
-      FROM fraud_alerts fa
-      JOIN users u ON fa.user_id = u.id
-      LEFT JOIN users assigned ON fa.assigned_to = assigned.id
-      WHERE 1=1
-    `;
-
-    const params = [];
-    let paramIndex = 1;
+    const query = db('fraud_alerts as fa')
+      .select('fa.*', 'u.username', 'u.email', 'u.risk_score', 'assigned.username as assigned_to_name')
+      .join('users as u', 'fa.user_id', 'u.id')
+      .leftJoin('users as assigned', 'fa.assigned_to', 'assigned.id')
+      .orderBy('fa.created_at', 'desc')
+      .limit(limit)
+      .offset(offset);
 
     if (status) {
-      query += ` AND fa.status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
+      query.andWhere('fa.status', status);
     }
-
     if (severity) {
-      query += ` AND fa.severity = $${paramIndex}`;
-      params.push(severity);
-      paramIndex++;
+      query.andWhere('fa.severity', severity);
     }
 
-    query += ` ORDER BY fa.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
-    return result.rows;
+    return query;
   }
 
   // Get alerts for specific user
   static async getByUserId(userId) {
-    const result = await pool.query(
-      `SELECT * FROM fraud_alerts
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
-      [userId]
-    );
-    return result.rows;
+    return db('fraud_alerts').where({ user_id: userId }).orderBy('created_at', 'desc');
   }
 
   // Update alert status
   static async updateStatus(alertId, status, resolutionNotes = null, resolvedBy = null) {
-    const result = await pool.query(
-      `UPDATE fraud_alerts
-       SET status = $1, resolved_at = NOW(), resolution_notes = $2, assigned_to = $3
-       WHERE id = $4
-       RETURNING *`,
-      [status, resolutionNotes, resolvedBy, alertId]
-    );
-    return result.rows[0];
+    const [result] = await db('fraud_alerts')
+      .where({ id: alertId })
+      .update({
+        status,
+        resolved_at: db.fn.now(),
+        resolution_notes: resolutionNotes,
+        assigned_to: resolvedBy
+      })
+      .returning('*');
+    return result;
   }
 
   // Assign alert to investigator
   static async assign(alertId, assignedTo) {
-    const result = await pool.query(
-      `UPDATE fraud_alerts
-       SET assigned_to = $1, status = 'investigating'
-       WHERE id = $2
-       RETURNING *`,
-      [assignedTo, alertId]
-    );
-    return result.rows[0];
+    const [result] = await db('fraud_alerts')
+      .where({ id: alertId })
+      .update({
+        assigned_to: assignedTo,
+        status: 'investigating'
+      })
+      .returning('*');
+    return result;
   }
 
   // Get count by status
   static async getCountByStatus() {
-    const result = await pool.query(
-      `SELECT status, COUNT(*) as count
-       FROM fraud_alerts
-       GROUP BY status`
-    );
-    return result.rows;
+    return db('fraud_alerts').select('status').count('* as count').groupBy('status');
   }
 }
 

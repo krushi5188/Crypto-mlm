@@ -19,8 +19,11 @@ const SettingsPage = () => {
     newPassword: '',
     confirmPassword: '',
   })
+  const { user } = useAuth()
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
+  const [editingReferral, setEditingReferral] = useState(false)
+  const [newReferralCode, setNewReferralCode] = useState('')
 
   useEffect(() => {
     fetchSettings()
@@ -111,6 +114,25 @@ const SettingsPage = () => {
       setErrors({ general: 'Failed to update settings' })
     }
   }
+
+  const handleReferralCodeChange = (e) => {
+    setNewReferralCode(e.target.value);
+  };
+
+  const handleReferralCodeSubmit = async () => {
+    try {
+      setSubmitting(true);
+      const apiToCall = user.role === 'instructor' ? adminAPI : memberAPI;
+      await apiToCall.updateProfile({ referral_code: newReferralCode });
+      setSuccess('Referral code updated successfully');
+      setEditingReferral(false);
+      fetchSettings();
+    } catch (error) {
+      setErrors({ referral: error.response?.data?.error || 'Failed to update referral code' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -311,6 +333,50 @@ const SettingsPage = () => {
               )}
             </Card>
           </>
+        )}
+
+        {/* Referral Code Section (Admin only) */}
+        {user.role === 'instructor' && activeSection === 'security' && (
+          <Card padding="lg">
+            <h2 className="text-2xl font-display font-bold text-white mb-6">
+              Referral Code
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-400 text-sm mb-2">Your Referral Code</p>
+                {editingReferral ? (
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      name="referralCode"
+                      value={newReferralCode}
+                      onChange={handleReferralCodeChange}
+                      error={errors.referral}
+                    />
+                    <Button onClick={handleReferralCodeSubmit} loading={submitting}>
+                      Save
+                    </Button>
+                    <Button variant="secondary" onClick={() => setEditingReferral(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <div className="flex-1 px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white font-mono text-lg">
+                      {settings?.referralCode}
+                    </div>
+                    <Button variant="secondary" onClick={() => {
+                      setEditingReferral(true);
+                      setNewReferralCode(settings?.referralCode);
+                    }}>
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
         )}
 
         {/* Notifications Section */}

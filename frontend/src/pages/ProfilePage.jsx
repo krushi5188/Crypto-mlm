@@ -27,6 +27,8 @@ const ProfilePage = () => {
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
   const [copied, setCopied] = useState(false)
+  const [editingReferral, setEditingReferral] = useState(false)
+  const [newReferralCode, setNewReferralCode] = useState('')
 
   useEffect(() => {
     fetchProfile()
@@ -123,6 +125,25 @@ const ProfilePage = () => {
       fetchProfile(); // Refresh profile data
     } catch (error) {
       setErrors({ general: 'Failed to link wallet. Please try again.' });
+    }
+  };
+
+  const handleReferralCodeChange = (e) => {
+    setNewReferralCode(e.target.value);
+  };
+
+  const handleReferralCodeSubmit = async () => {
+    try {
+      setSubmitting(true);
+      const apiToCall = user.role === 'instructor' ? adminAPI : memberAPI;
+      await apiToCall.updateProfile({ referral_code: newReferralCode });
+      setSuccess('Referral code updated successfully');
+      setEditingReferral(false);
+      fetchProfile();
+    } catch (error) {
+      setErrors({ referral: error.response?.data?.error || 'Failed to update referral code' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -342,17 +363,41 @@ const ProfilePage = () => {
           <div className="space-y-4">
             <div>
               <p className="text-gray-400 text-sm mb-2">Your Referral Code</p>
-              <div className="flex gap-2">
-                <div className="flex-1 px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white font-mono text-lg">
-                  {profileData?.referralCode}
+              {editingReferral ? (
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    name="referralCode"
+                    value={newReferralCode}
+                    onChange={handleReferralCodeChange}
+                    error={errors.referral}
+                  />
+                  <Button onClick={handleReferralCodeSubmit} loading={submitting}>
+                    Save
+                  </Button>
+                  <Button variant="secondary" onClick={() => setEditingReferral(false)}>
+                    Cancel
+                  </Button>
                 </div>
-                <Button
-                  variant={copied ? 'secondary' : 'primary'}
-                  onClick={copyReferralCode}
-                >
-                  {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                </Button>
-              </div>
+              ) : (
+                <div className="flex gap-2">
+                  <div className="flex-1 px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white font-mono text-lg">
+                    {profileData?.referralCode}
+                  </div>
+                  <Button variant="secondary" onClick={() => {
+                    setEditingReferral(true);
+                    setNewReferralCode(profileData?.referralCode);
+                  }}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={copied ? 'secondary' : 'primary'}
+                    onClick={copyReferralCode}
+                  >
+                    {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div>

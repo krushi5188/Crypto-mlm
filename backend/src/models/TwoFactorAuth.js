@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 
@@ -11,13 +11,17 @@ class TwoFactorAuth {
     });
 
     // Store in database
-    await pool.query(
-      `INSERT INTO user_2fa (user_id, secret, is_enabled)
-       VALUES ($1, $2, false)
-       ON CONFLICT (user_id)
-       DO UPDATE SET secret = $2, updated_at = CURRENT_TIMESTAMP`,
-      [userId, secret.base32]
-    );
+    await db('user_2fa')
+      .insert({
+        user_id: userId,
+        secret: secret.base32,
+        is_enabled: false
+      })
+      .onConflict('user_id')
+      .merge({
+        secret: secret.base32,
+        updated_at: db.fn.now()
+      });
 
     // Generate QR code
     const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url);
@@ -51,46 +55,37 @@ class TwoFactorAuth {
     }
 
     // Enable 2FA
-    await pool.query(
-      `UPDATE user_2fa
-       SET is_enabled = true, backup_codes = $1, enabled_at = CURRENT_TIMESTAMP
-       WHERE user_id = $2`,
-      [JSON.stringify(backupCodes), userId]
-    );
+    await db('user_2fa')
+      .where({ user_id: userId })
+      .update({
+        is_enabled: true,
+        backup_codes: JSON.stringify(backupCodes),
+        enabled_at: db.fn.now()
+      });
 
     return { success: true, backupCodes };
   }
 
   // Disable 2FA
   static async disable(userId) {
-    await pool.query(
-      'UPDATE user_2fa SET is_enabled = false WHERE user_id = $1',
-      [userId]
-    );
+    return db('user_2fa').where({ user_id: userId }).update({ is_enabled: false });
   }
 
   // Get user's 2FA settings
   static async getSettings(userId) {
-    const result = await pool.query(
-      'SELECT is_enabled, enabled_at FROM user_2fa WHERE user_id = $1',
-      [userId]
-    );
-
-    return result.rows[0] || { is_enabled: false, enabled_at: null };
+    const result = await db('user_2fa').select('is_enabled', 'enabled_at').where({ user_id: userId }).first();
+    return result || { is_enabled: false, enabled_at: null };
   }
 
   // Verify 2FA token
   static async verify(userId, token) {
-    const result = await pool.query(
-      'SELECT secret, backup_codes, is_enabled FROM user_2fa WHERE user_id = $1',
-      [userId]
-    );
+    const row = await db('user_2fa').select('secret', 'backup_codes', 'is_enabled').where({ user_id: userId }).first();
 
-    if (result.rows.length === 0 || !result.rows[0].is_enabled) {
+    if (!row || !row.is_enabled) {
       return { success: false, error: '2FA not enabled' };
     }
 
-    const { secret, backup_codes } = result.rows[0];
+    const { secret, backup_codes } = row;
 
     // Try TOTP verification
     const isTotpValid = speakeasy.totp.verify({
