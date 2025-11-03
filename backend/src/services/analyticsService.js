@@ -65,6 +65,24 @@ class AnalyticsService {
     }));
 
     return {
+      totalMembers: totalParticipants,
+      totalVolume: (distStats.total_balance || 0),
+      activeMembers: totalParticipants,
+      pendingWithdrawals: 0,
+      newSignups: totalParticipants,
+      dailyActive: totalParticipants,
+      avgNetworkSize: (distStats.avg_network_size || 0),
+      totalDeposits: (distStats.total_balance || 0),
+      totalWithdrawn: 0,
+      platformBalance: (distStats.total_balance || 0),
+      recentActivity: formattedRecentJoins.map(j => ({
+        type: 'signup',
+        description: `${j.username} joined the network`,
+        details: `Referred by ${j.referredBy}`,
+        time: j.joinedAt
+      })),
+      retention: 100,
+      pendingIssues: 0,
       overview: {
         totalParticipants,
         simulationStatus: config.simulation_status,
