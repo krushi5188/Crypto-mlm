@@ -48,8 +48,11 @@ const RegisterPage = () => {
 
   const handleConnectWallet = async () => {
     try {
-      await open();
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const result = await open();
+      if (!result.address) {
+        throw new Error("Wallet connection cancelled.");
+      }
+      const provider = new ethers.BrowserProvider(result.provider);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
       setFormData(prev => ({ ...prev, walletAddress }));
