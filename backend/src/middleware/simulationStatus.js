@@ -1,14 +1,14 @@
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 // Check if system is active
 const checkSimulationActive = async (req, res, next) => {
   try {
-    const result = await pool.query(
-      "SELECT config_value FROM system_config WHERE config_key = 'simulation_status'"
-    );
-    const rows = result.rows;
+    const simulationStatus = await db('system_config')
+      .where({ config_key: 'simulation_status' })
+      .select('config_value')
+      .first();
 
-    if (rows.length === 0 || rows[0].config_value !== 'active') {
+    if (!simulationStatus || simulationStatus.config_value !== 'active') {
       return res.status(503).json({
         error: 'System temporarily paused',
         code: 'SYSTEM_PAUSED'
