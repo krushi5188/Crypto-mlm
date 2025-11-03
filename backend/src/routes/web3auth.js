@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { pool } = require('../config/database');
 const { generateToken } = require('../utils/jwtToken');
-const { generateReferralCode } = require('../utils/generateReferralCode');
 
 // GET /api/v1/auth/web3/challenge
 router.get('/challenge', async (req, res) => {
@@ -71,7 +70,6 @@ router.post('/login', async (req, res) => {
         res.json({ token, user });
 
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Login failed' });
     }
 });
