@@ -448,12 +448,13 @@ const initializeDatabase = async () => {
 
     // Check if instructor account exists
     const instructorEmail = process.env.ADMIN_EMAIL || 'instructor@university.edu';
-    const existingInstructor = await User.findByEmail(instructorEmail);
+    const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
 
-    if (!existingInstructor) {
+    const existingInstructorByEmail = await User.findByEmail(instructorEmail);
+    const existingInstructorByUsername = await User.findByUsername(instructorUsername);
+
+    if (!existingInstructorByEmail && !existingInstructorByUsername) {
       console.log('Creating instructor account...');
-
-      const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
       const instructorPassword = process.env.ADMIN_PASSWORD || 'InstructorPassword123!';
 
       const passwordHash = await hashPassword(instructorPassword);

@@ -41,7 +41,7 @@ router.get('/dashboard', async (req, res) => {
     const userId = req.user.id;
 
     // Get user data
-    const user = await User.findById(userId);
+    const user = await User.getDashboardProfile(userId);
 
     // Get recent activity
     const recentActivity = await Transaction.getRecentTransactions(userId, 10);

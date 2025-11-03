@@ -24,6 +24,15 @@ class User {
     return result.rows[0] || null;
   }
 
+  // Find user by username
+  static async findByUsername(username) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
+    return result.rows[0] || null;
+  }
+
   // Find user by wallet address
   static async findByWalletAddress(walletAddress) {
     const result = await pool.query(
@@ -209,6 +218,29 @@ class User {
         SUM(balance) as total_balance
        FROM users
        WHERE role = 'member'`
+    );
+    return result.rows[0];
+  }
+
+  // Get full user profile for dashboard
+  static async getDashboardProfile(userId) {
+    const result = await pool.query(
+      `SELECT
+         u.id,
+         u.email,
+         u.username,
+         u.balance,
+         u.total_earned,
+         u.direct_recruits,
+         u.network_size,
+         u.referral_code,
+         u.created_at,
+         u.last_login,
+         r.username as referred_by_username
+       FROM users u
+       LEFT JOIN users r ON u.referred_by_id = r.id
+       WHERE u.id = $1`,
+      [userId]
     );
     return result.rows[0];
   }
