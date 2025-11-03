@@ -285,7 +285,7 @@ router.get('/profile', async (req, res) => {
       if (referrer) {
         referredBy = {
           id: referrer.id,
-          displayName: 'Your Upline' // Anonymized for privacy
+          displayName: referrer.username
         };
       }
     }

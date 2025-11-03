@@ -306,33 +306,31 @@ const ProfilePage = () => {
         </Card>
 
         {/* Wallet Information */}
-        {!profileData?.walletAddress &&
-          <Card padding="lg">
-            <h2 className="text-2xl font-display font-bold text-white mb-6">
-              Wallet Information
-            </h2>
-            {profileData?.walletAddress ? (
-              <div className="flex items-center gap-4 p-4 bg-white bg-opacity-5 rounded-xl">
-                <div className="p-3 bg-white bg-opacity-10 rounded-lg">
-                  <Wallet className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Linked Wallet</p>
-                  <p className="text-white font-medium break-all">{profileData.walletAddress}</p>
-                </div>
+        <Card padding="lg">
+          <h2 className="text-2xl font-display font-bold text-white mb-6">
+            Wallet Information
+          </h2>
+          {profileData?.walletAddress ? (
+            <div className="flex items-center gap-4 p-4 bg-white bg-opacity-5 rounded-xl">
+              <div className="p-3 bg-white bg-opacity-10 rounded-lg">
+                <Wallet className="w-6 h-6 text-white" />
               </div>
-            ) : (
               <div>
-                <p className="text-gray-400 mb-4">
-                  Link your MetaMask wallet to enable signing in without a password.
-                </p>
-                <Button onClick={handleLinkWallet} icon={<Wallet className="w-5 h-5" />}>
-                  Link Wallet
-                </Button>
+                <p className="text-gray-400 text-sm">Linked Wallet</p>
+                <p className="text-white font-medium break-all">{profileData.walletAddress}</p>
               </div>
-            )}
-          </Card>
-        }
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-400 mb-4">
+                Link your MetaMask wallet to enable signing in without a password.
+              </p>
+              <Button onClick={handleLinkWallet} icon={<Wallet className="w-5 h-5" />}>
+                Link Wallet
+              </Button>
+            </div>
+          )}
+        </Card>
 
 
         {/* Referral Information */}
