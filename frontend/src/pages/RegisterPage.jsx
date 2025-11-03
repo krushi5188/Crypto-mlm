@@ -7,6 +7,8 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { useAppKit } from '@reown/appkit/react'
 import { ethers } from 'ethers'
+import api from '../services/api'
+
 
 const RegisterPage = () => {
   const navigate = useNavigate()
@@ -23,6 +25,7 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [generalError, setGeneralError] = useState('')
+  const [signer, setSigner] = useState(null)
 
   // Redirect if no referral code
   useEffect(() => {
@@ -55,6 +58,7 @@ const RegisterPage = () => {
       const provider = new ethers.BrowserProvider(result.provider);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
+      setSigner(signer);
       setFormData(prev => ({ ...prev, walletAddress }));
     } catch (error) {
       setGeneralError('Failed to connect wallet. Please try again.');
@@ -101,13 +105,29 @@ const RegisterPage = () => {
     setLoading(true)
     setGeneralError('')
 
-    const result = await web3Login(formData)
+    try {
+      // 1. Get challenge
+      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${formData.walletAddress}`);
+      const { challenge } = challengeResponse.data;
 
-    if (result.success) {
-      navigate('/dashboard') // Redirect to dashboard after successful login
-    } else {
-      setGeneralError(result.error)
-      setLoading(false)
+      // 2. Sign challenge
+      if (!signer) {
+        throw new Error("Wallet not connected properly.");
+      }
+      const signature = await signer.signMessage(challenge);
+
+      // 3. Login
+      const loginResult = await web3Login({ ...formData, signature });
+
+      if (loginResult.success) {
+        navigate('/dashboard');
+      } else {
+        setGeneralError(loginResult.error);
+        setLoading(false);
+      }
+    } catch (error) {
+      setGeneralError('An error occurred during signup. Please try again.');
+      setLoading(false);
     }
   }
 

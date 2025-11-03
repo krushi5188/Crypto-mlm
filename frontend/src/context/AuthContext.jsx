@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
 
   const web3Login = async (data) => {
     try {
-      const response = await api.post('/auth/web3/login', data);
+      const response = await authAPI.web3Login(data);
       const { token, user } = response.data;
 
       localStorage.setItem('token', token);
