@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }) => {
   const web3Login = async (data) => {
     try {
       const response = await authAPI.web3Login(data)
-      const { token } = response.data
+      const { token } = response.data.data || response.data;
 
       localStorage.setItem('token', token)
       const finalUser = await loadUser()
