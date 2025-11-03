@@ -11,7 +11,7 @@ import { ethers } from 'ethers'
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { register } = useAuth()
+  const { web3Login } = useAuth()
   const { open } = useAppKit()
 
   const [formData, setFormData] = useState({
@@ -98,10 +98,10 @@ const RegisterPage = () => {
     setLoading(true)
     setGeneralError('')
 
-    const result = await register(formData)
+    const result = await web3Login(formData)
 
     if (result.success) {
-      navigate('/login') // Redirect to login after successful registration
+      navigate('/dashboard') // Redirect to dashboard after successful login
     } else {
       setGeneralError(result.error)
       setLoading(false)
