@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -19,8 +20,6 @@ const RegisterPage = () => {
 
 
   const [formData, setFormData] = useState({
-    email: '',
-    username: '',
     walletAddress: '',
     referralCode: searchParams.get('ref') || '',
   })
@@ -70,20 +69,6 @@ const RegisterPage = () => {
   const validate = () => {
     const newErrors = {}
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid'
-    }
-
-    if (!formData.username) {
-      newErrors.username = 'Username is required'
-    } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters'
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.username)) {
-      newErrors.username = 'Username can only contain letters and numbers'
-    }
-
     if (!formData.walletAddress) {
       newErrors.walletAddress = 'Wallet connection is required'
     }
@@ -108,18 +93,21 @@ const RegisterPage = () => {
     setGeneralError('')
 
     try {
-      // 1. Get challenge
-      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${formData.walletAddress}`);
-      const { challenge } = challengeResponse.data;
+      // 1. Sign message
+      const message = `Registering with referral code: ${formData.referralCode}`;
+      const signature = await signer.signMessage(message);
 
-      // 2. Sign challenge
-      if (!signer) {
-        throw new Error("Wallet not connected properly.");
-      }
-      const signature = await signer.signMessage(challenge);
+      // 2. Register
+      const registerResponse = await api.post('/auth/web3/register', {
+        walletAddress: formData.walletAddress,
+        signature,
+        referralCode: formData.referralCode,
+      });
 
       // 3. Login
-      const loginResult = await web3Login({ ...formData, signature });
+      const { token } = registerResponse.data;
+      const loginResult = await web3Login({ token });
+
 
       if (loginResult.success) {
         navigate('/dashboard');
@@ -128,7 +116,7 @@ const RegisterPage = () => {
         setLoading(false);
       }
     } catch (error) {
-      setGeneralError('An error occurred during signup. Please try again.');
+      setGeneralError(error.response?.data?.error || 'An error occurred during signup. Please try again.');
       setLoading(false);
     }
   }
@@ -227,27 +215,6 @@ const RegisterPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              required
-              icon={<Mail className="w-5 h-5" />}
-            />
-
-            <Input
-              label="Username"
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              error={errors.username}
-              required
-              icon={<User className="w-5 h-5" />}
-            />
 
             {formData.walletAddress ? (
               <Input

@@ -303,6 +303,7 @@ router.get('/profile', async (req, res) => {
         directRecruits: user.direct_recruits,
         networkSize: user.network_size,
         referredBy,
+        walletAddress: user.wallet_address,
         joinedDate: new Date(user.created_at).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',

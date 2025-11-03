@@ -67,7 +67,7 @@ class AnalyticsService {
     // --- New, more accurate calculations ---
 
     // Total volume is the sum of all balances
-    const totalVolumeResult = await pool.query(`SELECT SUM(balance) as total FROM users WHERE role = 'member'`);
+    const totalVolumeResult = await pool.query(`SELECT SUM(balance) as total FROM users WHERE role = 'member' AND approval_status = 'approved'`);
     const totalVolume = parseFloat(totalVolumeResult.rows[0].total) || 0;
 
     // Active members (logged in within last 30 days)

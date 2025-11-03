@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { authAPI, memberAPI } from '../services/api'
 
@@ -125,11 +126,30 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const web3Register = async (data) => {
+    try {
+      const response = await authAPI.web3Register(data)
+      const { token } = response.data.data || response.data;
+
+      localStorage.setItem('token', token)
+      const finalUser = await loadUser()
+
+      return { success: true, user: finalUser }
+    } catch (error) {
+      logout()
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Web3 registration failed',
+      }
+    }
+  }
+
   const value = {
     user,
     loading,
     login,
     web3Login,
+    web3Register,
     register,
     logout,
     isAuthenticated: !!user,

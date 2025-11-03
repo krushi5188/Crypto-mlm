@@ -52,18 +52,7 @@ router.post('/login', async (req, res) => {
         let user = await User.findByWalletAddress(lowerCaseAddress);
 
         if (!user) {
-            // New user - create a placeholder account.
-            // The frontend should prompt them to complete their profile.
-            const referralCode = await generateReferralCode();
-            const userId = await User.create({
-                wallet_address: lowerCaseAddress,
-                username: `user_${lowerCaseAddress.slice(2, 8)}`,
-                email: `${lowerCaseAddress}@placeholder.email`, // Use a placeholder domain
-                password_hash: 'web3_user', // Not used for login
-                referral_code: referralCode,
-                role: 'member',
-            });
-            user = await User.findById(userId);
+            return res.status(404).json({ error: 'User not found. Please register first.' });
         }
 
         const token = generateToken(user);
@@ -98,6 +87,61 @@ router.post('/link', async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ error: 'Failed to link wallet' });
+    }
+});
+
+// POST /api/v1/auth/web3/register
+router.post('/register', async (req, res) => {
+    try {
+        const { walletAddress, signature, referralCode } = req.body;
+        const lowerCaseAddress = walletAddress.toLowerCase();
+
+        // Basic validation
+        if (!walletAddress || !signature || !referralCode) {
+            return res.status(400).json({ error: 'Missing required fields.' });
+        }
+
+        // Verify signature (you might want a more secure challenge-response for this)
+        const recoveredAddress = ethers.verifyMessage(`Registering with referral code: ${referralCode}`, signature);
+        if (recoveredAddress.toLowerCase() !== lowerCaseAddress) {
+            return res.status(401).json({ error: 'Invalid signature.' });
+        }
+
+        // Check if wallet is already registered
+        const existingUser = await User.findByWalletAddress(lowerCaseAddress);
+        if (existingUser) {
+            return res.status(400).json({ error: 'Wallet address is already registered.' });
+        }
+
+        // Validate referral code
+        const referrer = await User.findByReferralCode(referralCode);
+        if (!referrer) {
+            return res.status(400).json({ error: 'Invalid referral code.' });
+        }
+
+        const username = `user_${lowerCaseAddress.slice(2, 8)}`;
+        const email = `${lowerCaseAddress}@placeholder.email`; // Placeholder
+
+        // Create user
+        const newUserId = await User.create({
+            wallet_address: lowerCaseAddress,
+            username: username,
+            email: email,
+            password_hash: 'n/a', // Not applicable for web3-only users
+            referral_code: await generateReferralCode(),
+            referred_by_id: referrer.id,
+            role: 'member',
+            approval_status: 'pending', // Or 'pending' if you want manual approval
+        });
+
+        const newUser = await User.findById(newUserId);
+        const token = generateToken(newUser);
+
+        res.status(201).json({ token, user: newUser });
+
+    } catch (error) {
+        console.error('Web3 Registration Error:', error);
+        res.status(500).json({ error: 'Registration failed' });
     }
 });
 
