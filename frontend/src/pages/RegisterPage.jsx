@@ -14,7 +14,7 @@ import api from '../services/api'
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { web3Login } = useAuth()
+  const { web3Register } = useAuth()
   const { open } = useAppKit()
   const { walletProvider } = useAppKitProvider("eip155");
 
@@ -27,6 +27,7 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false)
   const [generalError, setGeneralError] = useState('')
   const [signer, setSigner] = useState(null)
+  const [isPending, setIsPending] = useState(false)
 
   // Redirect if no referral code
   useEffect(() => {
@@ -98,21 +99,17 @@ const RegisterPage = () => {
       const signature = await signer.signMessage(message);
 
       // 2. Register
-      const registerResponse = await api.post('/auth/web3/register', {
+      const registerResult = await web3Register({
         walletAddress: formData.walletAddress,
         signature,
         referralCode: formData.referralCode,
       });
 
-      // 3. Login
-      const { token } = registerResponse.data;
-      const loginResult = await web3Login({ token });
 
-
-      if (loginResult.success) {
-        navigate('/dashboard');
+      if (registerResult.success) {
+        setIsPending(true)
       } else {
-        setGeneralError(loginResult.error);
+        setGeneralError(registerResult.error);
         setLoading(false);
       }
     } catch (error) {
@@ -120,6 +117,32 @@ const RegisterPage = () => {
       setLoading(false);
     }
   }
+
+  // Show pending approval message
+  if (isPending) {
+    return (
+        <div className="min-h-screen bg-black flex items-center justify-center px-4">
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full text-center"
+        >
+            <div className="w-16 h-16 bg-green-500 bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-400" />
+            </div>
+            <h1 className="text-3xl font-display font-bold text-white mb-2">
+            Registration Submitted
+            </h1>
+            <p className="text-gray-400 mb-6">
+            Your account is now pending approval from an admin. Please check back later.
+            </p>
+            <Button onClick={() => navigate('/')}>
+            Back to Home
+            </Button>
+        </motion.div>
+        </div>
+    )
+    }
 
   // Show error if no referral code
   if (!searchParams.get('ref')) {

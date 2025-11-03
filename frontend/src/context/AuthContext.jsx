@@ -93,12 +93,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     try {
       const response = await authAPI.register(data)
-      const { token } = response.data.data || response.data
-
-      localStorage.setItem('token', token)
-      const finalUser = await loadUser()
-
-      return { success: true, user: finalUser }
+      return { success: true, ...response.data }
     } catch (error) {
       logout()
       return {
@@ -129,20 +124,16 @@ export const AuthProvider = ({ children }) => {
   const web3Register = async (data) => {
     try {
       const response = await authAPI.web3Register(data)
-      const { token } = response.data.data || response.data;
-
-      localStorage.setItem('token', token)
-      const finalUser = await loadUser()
-
-      return { success: true, user: finalUser }
-    } catch (error) {
-      logout()
+      return { success: true, ...response.data }
+    } catch (error)
+    {
       return {
         success: false,
         error: error.response?.data?.error || 'Web3 registration failed',
       }
     }
   }
+
 
   const value = {
     user,
