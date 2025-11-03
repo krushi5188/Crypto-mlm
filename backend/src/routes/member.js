@@ -48,24 +48,11 @@ router.get('/dashboard', async (req, res) => {
 
     // Generate referral link
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const referralLink = `${baseUrl}/register?ref=${user.referral_code}`;
+    user.referralLink = `${baseUrl}/register?ref=${user.referral_code}`;
 
     res.json({
       success: true,
-      data: {
-        balance: parseFloat(user.balance),
-        totalEarned: parseFloat(user.total_earned),
-        directRecruits: user.direct_recruits,
-        networkSize: user.network_size,
-        referralCode: user.referral_code,
-        referralLink,
-        recentActivity: recentActivity.map(t => ({
-          id: t.id,
-          description: t.description,
-          amount: parseFloat(t.amount),
-          timestamp: t.created_at
-        }))
-      }
+      data: user
     });
   } catch (error) {
     console.error('Dashboard error:', error);
