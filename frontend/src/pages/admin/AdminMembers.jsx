@@ -47,6 +47,25 @@ const AdminMembers = () => {
     setShowDetails(true)
   }
 
+  const handleApprove = async (memberId) => {
+    try {
+      await adminAPI.approveParticipant(memberId);
+      fetchMembers();
+    } catch (error) {
+      console.error('Error approving member:', error);
+    }
+  };
+
+  const handleReject = async (memberId) => {
+    try {
+      await adminAPI.rejectParticipant(memberId, { reason: 'Admin rejection' });
+      fetchMembers();
+    } catch (error) {
+      console.error('Error rejecting member:', error);
+    }
+  };
+
+
   const handleStatusChange = async (memberId, newStatus) => {
     try {
       if (newStatus === 'suspended') {
@@ -80,6 +99,7 @@ const AdminMembers = () => {
     // Status filter
     const matchesStatus =
       statusFilter === 'all' ? true :
+      statusFilter === 'pending' ? member.approvalStatus === 'pending' :
       statusFilter === 'active' ? member.approvalStatus === 'approved' :
       statusFilter === 'suspended' ? member.approvalStatus === 'rejected' :
       statusFilter === 'flagged' ? member.flagged === true :
@@ -170,7 +190,7 @@ const AdminMembers = () => {
             </div>
 
             <div className="flex gap-2">
-              {['all', 'active', 'suspended', 'flagged'].map((filter) => (
+              {['all', 'pending', 'active', 'suspended', 'flagged'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setStatusFilter(filter)}
@@ -256,13 +276,34 @@ const AdminMembers = () => {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleViewDetails(member)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    {member.approvalStatus === 'pending' ? (
+                      <>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleApprove(member.id)}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleReject(member.id)}
+                        >
+                          <Ban className="w-4 h-4" />
+                          Reject
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleViewDetails(member)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               ))}
