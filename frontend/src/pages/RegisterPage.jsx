@@ -5,7 +5,7 @@ import { Mail, User, ArrowLeft, AlertCircle, CheckCircle, Wallet } from 'lucide-
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
-import { useAppKit } from '@reown/appkit/react'
+import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
 import { ethers } from 'ethers'
 import api from '../services/api'
 
@@ -15,6 +15,8 @@ const RegisterPage = () => {
   const [searchParams] = useSearchParams()
   const { web3Login } = useAuth()
   const { open } = useAppKit()
+  const { walletProvider } = useAppKitProvider("eip155");
+
 
   const [formData, setFormData] = useState({
     email: '',
@@ -51,11 +53,11 @@ const RegisterPage = () => {
 
   const handleConnectWallet = async () => {
     try {
-      const result = await open();
-      if (!result.address) {
-        throw new Error("Wallet connection cancelled.");
+      await open();
+      if (!walletProvider) {
+        throw new Error("Wallet provider not available.");
       }
-      const provider = new ethers.BrowserProvider(result.provider);
+      const provider = new ethers.BrowserProvider(walletProvider);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
       setSigner(signer);

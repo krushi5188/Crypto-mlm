@@ -7,13 +7,14 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { ethers } from 'ethers'
 import api from '../services/api'
-import { useAppKit } from '@reown/appkit/react'
+import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
 
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, web3Login } = useAuth()
   const { open } = useAppKit()
+  const { walletProvider } = useAppKitProvider("eip155");
 
   const [formData, setFormData] = useState({
     email: '',
@@ -95,7 +96,10 @@ const LoginPage = () => {
     try {
       setLoading(true);
       await open();
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      if (!walletProvider) {
+        throw new Error("Wallet provider not available.");
+      }
+      const provider = new ethers.BrowserProvider(walletProvider);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
 
