@@ -45,6 +45,14 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   return children
 }
 
+/**
+ * Define the application's route hierarchy for public, authenticated member, and admin pages.
+ *
+ * Public routes include landing, login, and register pages. Member routes render pages that
+ * require an authenticated user. Admin routes require an authenticated user with admin privileges.
+ *
+ * @returns {JSX.Element} A React element that renders the configured route tree.
+ */
 function AppRoutes() {
   return (
     <Routes>
@@ -150,6 +158,10 @@ function AppRoutes() {
 
 import { Web3ModalProvider } from './config/web3modal'
 
+/**
+ * Root application component that sets up routing, authentication, and the Web3 modal context for the app.
+ * @returns {JSX.Element} The root JSX element containing Router, AuthProvider, Web3ModalProvider, and application routes.
+ */
 function App() {
   return (
     <Router>

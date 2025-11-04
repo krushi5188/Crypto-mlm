@@ -1,7 +1,11 @@
-
 from playwright.sync_api import sync_playwright
 
 def run():
+    """
+    Run an end-to-end Playwright test that logs in as the admin on the local app and adds a new member.
+    
+    Performs UI interactions against http://localhost:3001: reveals the admin form, signs in with admin@example.com, navigates to the participants page, opens the Add Member form, submits a new member (newmember@example.com / newmember / password), and captures a success screenshot at jules-scratch/verification/add_member_success.png. On any exception it prints the error, saves an error screenshot to jules-scratch/verification/error.png, and always closes the browser.
+    """
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()

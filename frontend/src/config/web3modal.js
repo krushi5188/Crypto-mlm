@@ -28,6 +28,16 @@ createAppKit({
   }
 })
 
+/**
+ * Renders children within the configured Web3 modal / AppKit context.
+ *
+ * This component acts as the provider boundary for the Web3 modal integration initialized by this module.
+ * It does not alter or wrap its children beyond establishing the module-level configuration.
+ *
+ * @param {object} props
+ * @param {import('react').ReactNode} props.children - Content to render inside the Web3 modal provider.
+ * @returns {import('react').ReactNode} The passed `children` element(s).
+ */
 export function Web3ModalProvider({ children }) {
   return children
 }
