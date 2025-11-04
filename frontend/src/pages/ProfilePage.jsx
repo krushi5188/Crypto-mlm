@@ -36,8 +36,8 @@ const ProfilePage = () => {
     try {
       const apiToCall = user.role === 'instructor' ? adminAPI : memberAPI;
       const response = await apiToCall.getProfile();
-      // Admin response is { success, data: {...} }, member is { ... }
-      const profile = user.role === 'instructor' ? response.data.data : response.data;
+      // Both admin and member responses are nested under `data`
+      const profile = response.data.data || response.data;
       setProfileData(profile);
       setFormData({
         username: profile.username,
