@@ -306,11 +306,11 @@ const ProfilePage = () => {
         </Card>
 
         {/* Wallet Information */}
-        <Card padding="lg">
-          <h2 className="text-2xl font-display font-bold text-white mb-6">
-            Wallet Information
-          </h2>
-          {profileData?.walletAddress ? (
+        {profileData?.walletAddress ? (
+          <Card padding="lg">
+            <h2 className="text-2xl font-display font-bold text-white mb-6">
+              Wallet Information
+            </h2>
             <div className="flex items-center gap-4 p-4 bg-white bg-opacity-5 rounded-xl">
               <div className="p-3 bg-white bg-opacity-10 rounded-lg">
                 <Wallet className="w-6 h-6 text-white" />
@@ -320,7 +320,12 @@ const ProfilePage = () => {
                 <p className="text-white font-medium break-all">{profileData.walletAddress}</p>
               </div>
             </div>
-          ) : (
+          </Card>
+        ) : (
+          <Card padding="lg">
+            <h2 className="text-2xl font-display font-bold text-white mb-6">
+              Wallet Information
+            </h2>
             <div>
               <p className="text-gray-400 mb-4">
                 Link your MetaMask wallet to enable signing in without a password.
@@ -329,8 +334,8 @@ const ProfilePage = () => {
                 Link Wallet
               </Button>
             </div>
-          )}
-        </Card>
+          </Card>
+        )}
 
 
         {/* Referral Information */}
