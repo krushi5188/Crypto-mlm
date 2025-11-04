@@ -5,10 +5,9 @@ import { Mail, User, ArrowLeft, AlertCircle, CheckCircle, Wallet } from 'lucide-
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
-import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
 import { ethers } from 'ethers'
 import TronWeb from 'tronweb'
-import api from '../services/api'
+import { authAPI } from '../services/api'
 import { USDT_ADDRESSES, PLATFORM_WALLET_ADDRESS, SIGNUP_FEE_USDT, USDT_ABI } from '../config/constants'
 
 
@@ -16,8 +15,6 @@ const RegisterPage = () => {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const { web3Login } = useAuth()
-    const { open } = useAppKit()
-    const { walletProvider } = useAppKitProvider("eip155");
 
 
     const [formData, setFormData] = useState({
@@ -52,18 +49,18 @@ const RegisterPage = () => {
     }, [chain]);
 
     const handleConnectWallet = async () => {
+        if (typeof window.ethereum === 'undefined') {
+            setGeneralError('MetaMask is not installed. Please install it to continue.');
+            return;
+        }
         try {
-            await open();
-            if (!walletProvider) {
-                throw new Error("Wallet provider not available.");
-            }
-            const provider = new ethers.BrowserProvider(walletProvider);
+            const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const walletAddress = await signer.getAddress();
             setSigner(signer);
             setFormData(prev => ({ ...prev, walletAddress }));
         } catch (error) {
-            setGeneralError('Failed to connect wallet. Please try again.');
+            setGeneralError('Failed to connect wallet. Please make sure you have an Ethereum wallet and try again.');
         }
     };
 
@@ -82,18 +79,30 @@ const RegisterPage = () => {
         setGeneralError('');
 
         try {
-            let tx;
             let walletAddr = formData.walletAddress;
+            let signature;
+            let challenge;
 
+            // 1. Get challenge
+            const challengeResponse = await authAPI.getWeb3Challenge(walletAddr);
+            challenge = challengeResponse.data.challenge;
+
+            // 2. Sign challenge
+            if (chain === 'BSC') {
+                signature = await signer.signMessage(challenge);
+            } else if (chain === 'TRON') {
+                const tronWeb = window.tronWeb;
+                signature = await tronWeb.trx.sign(tronWeb.toHex(challenge));
+            }
+
+            // 3. Transfer funds and verify
+            let tx;
             if (chain === 'BSC') {
                 const usdtContract = new ethers.Contract(USDT_ADDRESSES.BSC, USDT_ABI, signer);
                 const decimals = await usdtContract.decimals();
                 const amount = ethers.parseUnits(SIGNUP_FEE_USDT.toString(), decimals);
                 tx = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS.BSC, amount);
             } else if (chain === 'TRON') {
-                if (!window.tronWeb || !window.tronWeb.ready) {
-                    throw new Error('TronLink is not connected or not ready.');
-                }
                 const tronWeb = window.tronWeb;
                 walletAddr = tronWeb.defaultAddress.base58;
                 const usdtContract = await tronWeb.contract().at(USDT_ADDRESSES.TRON);
@@ -102,52 +111,59 @@ const RegisterPage = () => {
                 const txHash = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS.TRON, amount).send({
                     feeLimit: 100000000
                 });
-                tx = { hash: txHash }; // Adapt to expected structure
+                tx = { hash: txHash };
             }
 
-            // 2. Submit registration
-            await authAPI.web3Register({
+            const verifyResponse = await authAPI.verifyWeb3({
                 walletAddress: walletAddr,
+                signature,
                 referralCode: formData.referralCode,
                 transactionHash: tx.hash,
-                chain: chain,
+                chain,
             });
 
-            setIsPending(true); // Show pending message
-
-            // 3. Poll for status
-            const interval = setInterval(async () => {
-                try {
-                    const statusResponse = await api.get(`/auth/web3/registration-status?walletAddress=${walletAddr}`);
-                    if (statusResponse.data.status === 'verified') {
-                        clearInterval(interval);
-                        const { token } = statusResponse.data;
-                        const loginResult = await web3Login({ token });
-                        if (loginResult.success) {
-                            navigate('/dashboard');
-                        } else {
-                            setGeneralError(loginResult.error);
-                            setIsPending(false);
-                            setLoading(false);
-                        }
-                    } else if (statusResponse.data.status === 'failed') {
-                        clearInterval(interval);
-                        setGeneralError('Payment verification failed. Please try again.');
-                        setIsPending(false);
-                        setLoading(false);
-                    }
-                } catch (error) {
-                    clearInterval(interval);
-                    setGeneralError('An error occurred while checking your registration status.');
-                    setIsPending(false);
-                    setLoading(false);
+            if (verifyResponse.data.token) {
+                // Login successful
+                const loginResult = await web3Login({ token: verifyResponse.data.token });
+                if (loginResult.success) {
+                    navigate('/dashboard');
+                } else {
+                    setGeneralError(loginResult.error);
                 }
-            }, 5000);
+            } else {
+                // Registration submitted, start polling
+                setIsPending(true);
+                const interval = setInterval(async () => {
+                    try {
+                        const statusResponse = await authAPI.getRegistrationStatus(walletAddr);
+                        if (statusResponse.data.status === 'verified') {
+                            clearInterval(interval);
+                            const { token } = statusResponse.data;
+                            const loginResult = await web3Login({ token });
+                            if (loginResult.success) {
+                                navigate('/dashboard');
+                            } else {
+                                setGeneralError(loginResult.error);
+                                setIsPending(false);
+                            }
+                        } else if (statusResponse.data.status === 'failed') {
+                            clearInterval(interval);
+                            setGeneralError('Payment verification failed. Please try again.');
+                            setIsPending(false);
+                        }
+                    } catch (error) {
+                        clearInterval(interval);
+                        setGeneralError('An error occurred while checking your registration status.');
+                        setIsPending(false);
+                    }
+                }, 5000);
+            }
 
         } catch (error) {
             console.error(error);
             const errorMessage = error.message || (error.response?.data?.error) || 'An error occurred during signup. Please try again.';
             setGeneralError(errorMessage);
+        } finally {
             setLoading(false);
         }
     };

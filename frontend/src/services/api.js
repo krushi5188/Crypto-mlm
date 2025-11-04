@@ -72,8 +72,9 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  web3Login: (data) => api.post('/auth/web3/login', data),
-  web3Register: (data) => api.post('/auth/web3/submit-registration', data),
+  getWeb3Challenge: (walletAddress) => api.get(`/auth/web3/challenge?walletAddress=${walletAddress}`),
+  verifyWeb3: (data) => api.post('/auth/web3/verify', data),
+  getRegistrationStatus: (walletAddress) => api.get(`/auth/web3/registration-status?walletAddress=${walletAddress}`),
   setup2FA: () => api.post('/auth/2fa/setup'),
   enable2FA: (data) => api.post('/auth/2fa/enable', data),
   disable2FA: (data) => api.post('/auth/2fa/disable', data),
