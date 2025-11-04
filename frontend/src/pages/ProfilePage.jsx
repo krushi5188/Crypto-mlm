@@ -5,11 +5,16 @@ import Card from '../components/base/Card'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { useAuth } from '../context/AuthContext'
-import { memberAPI } from '../services/api'
-import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy } from 'lucide-react'
+import { memberAPI, adminAPI } from '../services/api'
+import { User, Mail, Calendar, Shield, Edit2, Check, AlertCircle, Copy, Wallet } from 'lucide-react'
+import { ethers } from 'ethers'
+import api from '../services/api'
+import { useAppKit } from '@reown/appkit/react'
+
 
 const ProfilePage = () => {
   const { user } = useAuth()
+  const { open } = useAppKit()
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -29,17 +34,21 @@ const ProfilePage = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await memberAPI.getProfile()
-      setProfileData(response.data)
+      const apiToCall = user.role === 'instructor' ? adminAPI : memberAPI;
+      const response = await apiToCall.getProfile();
+      // Admin response is { success, data: {...} }, member is { ... }
+      const profile = user.role === 'instructor' ? response.data.data : response.data;
+      setProfileData(profile);
       setFormData({
-        username: response.data.username,
-        email: response.data.email,
-        fullName: response.data.fullName || '',
-      })
+        username: profile.username,
+        email: profile.email,
+        fullName: profile.fullName || '',
+        joinedDate: profile.joinedDate,
+      });
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('Error fetching profile:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -96,6 +105,26 @@ const ProfilePage = () => {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const handleLinkWallet = async () => {
+    try {
+      await open();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+
+      // Simple message to sign for verification
+      const message = `Link wallet ${walletAddress} to my Atlas Network account.`;
+      const signature = await signer.signMessage(message);
+
+      // Send to backend to link
+      await memberAPI.updateProfile({ walletAddress, signature, message });
+      setSuccess('Wallet linked successfully!');
+      fetchProfile(); // Refresh profile data
+    } catch (error) {
+      setErrors({ general: 'Failed to link wallet. Please try again.' });
+    }
+  };
 
   if (loading) {
     return (
@@ -276,6 +305,34 @@ const ProfilePage = () => {
           )}
         </Card>
 
+        {/* Wallet Information */}
+        <Card padding="lg">
+          <h2 className="text-2xl font-display font-bold text-white mb-6">
+            Wallet Information
+          </h2>
+          {profileData?.walletAddress ? (
+            <div className="flex items-center gap-4 p-4 bg-white bg-opacity-5 rounded-xl">
+              <div className="p-3 bg-white bg-opacity-10 rounded-lg">
+                <Wallet className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Linked Wallet</p>
+                <p className="text-white font-medium break-all">{profileData.walletAddress}</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-400 mb-4">
+                Link your MetaMask wallet to enable signing in without a password.
+              </p>
+              <Button onClick={handleLinkWallet} icon={<Wallet className="w-5 h-5" />}>
+                Link Wallet
+              </Button>
+            </div>
+          )}
+        </Card>
+
+
         {/* Referral Information */}
         <Card padding="lg">
           <h2 className="text-2xl font-display font-bold text-white mb-6">
@@ -301,7 +358,7 @@ const ProfilePage = () => {
             <div>
               <p className="text-gray-400 text-sm mb-2">Your Referral Link</p>
               <div className="px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white text-sm break-all">
-                {window.location.origin}/register?ref={profileData?.referralCode}
+                {profileData ? `${window.location.origin}/register?ref=${profileData.referralCode}` : ''}
               </div>
             </div>
 

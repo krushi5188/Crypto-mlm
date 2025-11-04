@@ -3,13 +3,13 @@ const { pool } = require('../config/database');
 class User {
   // Create new user
   static async create(userData) {
-    const { email, username, password_hash, role, referral_code, referred_by_id, approval_status } = userData;
+    const { email, username, walletAddress, role, referral_code, referred_by_id, approval_status } = userData;
 
     const result = await pool.query(
-      `INSERT INTO users (email, username, password_hash, role, referral_code, referred_by_id, approval_status)
+      `INSERT INTO users (email, username, wallet_address, role, referral_code, referred_by_id, approval_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [email, username, password_hash, role, referral_code, referred_by_id || null, approval_status || 'approved']
+      [email, username, walletAddress, role, referral_code, referred_by_id || null, approval_status || 'approved']
     );
 
     return result.rows[0].id;
@@ -20,6 +20,24 @@ class User {
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
+    );
+    return result.rows[0] || null;
+  }
+
+  // Find user by username
+  static async findByUsername(username) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
+    return result.rows[0] || null;
+  }
+
+  // Find user by wallet address
+  static async findByWalletAddress(walletAddress) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE lower(wallet_address) = lower($1)',
+      [walletAddress]
     );
     return result.rows[0] || null;
   }
@@ -120,15 +138,17 @@ class User {
   // Get all members with pagination
   static async getAllStudents(page = 1, limit = 50, sortBy = 'created_at', sortOrder = 'DESC', search = '') {
     const offset = (page - 1) * limit;
-    let query = `SELECT id, email, username, balance, total_earned, direct_recruits,
-                        network_size, referred_by_id, created_at, last_login
-                 FROM users
-                 WHERE role = 'member'`;
+    let query = `SELECT u.id, u.email, u.username, u.balance, u.total_earned, u.direct_recruits,
+                        u.network_size, u.referred_by_id, u.created_at, u.last_login,
+                        r.username as referred_by_username
+                 FROM users u
+                 LEFT JOIN users r ON u.referred_by_id = r.id
+                 WHERE u.role = 'member'`;
     const params = [];
     let paramIndex = 1;
 
     if (search) {
-      query += ` AND (username LIKE $${paramIndex} OR email LIKE $${paramIndex + 1})`;
+      query += ` AND (u.username LIKE $${paramIndex} OR u.email LIKE $${paramIndex + 1})`;
       params.push(`%${search}%`, `%${search}%`);
       paramIndex += 2;
     }
@@ -198,6 +218,29 @@ class User {
         SUM(balance) as total_balance
        FROM users
        WHERE role = 'member'`
+    );
+    return result.rows[0];
+  }
+
+  // Get full user profile for dashboard
+  static async getDashboardProfile(userId) {
+    const result = await pool.query(
+      `SELECT
+         u.id,
+         u.email,
+         u.username,
+         u.balance,
+         u.total_earned,
+         u.direct_recruits,
+         u.network_size,
+         u.referral_code,
+         u.created_at,
+         u.last_login,
+         r.username as referred_by_username
+       FROM users u
+       LEFT JOIN users r ON u.referred_by_id = r.id
+       WHERE u.id = $1`,
+      [userId]
     );
     return result.rows[0];
   }

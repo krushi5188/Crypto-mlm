@@ -1,14 +1,20 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowLeft, AlertCircle, Wallet } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
+import { ethers } from 'ethers'
+import api from '../services/api'
+import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
+
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, web3Login } = useAuth()
+  const { open } = useAppKit()
+  const { walletProvider } = useAppKitProvider("eip155");
 
   const [formData, setFormData] = useState({
     email: '',
@@ -17,6 +23,17 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [generalError, setGeneralError] = useState('')
+  const [adminLoginVisible, setAdminLoginVisible] = useState(false)
+  const [logoClicks, setLogoClicks] = useState(0)
+
+
+  const handleLogoClick = () => {
+    const newClicks = logoClicks + 1;
+    setLogoClicks(newClicks);
+    if (newClicks >= 5) {
+      setAdminLoginVisible(true);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -75,6 +92,43 @@ const LoginPage = () => {
     }
   }
 
+  const handleWeb3Login = async () => {
+    try {
+      setLoading(true);
+      await open();
+      if (!walletProvider) {
+        throw new Error("Wallet provider not available.");
+      }
+      const provider = new ethers.BrowserProvider(walletProvider);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+
+      // 1. Get challenge
+      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${walletAddress}`);
+      const { challenge } = challengeResponse.data;
+
+      // 2. Sign challenge
+      const signature = await signer.signMessage(challenge);
+
+      // 3. Login
+      const loginResult = await web3Login({ walletAddress, signature });
+
+      if (loginResult.success) {
+        if (loginResult.user.role === 'instructor') {
+          navigate('/admin/analytics');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        setGeneralError(loginResult.error);
+        setLoading(false);
+      }
+    } catch (error) {
+      setGeneralError('Wallet login failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12">
       {/* Background gradient effect */}
@@ -109,7 +163,10 @@ const LoginPage = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div
+              className="w-16 h-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 cursor-pointer"
+              onClick={handleLogoClick}
+            >
               <span className="text-black font-bold text-2xl">A</span>
             </div>
             <h1 className="text-4xl font-display font-bold text-white mb-2">
@@ -132,40 +189,64 @@ const LoginPage = () => {
             </motion.div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              required
-              icon={<Mail className="w-5 h-5" />}
-            />
+          {/* Web3 Login Button */}
+          <Button
+            fullWidth
+            size="lg"
+            variant="primary"
+            onClick={handleWeb3Login}
+            disabled={loading}
+            icon={<Wallet className="w-5 h-5" />}
+          >
+            Sign In with Wallet
+          </Button>
 
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              required
-              icon={<Lock className="w-5 h-5" />}
-            />
+          {/* Admin Login Form (Hidden) */}
+          {adminLoginVisible && (
+            <>
+              {/* Divider */}
+              <div className="my-6 flex items-center">
+                <div className="flex-grow border-t border-white border-opacity-10"></div>
+                <span className="mx-4 text-xs text-gray-400">Admin Login</span>
+                <div className="flex-grow border-t border-white border-opacity-10"></div>
+              </div>
 
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              loading={loading}
-              disabled={loading}
-            >
-              Sign In
-            </Button>
-          </form>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="Email Address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  required
+                  icon={<Mail className="w-5 h-5" />}
+                />
+
+                <Input
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  required
+                  icon={<Lock className="w-5 h-5" />}
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  variant="secondary"
+                  loading={loading}
+                  disabled={loading}
+                >
+                  Admin Sign In
+                </Button>
+              </form>
+            </>
+          )}
 
           {/* Invitation Notice */}
           <div className="mt-8 p-4 rounded-xl bg-white bg-opacity-5 border border-white border-opacity-10">

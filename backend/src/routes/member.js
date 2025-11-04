@@ -41,31 +41,18 @@ router.get('/dashboard', async (req, res) => {
     const userId = req.user.id;
 
     // Get user data
-    const user = await User.findById(userId);
+    const user = await User.getDashboardProfile(userId);
 
     // Get recent activity
     const recentActivity = await Transaction.getRecentTransactions(userId, 10);
 
     // Generate referral link
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const referralLink = `${baseUrl}/register?ref=${user.referral_code}`;
+    user.referralLink = `${baseUrl}/register?ref=${user.referral_code}`;
 
     res.json({
       success: true,
-      data: {
-        balance: parseFloat(user.balance),
-        totalEarned: parseFloat(user.total_earned),
-        directRecruits: user.direct_recruits,
-        networkSize: user.network_size,
-        referralCode: user.referral_code,
-        referralLink,
-        recentActivity: recentActivity.map(t => ({
-          id: t.id,
-          description: t.description,
-          amount: parseFloat(t.amount),
-          timestamp: t.created_at
-        }))
-      }
+      data: user
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -296,12 +283,18 @@ router.get('/profile', async (req, res) => {
         id: user.id,
         email: user.email,
         username: user.username,
+        fullName: user.full_name || user.username, // Fallback to username
         referralCode: user.referral_code,
         balance: parseFloat(user.balance),
         totalEarned: parseFloat(user.total_earned),
         directRecruits: user.direct_recruits,
         networkSize: user.network_size,
         referredBy,
+        joinedDate: new Date(user.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
         createdAt: user.created_at,
         lastLogin: user.last_login
       }

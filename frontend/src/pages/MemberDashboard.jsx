@@ -1,73 +1,68 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import Card from '../components/base/Card'
 import Button from '../components/base/Button'
-import { memberAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import {
-  DollarSign, Users, UserPlus, TrendingUp, Copy, Check,
-  ArrowRight, Clock, CheckCircle
+  Users, UserPlus, TrendingUp, Copy, Check,
+  ArrowRight, Clock, CheckCircle, Loader
 } from 'lucide-react'
 
 const MemberDashboard = () => {
   const navigate = useNavigate()
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    fetchDashboard()
-  }, [])
-
-  const fetchDashboard = async () => {
-    try {
-      const response = await memberAPI.getDashboard()
-      setData(response.data)
-    } catch (error) {
-      console.error('Error fetching dashboard:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const copyReferralLink = () => {
-    const link = `${window.location.origin}/register?ref=${data?.referralCode}`
+    if (!user?.referralCode) return
+    const link = `${window.location.origin}/register?ref=${user.referralCode}`
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (loading) {
+  const stats = [
+    {
+      label: 'Network Size',
+      value: user?.networkSize || 0,
+      icon: Users,
+    },
+    {
+      label: 'Direct Invites',
+      value: user?.directRecruits || 0,
+      icon: UserPlus,
+    },
+    {
+      label: 'Total Earned',
+      value: `${user?.totalEarned || 0} USDT`,
+      icon: TrendingUp,
+    },
+  ]
+
+  // Display a loading spinner while the user data is being fetched.
+  if (authLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <div className="text-white text-xl">Loading...</div>
+          <Loader className="w-12 h-12 text-white animate-spin" />
         </div>
       </DashboardLayout>
     )
   }
 
-  const stats = [
-    {
-      label: 'Network Size',
-      value: data?.networkSize || 0,
-      icon: Users,
-      color: 'blue',
-    },
-    {
-      label: 'Direct Invites',
-      value: data?.directRecruits || 0,
-      icon: UserPlus,
-      color: 'green',
-    },
-    {
-      label: 'Total Earned',
-      value: `${data?.totalEarned || 0} USDT`,
-      icon: TrendingUp,
-      color: 'purple',
-    },
-  ]
+  // After loading, if the user is somehow null, prompt to re-login.
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Could not load user data.</h2>
+          <Button onClick={() => navigate('/login')}>Go to Login</Button>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>
@@ -78,7 +73,7 @@ const MemberDashboard = () => {
             Dashboard
           </h1>
           <p className="text-gray-400">
-            Welcome back, {data?.username}
+            Welcome back, {user.username}
           </p>
         </div>
 
@@ -91,12 +86,12 @@ const MemberDashboard = () => {
           <Card variant="glass" padding="lg" className="text-center">
             <p className="text-gray-400 text-lg mb-2">Your Balance</p>
             <h2 className="text-7xl font-display font-bold text-white mb-4">
-              {data?.balance || 0} <span className="text-5xl text-gray-400">USDT</span>
+              {user.balance || 0} <span className="text-5xl text-gray-400">USDT</span>
             </h2>
-            {data?.todayEarnings > 0 && (
+            {user.todayEarnings > 0 && (
               <p className="text-green-400 flex items-center justify-center gap-2">
                 <TrendingUp className="w-5 h-5" />
-                +{data.todayEarnings} USDT today
+                +{user.todayEarnings} USDT today
               </p>
             )}
           </Card>
@@ -142,7 +137,7 @@ const MemberDashboard = () => {
             </p>
             <div className="flex gap-2">
               <div className="flex-1 px-4 py-3 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10 text-white text-sm truncate">
-                {window.location.origin}/register?ref={data?.referralCode}
+                {window.location.origin}/register?ref={user.referralCode}
               </div>
               <Button
                 variant={copied ? 'secondary' : 'primary'}
@@ -163,11 +158,11 @@ const MemberDashboard = () => {
             <Button
               fullWidth
               onClick={() => navigate('/withdrawals')}
-              disabled={data?.balance < 10}
+              disabled={user.balance < 10}
             >
               Withdraw Funds <ArrowRight className="w-5 h-5" />
             </Button>
-            {data?.balance < 10 && (
+            {user.balance < 10 && (
               <p className="text-xs text-gray-500 mt-2">
                 Minimum withdrawal: 10 USDT
               </p>
@@ -180,9 +175,9 @@ const MemberDashboard = () => {
           <h3 className="text-xl font-display font-bold text-white mb-6">
             Recent Activity
           </h3>
-          {data?.recentActivity && data.recentActivity.length > 0 ? (
+          {user.recentActivity && user.recentActivity.length > 0 ? (
             <div className="space-y-4">
-              {data.recentActivity.map((activity, index) => (
+              {user.recentActivity.map((activity, index) => (
                 <div
                   key={index}
                   className="flex items-start gap-4 pb-4 border-b border-white border-opacity-10 last:border-0"

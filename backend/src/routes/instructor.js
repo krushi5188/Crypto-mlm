@@ -20,6 +20,41 @@ router.use(authenticate);
 router.use(requireInstructor);
 
 /**
+ * GET /api/v1/instructor/profile
+ * Get instructor's own profile information
+ */
+router.get('/profile', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
+
+        res.json({
+            success: true,
+            data: {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                fullName: user.full_name || user.username,
+                referralCode: user.referral_code,
+                joinedDate: new Date(user.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }),
+                createdAt: user.created_at,
+                lastLogin: user.last_login
+            }
+        });
+    } catch (error) {
+        console.error('Instructor profile error:', error);
+        res.status(500).json({
+            error: 'Failed to load profile',
+            code: 'DATABASE_ERROR'
+        });
+    }
+});
+
+/**
  * GET /api/v1/instructor/analytics
  * Get comprehensive analytics dashboard data
  */
@@ -35,6 +70,82 @@ router.get('/analytics', async (req, res) => {
     console.error('Analytics error:', error);
     res.status(500).json({
       error: 'Failed to load analytics',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/add-member
+ * Instructor directly adds a new member (auto-approved, no approval needed)
+ */
+router.post('/add-member', validate('instructorAddMember'), async (req, res) => {
+  try {
+    const { email, username, password } = req.validatedBody;
+
+    // Check if email already exists
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({
+        error: 'Email already registered',
+        code: 'EMAIL_TAKEN'
+      });
+    }
+
+    // Check if username already exists
+    const usernameCheck = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (usernameCheck.rows.length > 0) {
+      return res.status(400).json({
+        error: 'Username already taken',
+        code: 'USERNAME_TAKEN'
+      });
+    }
+
+    // Use instructor as referrer (all participants created by instructor are under them)
+    const referrerId = req.user.id;
+
+    // Hash password
+    const { hashPassword } = require('../utils/passwordHash');
+    const password_hash = await hashPassword(password);
+
+    // Generate unique referral code
+    const { generateReferralCode } = require('../utils/generateReferralCode');
+    const newReferralCode = await generateReferralCode();
+
+    // Create user with APPROVED status
+    const userId = await User.create({
+      email,
+      username,
+      password_hash,
+      role: 'member',
+      referral_code: newReferralCode,
+      referred_by_id: referrerId,
+      approval_status: 'approved'
+    });
+
+    // Distribute commissions to instructor
+    const CommissionService = require('../services/commissionService');
+    await CommissionService.distributeCommissions(
+      userId,
+      username,
+      referrerId
+    );
+
+    const user = await User.findById(userId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Member account created successfully',
+      data: { user }
+    });
+  } catch (error) {
+    console.error('Add member error:', error);
+    res.status(500).json({
+      error: 'Failed to create member account',
       code: 'DATABASE_ERROR'
     });
   }
@@ -73,7 +184,7 @@ router.get('/participants', async (req, res) => {
           totalEarned: parseFloat(p.total_earned),
           directRecruits: p.direct_recruits,
           networkSize: p.network_size,
-          referredBy: p.referred_by_id,
+          referredBy: p.referred_by_username,
           approvalStatus: p.approval_status || 'approved',
           joinedAt: p.created_at,
           lastLogin: p.last_login

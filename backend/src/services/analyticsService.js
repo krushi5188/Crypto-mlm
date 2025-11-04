@@ -64,7 +64,54 @@ class AnalyticsService {
       joinedAt: user.created_at
     }));
 
+    // --- New, more accurate calculations ---
+
+    // Total volume is the sum of all balances
+    const totalVolumeResult = await pool.query(`SELECT SUM(balance) as total FROM users WHERE role = 'member'`);
+    const totalVolume = parseFloat(totalVolumeResult.rows[0].total) || 0;
+    
+    // Active members (logged in within last 30 days)
+    const activeMembersResult = await pool.query(`SELECT COUNT(*) as count FROM users WHERE role = 'member' AND last_login >= NOW() - INTERVAL '30 days'`);
+    const activeMembers = parseInt(activeMembersResult.rows[0].count);
+
+    // New signups (registered in last 7 days)
+    const newSignupsResult = await pool.query(`SELECT COUNT(*) as count FROM users WHERE role = 'member' AND created_at >= NOW() - INTERVAL '7 days'`);
+    const newSignups = parseInt(newSignupsResult.rows[0].count);
+
+    // Daily active users (logged in within last 24 hours)
+    const dailyActiveResult = await pool.query(`SELECT COUNT(*) as count FROM users WHERE role = 'member' AND last_login >= NOW() - INTERVAL '24 hours'`);
+    const dailyActive = parseInt(dailyActiveResult.rows[0].count);
+
+    // Average network size
+    const avgNetworkSizeResult = await pool.query(`SELECT AVG(network_size) as avg FROM users WHERE role = 'member'`);
+    const avgNetworkSize = parseFloat(avgNetworkSizeResult.rows[0].avg) || 0;
+
+    // Total deposits (sum of all commission and injection transactions)
+    const totalDepositsResult = await pool.query(`SELECT SUM(amount) as total FROM transactions WHERE type IN ('commission', 'injection')`);
+    const totalDeposits = parseFloat(totalDepositsResult.rows[0].total) || 0;
+    
+    // Platform balance (recruitment fees - commissions)
+    const platformBalance = (parseFloat(config.total_recruitment_fees) || 0) - (parseFloat(config.total_coins_distributed) || 0);
+
     return {
+      totalMembers: totalParticipants,
+      totalVolume: totalVolume,
+      activeMembers: activeMembers,
+      pendingWithdrawals: 0, // Assuming no withdrawal feature yet
+      newSignups: newSignups,
+      dailyActive: dailyActive,
+      avgNetworkSize: avgNetworkSize.toFixed(2),
+      totalDeposits: totalDeposits,
+      totalWithdrawn: 0, // Assuming no withdrawal feature yet
+      platformBalance: platformBalance,
+      recentActivity: formattedRecentJoins.map(j => ({
+        type: 'signup',
+        description: `${j.username} joined the network`,
+        details: `Referred by ${j.referredBy}`,
+        time: j.joinedAt
+      })),
+      retention: totalParticipants > 0 ? (activeMembers / totalParticipants * 100).toFixed(2) : 0,
+      pendingIssues: 0, // Placeholder
       overview: {
         totalParticipants,
         simulationStatus: config.simulation_status,

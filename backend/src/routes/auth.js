@@ -25,7 +25,7 @@ router.post('/register',
   validate('register'),
   async (req, res) => {
     try {
-      const { email, username, password, referralCode } = req.validatedBody;
+      const { email, username, walletAddress, referralCode } = req.validatedBody;
 
       // REQUIRED: Referral code is mandatory
       if (!referralCode) {
@@ -34,8 +34,6 @@ router.post('/register',
           code: 'REFERRAL_CODE_REQUIRED'
         });
       }
-
-      // Participant limit check removed - platform now supports unlimited members
 
       // Check if email already exists
       const existingEmail = await User.findByEmail(email);
@@ -46,7 +44,16 @@ router.post('/register',
         });
       }
 
-      // Check if username already exists (FIXED: PostgreSQL syntax)
+      // Check if wallet address already exists
+      const existingWallet = await User.findByWalletAddress(walletAddress);
+      if (existingWallet) {
+        return res.status(400).json({
+          error: 'Wallet address already registered',
+          code: 'WALLET_TAKEN'
+        });
+      }
+
+      // Check if username already exists
       const usernameCheck = await require('../config/database').pool.query(
         'SELECT id FROM users WHERE username = $1',
         [username]
@@ -76,9 +83,6 @@ router.post('/register',
         });
       }
 
-      // Hash password
-      const password_hash = await hashPassword(password);
-
       // Generate unique referral code
       const newReferralCode = await generateReferralCode();
 
@@ -86,15 +90,12 @@ router.post('/register',
       const userId = await User.create({
         email,
         username,
-        password_hash,
+        walletAddress,
         role: 'member',
         referral_code: newReferralCode,
         referred_by_id: referrer.id,
-        approval_status: 'pending'  // NEW: Pending approval
+        approval_status: 'pending'
       });
-
-      // NOTE: Commissions will be distributed AFTER instructor approves
-      // Do NOT distribute commissions here
 
       // Get created user
       const user = await User.findById(userId);

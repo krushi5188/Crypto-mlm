@@ -448,12 +448,13 @@ const initializeDatabase = async () => {
 
     // Check if instructor account exists
     const instructorEmail = process.env.ADMIN_EMAIL || 'instructor@university.edu';
-    const existingInstructor = await User.findByEmail(instructorEmail);
+    const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
 
-    if (!existingInstructor) {
+    const existingInstructorByEmail = await User.findByEmail(instructorEmail);
+    const existingInstructorByUsername = await User.findByUsername(instructorUsername);
+
+    if (!existingInstructorByEmail && !existingInstructorByUsername) {
       console.log('Creating instructor account...');
-
-      const instructorUsername = process.env.ADMIN_USERNAME || 'instructor';
       const instructorPassword = process.env.ADMIN_PASSWORD || 'InstructorPassword123!';
 
       const passwordHash = await hashPassword(instructorPassword);
@@ -499,12 +500,14 @@ if (process.env.NODE_ENV === 'production') {
 
 // Routes
 const authRoutes = require('./routes/auth');
+const web3AuthRoutes = require('./routes/web3auth');
 const memberRoutes = require('./routes/member');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
 const gamificationRoutes = require('./routes/gamification');
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth/web3', web3AuthRoutes);
 app.use('/api/v1/member', memberRoutes);
 app.use('/api/v1/admin', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);

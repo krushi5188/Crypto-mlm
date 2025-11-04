@@ -17,6 +17,13 @@ const AdminMembers = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedMember, setSelectedMember] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [addMemberData, setAddMemberData] = useState({
+    email: '',
+    username: '',
+    password: ''
+  })
+  const [addMemberError, setAddMemberError] = useState('')
 
   useEffect(() => {
     fetchMembers()
@@ -40,6 +47,25 @@ const AdminMembers = () => {
     setShowDetails(true)
   }
 
+  const handleApprove = async (memberId) => {
+    try {
+      await adminAPI.approveParticipant(memberId);
+      fetchMembers();
+    } catch (error) {
+      console.error('Error approving member:', error);
+    }
+  };
+
+  const handleReject = async (memberId) => {
+    try {
+      await adminAPI.rejectParticipant(memberId, { reason: 'Admin rejection' });
+      fetchMembers();
+    } catch (error) {
+      console.error('Error rejecting member:', error);
+    }
+  };
+
+
   const handleStatusChange = async (memberId, newStatus) => {
     try {
       if (newStatus === 'suspended') {
@@ -53,6 +79,18 @@ const AdminMembers = () => {
     }
   }
 
+  const handleAddMemberSubmit = async (e) => {
+    e.preventDefault();
+    setAddMemberError('');
+    try {
+      await adminAPI.addMember(addMemberData);
+      setShowAddMember(false);
+      fetchMembers();
+    } catch (error) {
+      setAddMemberError(error.response?.data?.error || 'Failed to add member');
+    }
+  };
+
   const filteredMembers = members.filter(member => {
     // Text search
     const matchesSearch = member.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,6 +99,7 @@ const AdminMembers = () => {
     // Status filter
     const matchesStatus =
       statusFilter === 'all' ? true :
+      statusFilter === 'pending' ? member.approvalStatus === 'pending' :
       statusFilter === 'active' ? member.approvalStatus === 'approved' :
       statusFilter === 'suspended' ? member.approvalStatus === 'rejected' :
       statusFilter === 'flagged' ? member.flagged === true :
@@ -83,13 +122,18 @@ const AdminMembers = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-4xl font-display font-bold text-white mb-2">
-            Members Management
-          </h1>
-          <p className="text-gray-400">
-            View and manage platform members
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-display font-bold text-white mb-2">
+              Members Management
+            </h1>
+            <p className="text-gray-400">
+              View and manage platform members
+            </p>
+          </div>
+          <Button onClick={() => setShowAddMember(true)}>
+            Add Member
+          </Button>
         </div>
 
         {/* Stats */}
@@ -146,7 +190,7 @@ const AdminMembers = () => {
             </div>
 
             <div className="flex gap-2">
-              {['all', 'active', 'suspended', 'flagged'].map((filter) => (
+              {['all', 'pending', 'active', 'suspended', 'flagged'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setStatusFilter(filter)}
@@ -204,6 +248,12 @@ const AdminMembers = () => {
                       <Mail className="w-3 h-3" />
                       {member.email}
                     </p>
+                    {member.referredBy && (
+                      <p className="text-gray-400 text-sm flex items-center gap-2 mt-1">
+                        <TrendingUp className="w-3 h-3" />
+                        Referred by: {member.referredBy}
+                      </p>
+                    )}
                   </div>
 
                   {/* Stats */}
@@ -226,13 +276,34 @@ const AdminMembers = () => {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleViewDetails(member)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    {member.approvalStatus === 'pending' ? (
+                      <>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleApprove(member.id)}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleReject(member.id)}
+                        >
+                          <Ban className="w-4 h-4" />
+                          Reject
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleViewDetails(member)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -247,7 +318,7 @@ const AdminMembers = () => {
 
         {/* Member Details Modal */}
         {showDetails && selectedMember && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+          <div className="fixed inset-0 bg-black flex items-center justify-center z-50 p-6">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -343,6 +414,60 @@ const AdminMembers = () => {
                     </div>
                   </div>
                 </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Add Member Modal */}
+        {showAddMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Add New Member
+                    </h2>
+                    <p className="text-gray-400">Create a new member account</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowAddMember(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form onSubmit={handleAddMemberSubmit} className="space-y-4">
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={addMemberData.email}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, email: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Username"
+                    type="text"
+                    value={addMemberData.username}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, username: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label="Password"
+                    type="password"
+                    value={addMemberData.password}
+                    onChange={(e) => setAddMemberData({ ...addMemberData, password: e.target.value })}
+                    required
+                  />
+                  {addMemberError && <p className="text-red-500 text-sm">{addMemberError}</p>}
+                  <Button type="submit" fullWidth>Create Member</Button>
+                </form>
               </Card>
             </motion.div>
           </div>

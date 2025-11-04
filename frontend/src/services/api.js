@@ -72,6 +72,7 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
+  web3Login: (data) => api.post('/auth/web3/login', data),
   setup2FA: () => api.post('/auth/2fa/setup'),
   enable2FA: (data) => api.post('/auth/2fa/enable', data),
   disable2FA: (data) => api.post('/auth/2fa/disable', data),
@@ -177,11 +178,13 @@ export const memberAPI = {
 
 // Admin API (routes point to /api/v1/admin)
 export const adminAPI = {
+  getProfile: () => api.get('/admin/profile'),
   getAnalytics: () => api.get('/admin/analytics'),
   getParticipants: (params) => api.get('/admin/participants', { params }),
   getParticipant: (id) => api.get(`/admin/participants/${id}`),
   approveParticipant: (id) => api.post(`/admin/participants/${id}/approve`),
   rejectParticipant: (id, data) => api.post(`/admin/participants/${id}/reject`, data),
+  addMember: (data) => api.post('/admin/add-member', data),
   addMember: (data) => api.post('/admin/add-member', data),
   getNetworkGraph: () => api.get('/admin/network-graph'),
   injectCoins: (data) => api.post('/admin/inject-coins', data),
