@@ -10,8 +10,10 @@ const USDT_ADDRESSES = {
     TRON: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
 };
 
-// IMPORTANT: This should be stored in environment variables in a real application
-const PLATFORM_WALLET_ADDRESS = process.env.PLATFORM_WALLET_ADDRESS || 'TBAf29TmsfrHq7iN5z2KZ4tL6GDRf1mMv5'; // Using a placeholder for now
+const PLATFORM_WALLET_ADDRESS = {
+    BSC: process.env.PLATFORM_WALLET_ADDRESS_BSC,
+    TRON: process.env.PLATFORM_WALLET_ADDRESS_TRON,
+};
 
 const SIGNUP_FEE_USDT = 20;
 

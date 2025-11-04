@@ -60,7 +60,7 @@ class TransactionVerifierService {
                 const transferEvent = txInfo.log.find(log => {
                     const decoded = tronWeb.coder.decodeEvent(USDT_ABI, log.data);
                     return decoded && decoded.name === 'Transfer' &&
-                           tronWeb.address.fromHex(decoded.result.to) === PLATFORM_WALLET_ADDRESS &&
+                           tronWeb.address.fromHex(decoded.result.to) === PLATFORM_WALLET_ADDRESS.TRON &&
                            tronWeb.address.fromHex(decoded.result.from) === userWalletAddress;
                 });
 
@@ -86,7 +86,7 @@ class TransactionVerifierService {
                 const to = decodedLog.args.to;
                 const value = decodedLog.args.value;
 
-                if (from.toLowerCase() !== userWalletAddress.toLowerCase() || to.toLowerCase() !== PLATFORM_WALLET_ADDRESS.toLowerCase()) {
+                if (from.toLowerCase() !== userWalletAddress.toLowerCase() || to.toLowerCase() !== PLATFORM_WALLET_ADDRESS.BSC.toLowerCase()) {
                     return false;
                 }
 

@@ -90,7 +90,7 @@ const RegisterPage = () => {
                 const usdtContract = new ethers.Contract(USDT_ADDRESSES.BSC, USDT_ABI, signer);
                 const decimals = await usdtContract.decimals();
                 const amount = ethers.parseUnits(SIGNUP_FEE_USDT.toString(), decimals);
-                tx = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS, amount);
+                tx = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS.BSC, amount);
             } else if (chain === 'TRON') {
                 if (!window.tronWeb || !window.tronWeb.ready) {
                     throw new Error('TronLink is not connected or not ready.');
@@ -100,7 +100,7 @@ const RegisterPage = () => {
                 const usdtContract = await tronWeb.contract().at(USDT_ADDRESSES.TRON);
                 const decimals = await usdtContract.decimals().call();
                 const amount = SIGNUP_FEE_USDT * (10 ** decimals);
-                const txHash = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS, amount).send({
+                const txHash = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS.TRON, amount).send({
                     feeLimit: 100000000
                 });
                 tx = { hash: txHash }; // Adapt to expected structure

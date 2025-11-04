@@ -15,6 +15,7 @@ const WithdrawalsPage = () => {
   const [formData, setFormData] = useState({
     amount: '',
     walletAddress: '',
+    chain: 'BSC', // Default to BSC
   })
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
@@ -181,6 +182,14 @@ const WithdrawalsPage = () => {
               required
               placeholder="0x..."
             />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Network</label>
+              <div className="flex gap-4">
+                  <Button type="button" onClick={() => setFormData(prev => ({...prev, chain: 'TRON'}))} variant={formData.chain === 'TRON' ? 'primary' : 'secondary'} fullWidth>TRON</Button>
+                  <Button type="button" onClick={() => setFormData(prev => ({...prev, chain: 'BSC'}))} variant={formData.chain === 'BSC' ? 'primary' : 'secondary'} fullWidth>BSC</Button>
+              </div>
+            </div>
 
             <div className="bg-white bg-opacity-5 rounded-xl p-4 border border-white border-opacity-10">
               <p className="text-sm text-gray-300 leading-relaxed">

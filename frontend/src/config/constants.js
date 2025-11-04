@@ -3,7 +3,10 @@ export const USDT_ADDRESSES = {
     TRON: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
 };
 
-export const PLATFORM_WALLET_ADDRESS = 'YOUR_PLATFORM_WALLET_ADDRESS'; // Replace with your actual address
+export const PLATFORM_WALLET_ADDRESS = {
+    BSC: import.meta.env.VITE_PLATFORM_WALLET_ADDRESS_BSC,
+    TRON: import.meta.env.VITE_PLATFORM_WALLET_ADDRESS_TRON,
+};
 
 export const SIGNUP_FEE_USDT = 20;
 

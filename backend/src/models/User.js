@@ -72,6 +72,14 @@ class User {
     return result.rowCount > 0;
   }
 
+  static async updateBalanceOnly(userId, newBalance, connection = pool) {
+    const result = await connection.query(
+      `UPDATE users SET balance = $1 WHERE id = $2`,
+      [newBalance, userId]
+    );
+    return result.rowCount > 0;
+  }
+
   // Increment direct recruits
   static async incrementDirectRecruits(userId, connection = pool) {
     await connection.query(

@@ -507,6 +507,7 @@ const memberRoutes = require('./routes/member');
 const instructorRoutes = require('./routes/instructor');
 const systemRoutes = require('./routes/system');
 const gamificationRoutes = require('./routes/gamification');
+const withdrawalRoutes = require('./routes/withdrawal');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth/web3', web3AuthRoutes);
@@ -514,6 +515,7 @@ app.use('/api/v1/member', memberRoutes);
 app.use('/api/v1/admin', instructorRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/gamification', gamificationRoutes);
+app.use('/api/v1/withdrawals', withdrawalRoutes);
 
 // Serve frontend static files (for unified deployment)
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');

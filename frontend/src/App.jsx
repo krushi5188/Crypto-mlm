@@ -21,6 +21,7 @@ import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminMembers from './pages/admin/AdminMembers'
 import AdminDeposits from './pages/admin/AdminDeposits'
 import AdminFraud from './pages/admin/AdminFraud'
+import AdminWithdrawals from './pages/admin/AdminWithdrawals'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -141,6 +142,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireAdmin={true}>
             <AdminFraud />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/withdrawals"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminWithdrawals />
           </ProtectedRoute>
         }
       />

@@ -101,9 +101,9 @@ export const memberAPI = {
   getInviteTransactions: (inviteUserId) => api.get(`/member/invite-transactions/${inviteUserId}`),
 
   // Withdrawals
-  getWithdrawals: (params) => api.get('/member/withdrawals', { params }),
-  createWithdrawal: (data) => api.post('/member/withdrawals', data),
-  cancelWithdrawal: (id) => api.delete(`/member/withdrawals/${id}`),
+  getWithdrawals: (params) => api.get('/withdrawals', { params }),
+  createWithdrawal: (data) => api.post('/withdrawals', data),
+  cancelWithdrawal: (id) => api.delete(`/withdrawals/${id}`),
   getWithdrawalStats: () => api.get('/member/withdrawal-stats'),
 
   // Goals
@@ -186,8 +186,9 @@ export const adminAPI = {
   approveParticipant: (id) => api.post(`/admin/participants/${id}/approve`),
   rejectParticipant: (id, data) => api.post(`/admin/participants/${id}/reject`, data),
   addMember: (data) => api.post('/admin/add-member', data),
-  addMember: (data) => api.post('/admin/add-member', data),
   getNetworkGraph: () => api.get('/admin/network-graph'),
+  getWithdrawals: (params) => api.get('/withdrawals/admin', { params }),
+  updateWithdrawalStatus: (id, data) => api.put(`/withdrawals/admin/${id}`, data),
   injectCoins: (data) => api.post('/admin/inject-coins', data),
   pause: () => api.post('/admin/pause'),
   resume: () => api.post('/admin/resume'),
