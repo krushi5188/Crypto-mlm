@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -107,7 +106,7 @@ const RegisterPage = () => {
             }
 
             // 2. Submit registration
-            await api.post('/auth/web3/submit-registration', {
+            await authAPI.web3Register({
                 walletAddress: walletAddr,
                 referralCode: formData.referralCode,
                 transactionHash: tx.hash,
@@ -170,11 +169,8 @@ const RegisterPage = () => {
             Registration Submitted
             </h1>
             <p className="text-gray-400 mb-6">
-            Your account is now pending approval from an admin. Please check back later.
+            Your payment is being verified. Please wait...
             </p>
-            <Button onClick={() => navigate('/')}>
-            Back to Home
-            </Button>
         </motion.div>
         </div>
     )
@@ -318,7 +314,7 @@ const RegisterPage = () => {
               fullWidth
               size="lg"
               loading={loading}
-              disabled={loading || !signer}
+              disabled={loading || (chain === 'BSC' && !signer)}
             >
               Create Account and Pay Fee
             </Button>

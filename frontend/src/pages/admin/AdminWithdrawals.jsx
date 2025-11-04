@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import AdminDashboardLayout from '../../components/layout/AdminDashboardLayout';
+import DashboardLayout from '../../components/layout/DashboardLayout';
 import { adminAPI } from '../../services/api';
 import { motion } from 'framer-motion';
 import { Eye, Check, X } from 'lucide-react';
@@ -43,7 +43,7 @@ const AdminWithdrawals = () => {
     };
 
     return (
-        <AdminDashboardLayout>
+        <DashboardLayout>
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-3xl font-bold text-white mb-6">Withdrawal Requests</h1>
 
@@ -83,7 +83,7 @@ const AdminWithdrawals = () => {
                     </table>
                 </div>
             </div>
-        </AdminDashboardLayout>
+        </DashboardLayout>
     );
 };
 
