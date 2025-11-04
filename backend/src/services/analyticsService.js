@@ -69,7 +69,7 @@ class AnalyticsService {
     // Total volume is the sum of all balances
     const totalVolumeResult = await pool.query(`SELECT SUM(balance) as total FROM users WHERE role = 'member'`);
     const totalVolume = parseFloat(totalVolumeResult.rows[0].total) || 0;
-
+    
     // Active members (logged in within last 30 days)
     const activeMembersResult = await pool.query(`SELECT COUNT(*) as count FROM users WHERE role = 'member' AND last_login >= NOW() - INTERVAL '30 days'`);
     const activeMembers = parseInt(activeMembersResult.rows[0].count);
@@ -89,7 +89,7 @@ class AnalyticsService {
     // Total deposits (sum of all commission and injection transactions)
     const totalDepositsResult = await pool.query(`SELECT SUM(amount) as total FROM transactions WHERE type IN ('commission', 'injection')`);
     const totalDeposits = parseFloat(totalDepositsResult.rows[0].total) || 0;
-
+    
     // Platform balance (recruitment fees - commissions)
     const platformBalance = (parseFloat(config.total_recruitment_fees) || 0) - (parseFloat(config.total_coins_distributed) || 0);
 
