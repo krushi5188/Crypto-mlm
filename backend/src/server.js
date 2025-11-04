@@ -20,6 +20,8 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 const User = require('./models/User');
 const { generateReferralCode } = require('./utils/generateReferralCode');
 const websocketService = require('./services/websocketService');
+const cron = require('node-cron');
+const TransactionVerifierService = require('./services/TransactionVerifierService');
 
 const app = express();
 const server = http.createServer(app);
@@ -584,6 +586,12 @@ const startServer = async () => {
     // Initialize WebSocket
     websocketService.initialize(server);
     console.log('✓ WebSocket service initialized');
+
+    // Schedule the transaction verifier to run every minute
+    cron.schedule('* * * * *', () => {
+      console.log('Running transaction verifier...');
+      TransactionVerifierService.verifyPendingTransactions();
+    });
 
     server.listen(PORT, () => {
       console.log('');

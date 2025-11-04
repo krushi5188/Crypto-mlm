@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const { ethers } = require('ethers');
@@ -90,25 +91,18 @@ router.post('/link', async (req, res) => {
     }
 });
 
-// POST /api/v1/auth/web3/register
-router.post('/register', async (req, res) => {
+// POST /api/v1/auth/web3/submit-registration
+router.post('/submit-registration', async (req, res) => {
     try {
-        const { walletAddress, signature, referralCode } = req.body;
-        const lowerCaseAddress = walletAddress.toLowerCase();
+        const { walletAddress, referralCode, transactionHash, chain } = req.body;
 
         // Basic validation
-        if (!walletAddress || !signature || !referralCode) {
+        if (!walletAddress || !referralCode || !transactionHash || !chain) {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
-        // Verify signature (you might want a more secure challenge-response for this)
-        const recoveredAddress = ethers.verifyMessage(`Registering with referral code: ${referralCode}`, signature);
-        if (recoveredAddress.toLowerCase() !== lowerCaseAddress) {
-            return res.status(401).json({ error: 'Invalid signature.' });
-        }
-
         // Check if wallet is already registered
-        const existingUser = await User.findByWalletAddress(lowerCaseAddress);
+        const existingUser = await User.findByWalletAddress(walletAddress);
         if (existingUser) {
             return res.status(400).json({ error: 'Wallet address is already registered.' });
         }
@@ -119,30 +113,47 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Invalid referral code.' });
         }
 
-        const username = `user_${lowerCaseAddress.slice(2, 8)}`;
-        const email = `${lowerCaseAddress}@placeholder.email`; // Placeholder
+        // Save to pending_registrations
+        await pool.query(
+            'INSERT INTO pending_registrations (wallet_address, referral_code, transaction_hash, chain) VALUES ($1, $2, $3, $4)',
+            [walletAddress, referralCode, transactionHash, chain]
+        );
 
-        // Create user
-        const newUserId = await User.create({
-            wallet_address: lowerCaseAddress,
-            username: username,
-            email: email,
-            password_hash: 'n/a', // Not applicable for web3-only users
-            referral_code: await generateReferralCode(),
-            referred_by_id: referrer.id,
-            role: 'member',
-            approval_status: 'pending', // Or 'pending' if you want manual approval
-        });
-
-        const newUser = await User.findById(newUserId);
-        const token = generateToken(newUser);
-
-        res.status(201).json({ token, user: newUser });
+        res.status(202).json({ success: true, message: 'Registration submitted and is being verified.' });
 
     } catch (error) {
-        console.error('Web3 Registration Error:', error);
-        res.status(500).json({ error: 'Registration failed' });
+        console.error('Submit Registration Error:', error);
+        res.status(500).json({ error: 'Registration submission failed' });
     }
 });
+
+// GET /api/v1/auth/web3/registration-status
+router.get('/registration-status', async (req, res) => {
+    try {
+        const { walletAddress } = req.query;
+
+        // Check if user exists
+        const user = await User.findByWalletAddress(walletAddress);
+        if (user) {
+            const token = generateToken(user);
+            return res.json({ status: 'verified', token, user });
+        }
+
+        // Check pending_registrations
+        const pendingResult = await pool.query('SELECT status FROM pending_registrations WHERE wallet_address = $1', [walletAddress]);
+        const pendingStatus = pendingResult.rows[0]?.status;
+
+        if (pendingStatus) {
+            return res.json({ status: pendingStatus });
+        }
+
+        return res.status(404).json({ status: 'not_found' });
+
+    } catch (error) {
+        console.error('Registration Status Error:', error);
+        res.status(500).json({ error: 'Failed to get registration status' });
+    }
+});
+
 
 module.exports = router;

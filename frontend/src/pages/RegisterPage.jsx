@@ -8,115 +8,151 @@ import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
 import { ethers } from 'ethers'
+import TronWeb from 'tronweb'
 import api from '../services/api'
+import { USDT_ADDRESSES, PLATFORM_WALLET_ADDRESS, SIGNUP_FEE_USDT, USDT_ABI } from '../config/constants'
 
 
 const RegisterPage = () => {
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { web3Register } = useAuth()
-  const { open } = useAppKit()
-  const { walletProvider } = useAppKitProvider("eip155");
+    const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const { web3Login } = useAuth()
+    const { open } = useAppKit()
+    const { walletProvider } = useAppKitProvider("eip155");
 
 
-  const [formData, setFormData] = useState({
-    walletAddress: '',
-    referralCode: searchParams.get('ref') || '',
-  })
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [generalError, setGeneralError] = useState('')
-  const [signer, setSigner] = useState(null)
-  const [isPending, setIsPending] = useState(false)
+    const [formData, setFormData] = useState({
+        walletAddress: '',
+        referralCode: searchParams.get('ref') || '',
+    })
+    const [errors, setErrors] = useState({})
+    const [loading, setLoading] = useState(false)
+    const [generalError, setGeneralError] = useState('')
+    const [signer, setSigner] = useState(null)
+    const [isPending, setIsPending] = useState(false)
+    const [chain, setChain] = useState('BSC') // Default to BSC
 
-  // Redirect if no referral code
-  useEffect(() => {
-    const ref = searchParams.get('ref')
-    if (!ref) {
-      setGeneralError('Registration requires an invitation. Please use a referral link.')
-      setTimeout(() => {
-        navigate('/')
-      }, 3000)
-    }
-  }, [searchParams, navigate])
+    // Redirect if no referral code
+    useEffect(() => {
+        const ref = searchParams.get('ref')
+        if (!ref) {
+            setGeneralError('Registration requires an invitation. Please use a referral link.')
+            setTimeout(() => {
+                navigate('/')
+            }, 3000)
+        }
+    }, [searchParams, navigate])
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
-    }
-    if (generalError) {
-      setGeneralError('')
-    }
-  }
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (chain === 'TRON' && window.tronWeb && window.tronWeb.ready) {
+                setFormData(prev => ({ ...prev, walletAddress: window.tronWeb.defaultAddress.base58 }));
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, [chain]);
 
-  const handleConnectWallet = async () => {
-    try {
-      await open();
-      if (!walletProvider) {
-        throw new Error("Wallet provider not available.");
-      }
-      const provider = new ethers.BrowserProvider(walletProvider);
-      const signer = await provider.getSigner();
-      const walletAddress = await signer.getAddress();
-      setSigner(signer);
-      setFormData(prev => ({ ...prev, walletAddress }));
-    } catch (error) {
-      setGeneralError('Failed to connect wallet. Please try again.');
-    }
-  };
+    const handleConnectWallet = async () => {
+        try {
+            await open();
+            if (!walletProvider) {
+                throw new Error("Wallet provider not available.");
+            }
+            const provider = new ethers.BrowserProvider(walletProvider);
+            const signer = await provider.getSigner();
+            const walletAddress = await signer.getAddress();
+            setSigner(signer);
+            setFormData(prev => ({ ...prev, walletAddress }));
+        } catch (error) {
+            setGeneralError('Failed to connect wallet. Please try again.');
+        }
+    };
 
-  const validate = () => {
-    const newErrors = {}
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!signer && chain === 'BSC') {
+            setGeneralError('Please connect your wallet first.');
+            return;
+        }
+        if (!window.tronWeb && chain === 'TRON') {
+            setGeneralError('Please connect your Tron wallet (e.g., TronLink).');
+            return;
+        }
 
-    if (!formData.walletAddress) {
-      newErrors.walletAddress = 'Wallet connection is required'
-    }
+        setLoading(true);
+        setGeneralError('');
 
-    if (!formData.referralCode) {
-      newErrors.referralCode = 'Referral code is required'
-    }
+        try {
+            let tx;
+            let walletAddr = formData.walletAddress;
 
-    return newErrors
-  }
+            if (chain === 'BSC') {
+                const usdtContract = new ethers.Contract(USDT_ADDRESSES.BSC, USDT_ABI, signer);
+                const decimals = await usdtContract.decimals();
+                const amount = ethers.parseUnits(SIGNUP_FEE_USDT.toString(), decimals);
+                tx = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS, amount);
+            } else if (chain === 'TRON') {
+                if (!window.tronWeb || !window.tronWeb.ready) {
+                    throw new Error('TronLink is not connected or not ready.');
+                }
+                const tronWeb = window.tronWeb;
+                walletAddr = tronWeb.defaultAddress.base58;
+                const usdtContract = await tronWeb.contract().at(USDT_ADDRESSES.TRON);
+                const decimals = await usdtContract.decimals().call();
+                const amount = SIGNUP_FEE_USDT * (10 ** decimals);
+                const txHash = await usdtContract.transfer(PLATFORM_WALLET_ADDRESS, amount).send({
+                    feeLimit: 100000000
+                });
+                tx = { hash: txHash }; // Adapt to expected structure
+            }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+            // 2. Submit registration
+            await api.post('/auth/web3/submit-registration', {
+                walletAddress: walletAddr,
+                referralCode: formData.referralCode,
+                transactionHash: tx.hash,
+                chain: chain,
+            });
 
-    const newErrors = validate()
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
+            setIsPending(true); // Show pending message
 
-    setLoading(true)
-    setGeneralError('')
+            // 3. Poll for status
+            const interval = setInterval(async () => {
+                try {
+                    const statusResponse = await api.get(`/auth/web3/registration-status?walletAddress=${walletAddr}`);
+                    if (statusResponse.data.status === 'verified') {
+                        clearInterval(interval);
+                        const { token } = statusResponse.data;
+                        const loginResult = await web3Login({ token });
+                        if (loginResult.success) {
+                            navigate('/dashboard');
+                        } else {
+                            setGeneralError(loginResult.error);
+                            setIsPending(false);
+                            setLoading(false);
+                        }
+                    } else if (statusResponse.data.status === 'failed') {
+                        clearInterval(interval);
+                        setGeneralError('Payment verification failed. Please try again.');
+                        setIsPending(false);
+                        setLoading(false);
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                    setGeneralError('An error occurred while checking your registration status.');
+                    setIsPending(false);
+                    setLoading(false);
+                }
+            }, 5000);
 
-    try {
-      // 1. Sign message
-      const message = `Registering with referral code: ${formData.referralCode}`;
-      const signature = await signer.signMessage(message);
+        } catch (error) {
+            console.error(error);
+            const errorMessage = error.message || (error.response?.data?.error) || 'An error occurred during signup. Please try again.';
+            setGeneralError(errorMessage);
+            setLoading(false);
+        }
+    };
 
-      // 2. Register
-      const registerResult = await web3Register({
-        walletAddress: formData.walletAddress,
-        signature,
-        referralCode: formData.referralCode,
-      });
-
-
-      if (registerResult.success) {
-        setIsPending(true)
-      } else {
-        setGeneralError(registerResult.error);
-        setLoading(false);
-      }
-    } catch (error) {
-      setGeneralError(error.response?.data?.error || 'An error occurred during signup. Please try again.');
-      setLoading(false);
-    }
-  }
 
   // Show pending approval message
   if (isPending) {
@@ -257,8 +293,9 @@ const RegisterPage = () => {
                 variant="secondary"
                 onClick={handleConnectWallet}
                 icon={<Wallet className="w-5 h-5" />}
+                disabled={chain === 'TRON'}
               >
-                Connect Wallet
+                {chain === 'TRON' ? 'Use TronLink Wallet' : 'Connect Wallet'}
               </Button>
             )}
 
@@ -267,20 +304,23 @@ const RegisterPage = () => {
               type="text"
               name="referralCode"
               value={formData.referralCode}
-              onChange={handleChange}
-              error={errors.referralCode}
               required
               disabled
             />
+
+            <div className="flex gap-4">
+                <Button type="button" onClick={() => setChain('TRON')} variant={chain === 'TRON' ? 'primary' : 'secondary'} fullWidth>TRON</Button>
+                <Button type="button" onClick={() => setChain('BSC')} variant={chain === 'BSC' ? 'primary' : 'secondary'} fullWidth>BSC</Button>
+            </div>
 
             <Button
               type="submit"
               fullWidth
               size="lg"
               loading={loading}
-              disabled={loading}
+              disabled={loading || !signer}
             >
-              Create Account
+              Create Account and Pay Fee
             </Button>
           </form>
 
