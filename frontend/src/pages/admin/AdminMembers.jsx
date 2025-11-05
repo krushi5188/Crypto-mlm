@@ -97,11 +97,12 @@ const AdminMembers = () => {
       member.email.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Status filter
+    const memberStatus = member.approvalStatus || 'pending';
     const matchesStatus =
       statusFilter === 'all' ? true :
-      statusFilter === 'pending' ? member.approvalStatus === 'pending' :
-      statusFilter === 'active' ? member.approvalStatus === 'approved' :
-      statusFilter === 'suspended' ? member.approvalStatus === 'rejected' :
+      statusFilter === 'pending' ? memberStatus === 'pending' :
+      statusFilter === 'active' ? memberStatus === 'approved' :
+      statusFilter === 'suspended' ? memberStatus === 'rejected' :
       statusFilter === 'flagged' ? member.flagged === true :
       true;
 
@@ -225,13 +226,13 @@ const AdminMembers = () => {
                 >
                   {/* Member Avatar */}
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    member.approvalStatus === 'approved' ? 'bg-green-500' :
-                    member.approvalStatus === 'rejected' ? 'bg-red-500' :
+                    (member.approvalStatus || 'pending') === 'approved' ? 'bg-green-500' :
+                    (member.approvalStatus || 'pending') === 'rejected' ? 'bg-red-500' :
                     'bg-gray-500'
                   } bg-opacity-20`}>
                     <Users className={`w-6 h-6 ${
-                      member.approvalStatus === 'approved' ? 'text-green-400' :
-                      member.approvalStatus === 'rejected' ? 'text-red-400' :
+                      (member.approvalStatus || 'pending') === 'approved' ? 'text-green-400' :
+                      (member.approvalStatus || 'pending') === 'rejected' ? 'text-red-400' :
                       'text-gray-400'
                     }`} />
                   </div>
@@ -353,7 +354,7 @@ const AdminMembers = () => {
                           ? 'bg-yellow-500 bg-opacity-20 text-yellow-400'
                           : 'bg-red-500 bg-opacity-20 text-red-400'
                       }`}>
-                        {selectedMember.approvalStatus ? selectedMember.approvalStatus.charAt(0).toUpperCase() + selectedMember.approvalStatus.slice(1) : 'Unknown'}
+                        {(selectedMember.approvalStatus || 'pending').charAt(0).toUpperCase() + (selectedMember.approvalStatus || 'pending').slice(1)}
                       </span>
                       {selectedMember.flagged === true && (
                         <span className="px-3 py-1 rounded-lg text-sm font-medium bg-yellow-500 bg-opacity-20 text-yellow-400">
