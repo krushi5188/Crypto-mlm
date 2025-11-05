@@ -13,7 +13,7 @@ const { validate } = require('../utils/validation');
 const { registerLimiter, loginLimiter } = require('../middleware/rateLimiter');
 const { checkSimulationActive } = require('../middleware/simulationStatus');
 const { trackLogin, trackFailedLogin } = require('../middleware/fraudTracking');
-const authenticate = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * POST /api/v1/auth/register

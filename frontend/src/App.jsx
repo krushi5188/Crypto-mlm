@@ -157,11 +157,15 @@ function AppRoutes() {
   )
 }
 
+import { Web3ModalProvider } from './config/web3modal'
+
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <Web3ModalProvider>
+          <AppRoutes />
+        </Web3ModalProvider>
       </AuthProvider>
     </Router>
   )

@@ -29,55 +29,38 @@ router.get('/challenge', async (req, res) => {
     }
 });
 
-// POST /api/v1/auth/web3/verify
-router.post('/verify', async (req, res) => {
+// POST /api/v1/auth/web3/login
+router.post('/login', async (req, res) => {
     try {
-        const { walletAddress, signature, referralCode, transactionHash, chain } = req.body;
+        const { walletAddress, signature } = req.body;
         const lowerCaseAddress = walletAddress.toLowerCase();
 
         const challengeResult = await pool.query('SELECT challenge FROM web3_challenges WHERE wallet_address = $1', [lowerCaseAddress]);
         const challenge = challengeResult.rows[0]?.challenge;
 
         if (!challenge) {
-            return res.status(400).json({ error: 'No challenge found or challenge expired.' });
+            return res.status(400).json({ error: 'No challenge found for this address' });
         }
 
         const recoveredAddress = ethers.verifyMessage(challenge, signature);
 
         if (recoveredAddress.toLowerCase() !== lowerCaseAddress) {
-            return res.status(401).json({ error: 'Invalid signature.' });
+            return res.status(401).json({ error: 'Invalid signature' });
         }
 
-        // Clean up the challenge
         await pool.query('DELETE FROM web3_challenges WHERE wallet_address = $1', [lowerCaseAddress]);
 
         let user = await User.findByWalletAddress(lowerCaseAddress);
 
-        // If user exists, it's a login
-        if (user) {
-            const token = generateToken(user);
-            return res.json({ token, user, message: 'Login successful' });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found. Please register first.' });
         }
 
-        // If user does not exist, it's a registration
-        if (!referralCode || !transactionHash || !chain) {
-            return res.status(400).json({ error: 'Missing required fields for registration.' });
-        }
-
-        // Save to pending_registrations to be verified by the background service
-        await pool.query(
-            'INSERT INTO pending_registrations (wallet_address, referral_code, transaction_hash, chain) VALUES ($1, $2, $3, $4)',
-            [lowerCaseAddress, referralCode, transactionHash, chain]
-        );
-
-        res.status(202).json({
-            success: true,
-            message: 'Registration submitted. Please check back in a few minutes for verification.'
-        });
+        const token = generateToken(user);
+        res.json({ token, user });
 
     } catch (error) {
-        console.error('Web3 Verify Error:', error);
-        res.status(500).json({ error: 'Verification failed' });
+        res.status(500).json({ error: 'Login failed' });
     }
 });
 

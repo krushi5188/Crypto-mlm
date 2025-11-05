@@ -6,12 +6,15 @@ import { useAuth } from '../context/AuthContext'
 import Button from '../components/base/Button'
 import Input from '../components/base/Input'
 import { ethers } from 'ethers'
-import { authAPI } from '../services/api'
+import api from '../services/api'
+import { useAppKit, useAppKitProvider } from '@reown/appkit/react'
 
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, web3Login } = useAuth()
+  const { open } = useAppKit()
+  const { walletProvider } = useAppKitProvider("eip155");
 
   const [formData, setFormData] = useState({
     email: '',
@@ -90,44 +93,39 @@ const LoginPage = () => {
   }
 
   const handleWeb3Login = async () => {
-    if (typeof window.ethereum === 'undefined') {
-        setGeneralError('MetaMask is not installed. Please install it to continue.');
-        return;
-    }
     try {
-        setLoading(true);
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const walletAddress = await signer.getAddress();
+      setLoading(true);
+      await open();
+      if (!walletProvider) {
+        throw new Error("Wallet provider not available.");
+      }
+      const provider = new ethers.BrowserProvider(walletProvider);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
 
-        // 1. Get challenge
-        const challengeResponse = await authAPI.getWeb3Challenge(walletAddress);
-        const { challenge } = challengeResponse.data;
+      // 1. Get challenge
+      const challengeResponse = await api.get(`/auth/web3/challenge?walletAddress=${walletAddress}`);
+      const { challenge } = challengeResponse.data;
 
-        // 2. Sign challenge
-        const signature = await signer.signMessage(challenge);
+      // 2. Sign challenge
+      const signature = await signer.signMessage(challenge);
 
-        // 3. Verify and Login
-        const verifyResponse = await authAPI.verifyWeb3({ walletAddress, signature });
+      // 3. Login
+      const loginResult = await web3Login({ walletAddress, signature });
 
-        if (verifyResponse.data.token) {
-            const loginResult = await web3Login({ token: verifyResponse.data.token });
-            if (loginResult.success) {
-                if (loginResult.user.role === 'instructor') {
-                    navigate('/admin/analytics');
-                } else {
-                    navigate('/dashboard');
-                }
-            } else {
-                setGeneralError(loginResult.error);
-            }
+      if (loginResult.success) {
+        if (loginResult.user.role === 'instructor') {
+          navigate('/admin/analytics');
         } else {
-             setGeneralError('Login failed. Please try again.');
+          navigate('/dashboard');
         }
-    } catch (error) {
-        setGeneralError('Wallet login failed. Please try again.');
-    } finally {
+      } else {
+        setGeneralError(loginResult.error);
         setLoading(false);
+      }
+    } catch (error) {
+      setGeneralError('Wallet login failed. Please try again.');
+      setLoading(false);
     }
   };
 
