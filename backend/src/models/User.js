@@ -147,7 +147,7 @@ class User {
   static async getAllStudents(page = 1, limit = 50, sortBy = 'created_at', sortOrder = 'DESC', search = '') {
     const offset = (page - 1) * limit;
     let query = `SELECT u.id, u.email, u.username, u.balance, u.total_earned, u.direct_recruits,
-                        u.network_size, u.referred_by_id, u.created_at, u.last_login,
+                        u.network_size, u.referred_by_id, u.created_at, u.last_login, u.approval_status,
                         r.username as referred_by_username
                  FROM users u
                  LEFT JOIN users r ON u.referred_by_id = r.id
