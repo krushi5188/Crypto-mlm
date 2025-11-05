@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { requireInstructor } = require('../middleware/roleAuth');
 const Withdrawal = require('../models/Withdrawal');
 const User = require('../models/User');
@@ -8,7 +8,7 @@ const User = require('../models/User');
 // @route   POST /api/withdrawals
 // @desc    Request a new withdrawal
 // @access  Private
-router.post('/', auth, async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
     const { amount, wallet_address, chain } = req.body;
     const userId = req.user.id;
 
@@ -42,7 +42,7 @@ router.post('/', auth, async (req, res) => {
 // @route   GET /api/withdrawals
 // @desc    Get user's withdrawal history
 // @access  Private
-router.get('/', auth, async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
     try {
         const withdrawals = await Withdrawal.getUserWithdrawals(req.user.id);
         res.json(withdrawals);
