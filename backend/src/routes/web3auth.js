@@ -25,6 +25,7 @@ router.get('/challenge', async (req, res) => {
 
         res.json({ challenge });
     } catch (error) {
+        console.error('Challenge generation failed:', error);
         res.status(500).json({ error: 'Failed to generate challenge' });
     }
 });
