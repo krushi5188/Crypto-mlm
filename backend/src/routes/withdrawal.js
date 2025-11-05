@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const instructorAuth = require('../middleware/instructorAuth');
+const { requireInstructor } = require('../middleware/roleAuth');
 const Withdrawal = require('../models/Withdrawal');
 const User = require('../models/User');
 
@@ -55,7 +55,7 @@ router.get('/', auth, async (req, res) => {
 // @route   GET /api/withdrawals/admin
 // @desc    Get all withdrawals (admin)
 // @access  Instructor
-router.get('/admin', instructorAuth, async (req, res) => {
+router.get('/admin', requireInstructor, async (req, res) => {
     try {
         const withdrawals = await Withdrawal.getAllWithdrawals(req.query);
         res.json(withdrawals);
@@ -68,7 +68,7 @@ router.get('/admin', instructorAuth, async (req, res) => {
 // @route   PUT /api/withdrawals/admin/:id
 // @desc    Update a withdrawal status (admin)
 // @access  Instructor
-router.put('/admin/:id', instructorAuth, async (req, res) => {
+router.put('/admin/:id', requireInstructor, async (req, res) => {
     const { status, transaction_hash, rejected_reason } = req.body;
     const withdrawalId = req.params.id;
 
