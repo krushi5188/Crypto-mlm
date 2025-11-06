@@ -45,6 +45,13 @@ const schemas = {
     note: Joi.string().max(500).optional()
   }),
 
+  // Deduct coins
+  deductCoins: Joi.object({
+    userId: Joi.number().integer().positive().required(),
+    amount: Joi.number().positive().precision(2).required(),
+    note: Joi.string().max(500).optional()
+  }),
+
   // Reset simulation
   reset: Joi.object({
     type: Joi.string().valid('full', 'soft').required(),
