@@ -326,6 +326,32 @@ router.post('/participants/:id/approve', async (req, res) => {
         participant.username,
         participant.referred_by_id
       );
+
+      // Check for and award promotion bonuses
+      const referrer = await User.findById(participant.referred_by_id);
+      const promotions = await pool.query(
+        `SELECT p.* FROM promotions p
+         JOIN user_promotions up ON p.id = up.promotion_id
+         WHERE up.user_id = $1 AND p.is_active = TRUE AND p.type = 'referral_milestone'`,
+        [referrer.id]
+      );
+
+      for (const promo of promotions.rows) {
+        if (referrer.direct_recruits > 0 && referrer.direct_recruits % promo.rules.referrals_required === 0) {
+          const bonusAmount = promo.reward_amount;
+          const balanceAfterBonus = parseFloat(referrer.balance) + parseFloat(bonusAmount);
+
+          await User.updateBalance(referrer.id, bonusAmount);
+
+          await Transaction.create({
+            user_id: referrer.id,
+            amount: bonusAmount,
+            type: 'bonus',
+            description: `Promotion bonus: ${promo.name}`,
+            balance_after: balanceAfterBonus,
+          });
+        }
+      }
     }
 
     // Log admin action
@@ -796,6 +822,32 @@ router.post('/bulk-approve', async (req, res) => {
               participant.username,
               participant.referred_by_id
             );
+
+            // Check for and award promotion bonuses
+            const referrer = await User.findById(participant.referred_by_id);
+            const promotions = await pool.query(
+              `SELECT p.* FROM promotions p
+               JOIN user_promotions up ON p.id = up.promotion_id
+               WHERE up.user_id = $1 AND p.is_active = TRUE AND p.type = 'referral_milestone'`,
+              [referrer.id]
+            );
+
+            for (const promo of promotions.rows) {
+              if (referrer.direct_recruits > 0 && referrer.direct_recruits % promo.rules.referrals_required === 0) {
+                const bonusAmount = promo.reward_amount;
+                const balanceAfterBonus = parseFloat(referrer.balance) + parseFloat(bonusAmount);
+
+                await User.updateBalance(referrer.id, bonusAmount);
+
+                await Transaction.create({
+                  user_id: referrer.id,
+                  amount: bonusAmount,
+                  type: 'bonus',
+                  description: `Promotion bonus: ${promo.name}`,
+                  balance_after: balanceAfterBonus,
+                });
+              }
+            }
           }
 
           approvedCount++;

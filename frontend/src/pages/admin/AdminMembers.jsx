@@ -17,6 +17,10 @@ const AdminMembers = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedMember, setSelectedMember] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [showDripFunds, setShowDripFunds] = useState(false)
+  const [dripAmount, setDripAmount] = useState('')
+  const [dripNote, setDripNote] = useState('')
+  const [dripError, setDripError] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
   const [addMemberData, setAddMemberData] = useState({
     email: '',
@@ -414,6 +418,17 @@ const AdminMembers = () => {
                     </div>
                   </div>
                 </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    onClick={() => {
+                      setShowDetails(false);
+                      setShowDripFunds(true);
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Drip Funds
+                  </Button>
+                </div>
               </Card>
             </motion.div>
           </div>
@@ -467,6 +482,80 @@ const AdminMembers = () => {
                   />
                   {addMemberError && <p className="text-red-500 text-sm">{addMemberError}</p>}
                   <Button type="submit" fullWidth>Create Member</Button>
+                </form>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Drip Funds Modal */}
+        {showDripFunds && selectedMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Drip Funds to {selectedMember.username}
+                    </h2>
+                    <p className="text-gray-400">Manually add funds to a member's balance.</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setShowDripFunds(false);
+                      setDripAmount('');
+                      setDripNote('');
+                      setDripError('');
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setDripError('');
+                    try {
+                      await adminAPI.injectCoins({
+                        userId: selectedMember.id,
+                        amount: parseFloat(dripAmount),
+                        note: dripNote,
+                      });
+                      setShowDripFunds(false);
+                      setDripAmount('');
+                      setDripNote('');
+                      fetchMembers(); // Refresh member list to show updated balance
+                    } catch (error) {
+                      setDripError(error.response?.data?.error || 'Failed to drip funds');
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <Input
+                    label="Amount (USDT)"
+                    type="number"
+                    value={dripAmount}
+                    onChange={(e) => setDripAmount(e.target.value)}
+                    required
+                    placeholder="e.g., 100"
+                  />
+                  <Input
+                    label="Note (Optional)"
+                    type="text"
+                    value={dripNote}
+                    onChange={(e) => setDripNote(e.target.value)}
+                    placeholder="e.g., Manual bonus"
+                  />
+                  {dripError && <p className="text-red-500 text-sm">{dripError}</p>}
+                  <Button type="submit" fullWidth>
+                    Confirm Drip
+                  </Button>
                 </form>
               </Card>
             </motion.div>

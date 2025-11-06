@@ -9,6 +9,7 @@ import {
   Users, UserPlus, TrendingUp, Copy, Check,
   ArrowRight, Clock, CheckCircle, Loader
 } from 'lucide-react'
+import PromotionsBanner from '../components/promotions/PromotionsBanner'
 
 const MemberDashboard = () => {
   const navigate = useNavigate()
@@ -76,6 +77,8 @@ const MemberDashboard = () => {
             Welcome back, {user.username}
           </p>
         </div>
+
+        <PromotionsBanner />
 
         {/* Balance Hero */}
         <motion.div
