@@ -8,7 +8,7 @@ const User = require('../models/User');
 // @route   POST /api/withdrawals
 // @desc    Request a new withdrawal
 // @access  Private
-router.post('/', authenticate, async (req, res) => {
+router.post('', authenticate, async (req, res) => {
     const { amount, wallet_address, chain } = req.body;
     const userId = req.user.id;
 
@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req, res) => {
 // @route   GET /api/withdrawals
 // @desc    Get user's withdrawal history
 // @access  Private
-router.get('/', authenticate, async (req, res) => {
+router.get('', authenticate, async (req, res) => {
     try {
         const withdrawals = await Withdrawal.getUserWithdrawals(req.user.id);
         res.json(withdrawals);
