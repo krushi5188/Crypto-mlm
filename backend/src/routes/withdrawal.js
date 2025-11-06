@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { requireInstructor } = require('../middleware/roleAuth');
+const { requireInstructor, requireMember } = require('../middleware/roleAuth');
 const Withdrawal = require('../models/Withdrawal');
 const User = require('../models/User');
 
 // @route   POST /api/withdrawals
 // @desc    Request a new withdrawal
 // @access  Private
-router.post('/', authenticate, async (req, res) => {
+router.post('', authenticate, requireMember, async (req, res) => {
     const { amount, wallet_address, chain } = req.body;
     const userId = req.user.id;
 
@@ -42,7 +42,7 @@ router.post('/', authenticate, async (req, res) => {
 // @route   GET /api/withdrawals
 // @desc    Get user's withdrawal history
 // @access  Private
-router.get('/', authenticate, async (req, res) => {
+router.get('', authenticate, requireMember, async (req, res) => {
     try {
         const withdrawals = await Withdrawal.getUserWithdrawals(req.user.id);
         res.json(withdrawals);
@@ -55,7 +55,7 @@ router.get('/', authenticate, async (req, res) => {
 // @route   GET /api/withdrawals/admin
 // @desc    Get all withdrawals (admin)
 // @access  Instructor
-router.get('/admin', requireInstructor, async (req, res) => {
+router.get('/admin', authenticate, requireInstructor, async (req, res) => {
     try {
         const withdrawals = await Withdrawal.getAllWithdrawals(req.query);
         res.json(withdrawals);
@@ -68,7 +68,7 @@ router.get('/admin', requireInstructor, async (req, res) => {
 // @route   PUT /api/withdrawals/admin/:id
 // @desc    Update a withdrawal status (admin)
 // @access  Instructor
-router.put('/admin/:id', requireInstructor, async (req, res) => {
+router.put('/admin/:id', authenticate, requireInstructor, async (req, res) => {
     const { status, transaction_hash, rejected_reason } = req.body;
     const withdrawalId = req.params.id;
 

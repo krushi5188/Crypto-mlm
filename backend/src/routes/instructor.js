@@ -635,6 +635,93 @@ router.post('/inject-coins', validate('injectCoins'), async (req, res) => {
 });
 
 /**
+ * POST /api/v1/instructor/deduct-coins
+ * Manually deduct coins from a participant account
+ */
+router.post('/deduct-coins', validate('deductCoins'), async (req, res) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const { userId, amount, note } = req.validatedBody;
+
+    await connection.beginTransaction();
+
+    // Verify user exists and is a member
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'member') {
+      await connection.rollback();
+      return res.status(404).json({
+        error: 'Participant not found',
+        code: 'NOT_FOUND'
+      });
+    }
+
+    // Check for sufficient balance
+    if (parseFloat(user.balance) < amount) {
+      await connection.rollback();
+      return res.status(400).json({
+        error: 'Insufficient balance for deduction',
+        code: 'INSUFFICIENT_BALANCE'
+      });
+    }
+
+    // Update balance
+    await User.updateBalance(userId, -amount, connection);
+
+    // Get new balance
+    const [balanceResult] = await connection.query(
+      'SELECT balance FROM users WHERE id = ?',
+      [userId]
+    );
+    const balanceAfter = balanceResult[0].balance;
+
+    // Create transaction record
+    const transactionId = await Transaction.create({
+      user_id: userId,
+      amount: -amount,
+      type: 'deduction',
+      description: note || `Manual coin deduction by instructor`,
+      balance_after: balanceAfter
+    }, connection);
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'deduct_coins',
+      target_user_id: userId,
+      details: { amount, note, transaction_id: transactionId },
+      ip_address: req.ip
+    });
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: {
+        message: `${amount} USDT deducted from ${user.username}`,
+        transaction: {
+          id: transactionId,
+          userId,
+          amount: -amount,
+          type: 'deduction',
+          balanceAfter: parseFloat(balanceAfter),
+          createdAt: new Date()
+        }
+      }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Deduct coins error:', error);
+    res.status(500).json({
+      error: 'Failed to deduct coins',
+      code: 'DATABASE_ERROR'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
  * POST /api/v1/instructor/pause
  * Pause the system
  */

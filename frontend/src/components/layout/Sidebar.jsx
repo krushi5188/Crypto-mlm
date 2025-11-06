@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard, Users, TrendingUp, Wallet, User, Settings,
   LogOut, Menu, X, BarChart3, UserCheck, Coins, AlertTriangle,
-  FileText, Database, Shield
+  FileText, Database, Shield, Gift
 } from 'lucide-react'
 
 const Sidebar = () => {

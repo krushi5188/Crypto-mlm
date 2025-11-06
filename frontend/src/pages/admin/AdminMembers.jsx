@@ -21,6 +21,10 @@ const AdminMembers = () => {
   const [dripAmount, setDripAmount] = useState('')
   const [dripNote, setDripNote] = useState('')
   const [dripError, setDripError] = useState('')
+  const [showDeductFunds, setShowDeductFunds] = useState(false)
+  const [deductAmount, setDeductAmount] = useState('')
+  const [deductNote, setDeductNote] = useState('')
+  const [deductError, setDeductError] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
   const [addMemberData, setAddMemberData] = useState({
     email: '',
@@ -418,7 +422,17 @@ const AdminMembers = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex justify-end gap-4">
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setShowDetails(false);
+                      setShowDeductFunds(true);
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Deduct Funds
+                  </Button>
                   <Button
                     onClick={() => {
                       setShowDetails(false);
@@ -429,6 +443,80 @@ const AdminMembers = () => {
                     Drip Funds
                   </Button>
                 </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Deduct Funds Modal */}
+        {showDeductFunds && selectedMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Deduct Funds from {selectedMember.username}
+                    </h2>
+                    <p className="text-gray-400">Manually deduct funds from a member's balance.</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setShowDeductFunds(false);
+                      setDeductAmount('');
+                      setDeductNote('');
+                      setDeductError('');
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setDeductError('');
+                    try {
+                      await adminAPI.deductCoins({
+                        userId: selectedMember.id,
+                        amount: parseFloat(deductAmount),
+                        note: deductNote,
+                      });
+                      setShowDeductFunds(false);
+                      setDeductAmount('');
+                      setDeductNote('');
+                      fetchMembers(); // Refresh member list to show updated balance
+                    } catch (error) {
+                      setDeductError(error.response?.data?.error || 'Failed to deduct funds');
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <Input
+                    label="Amount (USDT)"
+                    type="number"
+                    value={deductAmount}
+                    onChange={(e) => setDeductAmount(e.target.value)}
+                    required
+                    placeholder="e.g., 50"
+                  />
+                  <Input
+                    label="Note (Optional)"
+                    type="text"
+                    value={deductNote}
+                    onChange={(e) => setDeductNote(e.target.value)}
+                    placeholder="e.g., Deduction for policy violation"
+                  />
+                  {deductError && <p className="text-red-500 text-sm">{deductError}</p>}
+                  <Button type="submit" fullWidth variant="danger">
+                    Confirm Deduction
+                  </Button>
+                </form>
               </Card>
             </motion.div>
           </div>
