@@ -194,6 +194,7 @@ export const adminAPI = {
   getWithdrawals: (params) => api.get('/withdrawals/admin', { params }),
   updateWithdrawalStatus: (id, data) => api.put(`/withdrawals/admin/${id}`, data),
   injectCoins: (data) => api.post('/admin/inject-coins', data),
+  deductCoins: (data) => api.post('/admin/deduct-coins', data),
   pause: () => api.post('/admin/pause'),
   resume: () => api.post('/admin/resume'),
   reset: (data) => api.post('/admin/reset', data),
