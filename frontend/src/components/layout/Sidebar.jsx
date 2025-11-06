@@ -33,6 +33,7 @@ const Sidebar = () => {
   const adminNav = [
     { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { path: '/admin/members', label: 'Members', icon: UserCheck },
+    { path: '/admin/promotions', label: 'Promotions', icon: Gift },
     { path: '/admin/deposits', label: 'Deposits', icon: Database },
     { path: '/admin/withdrawals', label: 'Withdrawals', icon: Wallet },
     { path: '/admin/fraud', label: 'Fraud Detection', icon: AlertTriangle },

@@ -174,7 +174,11 @@ export const memberAPI = {
   // Settings (for SettingsPage)
   getSettings: () => api.get('/member/preferences'),
   updateSettings: (data) => api.put('/member/preferences', data),
-  updatePassword: (data) => api.put('/member/profile', data)
+  updatePassword: (data) => api.put('/member/profile', data),
+
+  // Promotions
+  getPromotions: () => api.get('/member/promotions'),
+  signupForPromotion: (id) => api.post(`/member/promotions/${id}/signup`),
 };
 
 // Admin API (routes point to /api/v1/admin)
@@ -258,7 +262,13 @@ export const adminAPI = {
   updateExperimentStatus: (id, status) => api.put(`/admin/ab-experiments/${id}/status`, { status }),
   setExperimentWinner: (id, winnerVariant) => api.post(`/admin/ab-experiments/${id}/winner`, { winnerVariant }),
   deleteExperiment: (id) => api.delete(`/admin/ab-experiments/${id}`),
-  trackExperimentEvent: (id, data) => api.post(`/admin/ab-experiments/${id}/track`, data)
+  trackExperimentEvent: (id, data) => api.post(`/admin/ab-experiments/${id}/track`, data),
+
+  // Promotions
+  getPromotions: () => api.get('/promotions'),
+  createPromotion: (data) => api.post('/promotions', data),
+  updatePromotion: (id, data) => api.put(`/promotions/${id}`, data),
+  deletePromotion: (id) => api.delete(`/promotions/${id}`),
 };
 
 // Keep instructorAPI as alias for backwards compatibility

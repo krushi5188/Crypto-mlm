@@ -77,6 +77,54 @@ router.get('/dashboard', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/member/promotions
+ * Get all active promotions that the user has not signed up for yet.
+ */
+router.get('/promotions', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT p.* FROM promotions p
+       LEFT JOIN user_promotions up ON p.id = up.promotion_id AND up.user_id = $1
+       WHERE p.is_active = TRUE AND up.id IS NULL`,
+      [userId]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error fetching active promotions:', error);
+    res.status(500).json({ error: 'Failed to fetch promotions' });
+  }
+});
+
+/**
+ * POST /api/v1/member/promotions/:id/signup
+ * Sign up the current user for a promotion.
+ */
+router.post('/promotions/:id/signup', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const promotionId = parseInt(req.params.id);
+
+    // Check if the promotion is active
+    const promotionResult = await pool.query('SELECT * FROM promotions WHERE id = $1 AND is_active = TRUE', [promotionId]);
+    if (promotionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Promotion not found or is not active' });
+    }
+
+    // Sign the user up
+    const result = await pool.query(
+      'INSERT INTO user_promotions (user_id, promotion_id) VALUES ($1, $2) ON CONFLICT (user_id, promotion_id) DO NOTHING RETURNING *',
+      [userId, promotionId]
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error signing up for promotion:', error);
+    res.status(500).json({ error: 'Failed to sign up for promotion' });
+  }
+});
+
+/**
  * GET /api/v1/member/network
  * Get downline network visualization data
  */
