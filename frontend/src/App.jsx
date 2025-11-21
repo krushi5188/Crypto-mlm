@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage'
 import MemberDashboard from './pages/MemberDashboard'
 import NetworkPage from './pages/NetworkPage'
 import EarningsPage from './pages/EarningsPage'
+import LeaderboardPage from './pages/LeaderboardPage'
 import WithdrawalsPage from './pages/WithdrawalsPage'
 import WalletsPage from './pages/WalletsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -77,6 +78,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <EarningsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaderboard"
+        element={
+          <ProtectedRoute>
+            <LeaderboardPage />
           </ProtectedRoute>
         }
       />

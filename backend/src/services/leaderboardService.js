@@ -44,7 +44,7 @@ class LeaderboardService {
 
       const result = await pool.query(query, [limit]);
 
-      return result.rows.map((row, index) => ({
+      const realData = result.rows.map((row, index) => ({
         rank: index + 1,
         userId: row.id,
         username: row.username,
@@ -59,6 +59,8 @@ class LeaderboardService {
         networkSize: row.network_size,
         joinedAt: row.joined_at
       }));
+
+      return this.injectGhostData(realData, 'earnings', limit);
     } catch (error) {
       console.error('Get top earners error:', error);
       throw error;
@@ -121,7 +123,7 @@ class LeaderboardService {
 
       const result = await pool.query(query, [limit]);
 
-      return result.rows.map((row, index) => ({
+      const realData = result.rows.map((row, index) => ({
         rank: index + 1,
         userId: row.id,
         username: row.username,
@@ -136,10 +138,84 @@ class LeaderboardService {
         totalEarned: parseFloat(row.total_earned),
         joinedAt: row.joined_at
       }));
+
+      return this.injectGhostData(realData, 'recruits', limit);
     } catch (error) {
       console.error('Get top recruiters error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Inject ghost (bot) data to populate empty leaderboards
+   */
+  static injectGhostData(realData, type, limit) {
+    // Ensure ghost members are always present
+    // We want a mix of high performers (50-70 invites) and some regular ones
+
+    const botNames = [
+      'CryptoKing99', 'SatoshiDream', 'MoonWalker', 'AlphaWolf', 'HodlGang',
+      'BitcoinBaron', 'EthEmpire', 'ChainMaster', 'BlockBuilder', 'DefiDynasty',
+      'TokenTitan', 'YieldFarmer', 'MintMaster', 'HashHero', 'NodeNinja',
+      'LedgerLegend', 'WalletWhale', 'CoinCaptain', 'AssetAce', 'ValueViking',
+      'BullRun2025', 'WhaleWatcher', 'SmartMoney', 'DiamondHands', 'HODLer'
+    ];
+
+    const ghostData = [];
+    // Generate ~25 ghosts to populate the leaderboard
+    // Some are top tier (Whales), some are mid tier
+
+    for (let i = 0; i < 25; i++) {
+      const name = botNames[i % botNames.length] + (i > botNames.length ? i : '');
+      let earnings, recruits;
+
+      // Top 5 ghosts are "Whales" (50-70 invites) as requested
+      if (i < 5) {
+        recruits = Math.floor(Math.random() * 21) + 50; // 50 to 70
+        earnings = (recruits * 10) + (Math.random() * 5000); // Realistic earnings based on recruits
+      } else if (i < 15) {
+        // Mid tier
+        recruits = Math.floor(Math.random() * 30) + 10; // 10 to 40
+        earnings = (recruits * 10) + (Math.random() * 1000);
+      } else {
+        // Low tier / inactive
+        recruits = Math.floor(Math.random() * 10); // 0 to 9
+        earnings = (recruits * 10) + (Math.random() * 100);
+      }
+
+      ghostData.push({
+        rank: 0,
+        userId: -1 * (i + 1),
+        username: name,
+        earnings: parseFloat(earnings.toFixed(2)),
+        recruitCount: recruits,
+        currentRank: {
+          id: 99,
+          name: recruits >= 50 ? 'Diamond' : recruits >= 25 ? 'Gold' : recruits >= 10 ? 'Silver' : 'Starter',
+          icon: recruits >= 50 ? '💎' : recruits >= 25 ? '🥇' : recruits >= 10 ? '🥈' : '🌱',
+          color: recruits >= 50 ? '#b9f2ff' : '#ffd700'
+        },
+        directRecruits: recruits,
+        networkSize: recruits * (Math.floor(Math.random() * 5) + 1),
+        joinedAt: new Date(Date.now() - Math.floor(Math.random() * 60 * 24 * 60 * 60 * 1000))
+      });
+    }
+
+    // Merge Real Data with Ghost Data
+    // Real users compete with ghosts. If a real user has 60 recruits, they will rank among the Whales.
+    const combined = [...realData, ...ghostData];
+
+    if (type === 'earnings') {
+      combined.sort((a, b) => b.earnings - a.earnings);
+    } else {
+      combined.sort((a, b) => (b.recruitCount || b.directRecruits) - (a.recruitCount || a.directRecruits));
+    }
+
+    // Re-assign ranks and slice to limit
+    return combined.slice(0, limit).map((item, index) => ({
+      ...item,
+      rank: index + 1
+    }));
   }
 
   /**

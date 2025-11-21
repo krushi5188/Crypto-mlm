@@ -336,7 +336,7 @@ class CommissionService {
 
       // Get referrer info
       const referrerResult = await pool.query(
-        'SELECT id, username, custom_payment_depth FROM users WHERE id = $1',
+        'SELECT id, username, commission_tier FROM users WHERE id = $1',
         [referrerId]
       );
 
@@ -350,7 +350,7 @@ class CommissionService {
         id: referrerId,
         username: referrer.username,
         level: currentLevel,
-        custom_payment_depth: referrer.custom_payment_depth
+        commission_tier: referrer.commission_tier
       });
 
       currentUserId = referrerId;
