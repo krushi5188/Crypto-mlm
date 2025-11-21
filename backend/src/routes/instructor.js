@@ -76,6 +76,49 @@ router.get('/analytics', async (req, res) => {
 });
 
 /**
+ * POST /api/v1/instructor/participants/:id/move
+ * Manually move a participant to a new referrer (Level Wise Promotion)
+ */
+router.post('/participants/:id/move', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+    const { newReferrerId } = req.body;
+
+    if (!newReferrerId) {
+      return res.status(400).json({
+        error: 'New Referrer ID is required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const ReferralService = require('../services/referralService');
+    await ReferralService.moveUser(participantId, newReferrerId);
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'manual_move',
+      target_user_id: participantId,
+      details: { new_referrer_id: newReferrerId },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Participant moved successfully'
+      }
+    });
+  } catch (error) {
+    console.error('Manual move error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to move participant',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
  * POST /api/v1/instructor/add-member
  * Instructor directly adds a new member (auto-approved, no approval needed)
  */
@@ -282,6 +325,50 @@ router.get('/participants/:id', async (req, res) => {
     console.error('Participant detail error:', error);
     res.status(500).json({
       error: 'Failed to load participant details',
+      code: 'DATABASE_ERROR'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/instructor/participants/:id/promote
+ * Manually promote a participant to a specific rank
+ */
+router.post('/participants/:id/promote', async (req, res) => {
+  try {
+    const participantId = parseInt(req.params.id);
+    const { rankId } = req.body;
+
+    if (!rankId) {
+      return res.status(400).json({
+        error: 'Rank ID is required',
+        code: 'VALIDATION_ERROR'
+      });
+    }
+
+    const RankService = require('../services/rankService');
+    const newRank = await RankService.adminPromoteUser(participantId, rankId);
+
+    // Log admin action
+    await AdminAction.log({
+      admin_id: req.user.id,
+      action_type: 'manual_promote',
+      target_user_id: participantId,
+      details: { rank_id: rankId, rank_name: newRank.rank_name },
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Participant promoted to ${newRank.rank_name}`,
+        rank: newRank
+      }
+    });
+  } catch (error) {
+    console.error('Manual promote error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to promote participant',
       code: 'DATABASE_ERROR'
     });
   }

@@ -6,9 +6,9 @@ class RankService {
    */
   static async calculateRank(userId) {
     try {
-      // Get user stats
+      // Get user stats, including manual override flag
       const userResult = await pool.query(
-        `SELECT id, direct_recruits, network_size, total_earned, current_rank_id
+        `SELECT id, direct_recruits, network_size, total_earned, current_rank_id, manual_rank_override
          FROM users
          WHERE id = $1`,
         [userId]
@@ -20,10 +20,22 @@ class RankService {
 
       const user = userResult.rows[0];
 
+      // If manual override is enabled, do NOT recalculate rank based on stats.
+      // Return current rank as the qualified rank to prevent downgrading.
+      if (user.manual_rank_override && user.current_rank_id) {
+        const currentRankResult = await pool.query(
+          'SELECT * FROM user_ranks WHERE id = $1',
+          [user.current_rank_id]
+        );
+        if (currentRankResult.rows.length > 0) {
+          return currentRankResult.rows[0];
+        }
+      }
+
       // Get all ranks ordered by rank_order descending (highest first)
       const ranksResult = await pool.query(
         `SELECT id, rank_name, min_direct_recruits, min_network_size,
-                min_total_earned, rank_order, badge_icon, badge_color, perks
+                min_total_earned, rank_order, badge_icon, badge_color, perks, default_commission_tier
          FROM user_ranks
          ORDER BY rank_order DESC`
       );
@@ -52,7 +64,7 @@ class RankService {
 
       // Check if rank changed
       if (user.current_rank_id !== qualifiedRank.id) {
-        await this.updateUserRank(userId, qualifiedRank.id);
+        await this.updateUserRank(userId, qualifiedRank.id, qualifiedRank.default_commission_tier);
 
         // Send notification if not initial assignment (user had a rank before)
         if (user.current_rank_id !== null) {
@@ -77,11 +89,14 @@ class RankService {
   /**
    * Update user's rank in database
    */
-  static async updateUserRank(userId, rankId) {
+  static async updateUserRank(userId, rankId, commissionTier = null) {
     try {
       await pool.query(
-        'UPDATE users SET current_rank_id = $1 WHERE id = $2',
-        [rankId, userId]
+        `UPDATE users
+         SET current_rank_id = $1,
+             commission_tier = COALESCE($3, commission_tier)
+         WHERE id = $2`,
+        [rankId, userId, commissionTier]
       );
 
       return true;
@@ -304,6 +319,63 @@ class RankService {
     } catch (error) {
       console.error('Check rank up error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Admin Manual Promotion
+   * Promotes a user to a specific rank regardless of stats.
+   * Sets the manual_rank_override flag to prevent auto-downgrade.
+   */
+  static async adminPromoteUser(userId, rankId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Verify rank exists
+      const rankResult = await client.query('SELECT * FROM user_ranks WHERE id = $1', [rankId]);
+      if (rankResult.rows.length === 0) {
+        throw new Error('Rank not found');
+      }
+      const rank = rankResult.rows[0];
+
+      // Check if rank has a default commission tier
+      const tier = rank.default_commission_tier || null;
+
+      // Update user
+      await client.query(
+        `UPDATE users
+         SET current_rank_id = $1,
+             manual_rank_override = TRUE,
+             commission_tier = COALESCE($3, commission_tier)
+         WHERE id = $2`,
+        [rankId, userId, tier]
+      );
+
+      // Create Notification
+      const NotificationService = require('./notificationService');
+      // Note: We can't use the service directly inside transaction usually if it uses pool,
+      // but NotificationService usually handles its own pool.
+      // For safety, we'll just insert notification manually or call service after commit.
+
+      await client.query('COMMIT');
+
+      // Send notification (outside transaction)
+      await NotificationService.createNotification(
+        userId,
+        'rank_up',
+        'Rank Up!',
+        `You have been promoted to ${rank.rank_name} by the administrator! ${rank.badge_icon}`,
+        { rankId: rank.id, rankName: rank.rank_name }
+      );
+
+      return rank;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Admin promote user error:', error);
+      throw error;
+    } finally {
+      client.release();
     }
   }
 }

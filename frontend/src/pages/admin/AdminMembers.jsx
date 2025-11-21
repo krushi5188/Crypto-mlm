@@ -25,6 +25,13 @@ const AdminMembers = () => {
   const [deductAmount, setDeductAmount] = useState('')
   const [deductNote, setDeductNote] = useState('')
   const [deductError, setDeductError] = useState('')
+  const [showPromote, setShowPromote] = useState(false)
+  const [targetRank, setTargetRank] = useState('')
+  const [promoteError, setPromoteError] = useState('')
+  const [ranks, setRanks] = useState([]) // We'll hardcode ranks or fetch if an API exists, for now hardcode based on migration
+  const [showMove, setShowMove] = useState(false)
+  const [newSponsorId, setNewSponsorId] = useState('')
+  const [moveError, setMoveError] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
   const [addMemberData, setAddMemberData] = useState({
     email: '',
@@ -35,7 +42,29 @@ const AdminMembers = () => {
 
   useEffect(() => {
     fetchMembers()
+    fetchRanks()
   }, [])
+
+  const fetchRanks = async () => {
+    try {
+      // Assuming gamificationAPI.getAllRanks exists as per services/api.js
+      const { gamificationAPI } = await import('../../services/api');
+      const response = await gamificationAPI.getAllRanks();
+      setRanks(response.data || []);
+    } catch (error) {
+      console.error('Error fetching ranks:', error);
+      // Fallback to hardcoded if API fails or not implemented yet
+      setRanks([
+        { id: 1, name: 'Starter' },
+        { id: 2, name: 'Bronze' },
+        { id: 3, name: 'Silver' },
+        { id: 4, name: 'Gold' },
+        { id: 5, name: 'Platinum' },
+        { id: 6, name: 'Diamond' },
+        { id: 7, name: 'Ambassador' },
+      ]);
+    }
+  }
 
   const fetchMembers = async () => {
     try {
@@ -424,6 +453,26 @@ const AdminMembers = () => {
                 </div>
                 <div className="mt-6 flex justify-end gap-4">
                   <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowDetails(false);
+                      setShowPromote(true);
+                    }}
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Promote Rank
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowDetails(false);
+                      setShowMove(true);
+                    }}
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Change Sponsor
+                  </Button>
+                  <Button
                     variant="danger"
                     onClick={() => {
                       setShowDetails(false);
@@ -443,6 +492,158 @@ const AdminMembers = () => {
                     Drip Funds
                   </Button>
                 </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Promote Modal */}
+        {showPromote && selectedMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Promote {selectedMember.username}
+                    </h2>
+                    <p className="text-gray-400">Manually override member rank.</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setShowPromote(false);
+                      setTargetRank('');
+                      setPromoteError('');
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setPromoteError('');
+                    try {
+                      await adminAPI.promoteParticipant(selectedMember.id, parseInt(targetRank));
+
+                      setShowPromote(false);
+                      setTargetRank('');
+                      fetchMembers();
+                    } catch (error) {
+                      setPromoteError(error.response?.data?.error || 'Failed to promote member');
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">Select New Rank</label>
+                    <select
+                      value={targetRank}
+                      onChange={(e) => setTargetRank(e.target.value)}
+                      className="w-full px-4 py-3 bg-white bg-opacity-5 border border-white border-opacity-10 rounded-xl text-white focus:outline-none focus:border-green-500 transition-all"
+                      required
+                    >
+                      <option value="">-- Select Rank --</option>
+                      {ranks.map(rank => (
+                        <option key={rank.id} value={rank.id}>{rank.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {promoteError && <p className="text-red-500 text-sm">{promoteError}</p>}
+
+                  <div className="p-3 bg-yellow-500 bg-opacity-10 rounded-lg border border-yellow-500 border-opacity-20">
+                    <p className="text-yellow-400 text-xs flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        This will permanently lock the user's rank to this level (or higher) until manually changed again.
+                        They will not be auto-downgraded if their stats drop.
+                      </span>
+                    </p>
+                  </div>
+
+                  <Button type="submit" fullWidth variant="primary">
+                    Confirm Promotion
+                  </Button>
+                </form>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Move User Modal */}
+        {showMove && selectedMember && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md w-full"
+            >
+              <Card padding="lg">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-bold text-white mb-1">
+                      Change Sponsor
+                    </h2>
+                    <p className="text-gray-400">Move {selectedMember.username} under a new sponsor.</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setShowMove(false);
+                      setNewSponsorId('');
+                      setMoveError('');
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setMoveError('');
+                    try {
+                      await adminAPI.moveParticipant(selectedMember.id, parseInt(newSponsorId));
+                      setShowMove(false);
+                      setNewSponsorId('');
+                      fetchMembers();
+                    } catch (error) {
+                      setMoveError(error.response?.data?.error || 'Failed to move member');
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <Input
+                    label="New Sponsor ID"
+                    type="number"
+                    value={newSponsorId}
+                    onChange={(e) => setNewSponsorId(e.target.value)}
+                    required
+                    placeholder="e.g., 1"
+                  />
+
+                  {moveError && <p className="text-red-500 text-sm">{moveError}</p>}
+
+                  <div className="p-3 bg-red-500 bg-opacity-10 rounded-lg border border-red-500 border-opacity-20">
+                    <p className="text-red-400 text-xs flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        Warning: This will alter the entire downline structure. The user and all their recruits will be moved.
+                      </span>
+                    </p>
+                  </div>
+
+                  <Button type="submit" fullWidth variant="danger">
+                    Confirm Move
+                  </Button>
+                </form>
               </Card>
             </motion.div>
           </div>
