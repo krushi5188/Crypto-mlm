@@ -4,7 +4,7 @@ class LeaderboardService {
   /**
    * Get top earners leaderboard
    */
-  static async getTopEarners(limit = 100, period = 'all_time') {
+  static async getTopEarners(limit = 100, period = 'all_time', currentUserId = null) {
     try {
       let dateFilter = '';
 
@@ -60,7 +60,8 @@ class LeaderboardService {
         joinedAt: row.joined_at
       }));
 
-      return this.injectGhostData(realData, 'earnings', limit);
+      const fullList = this.injectGhostData(realData, 'earnings', limit);
+      return this.redactLeaderboard(fullList, currentUserId);
     } catch (error) {
       console.error('Get top earners error:', error);
       throw error;
@@ -70,7 +71,7 @@ class LeaderboardService {
   /**
    * Get top recruiters leaderboard
    */
-  static async getTopRecruiters(limit = 100, period = 'all_time') {
+  static async getTopRecruiters(limit = 100, period = 'all_time', currentUserId = null) {
     try {
       let query;
 
@@ -139,7 +140,8 @@ class LeaderboardService {
         joinedAt: row.joined_at
       }));
 
-      return this.injectGhostData(realData, 'recruits', limit);
+      const fullList = this.injectGhostData(realData, 'recruits', limit);
+      return this.redactLeaderboard(fullList, currentUserId);
     } catch (error) {
       console.error('Get top recruiters error:', error);
       throw error;
@@ -151,7 +153,7 @@ class LeaderboardService {
    */
   static injectGhostData(realData, type, limit) {
     // Ensure ghost members are always present
-    // We want a mix of high performers (50-70 invites) and some regular ones
+    // Generate 1760 ghosts to match the 1763 total member count claim
 
     const botNames = [
       'CryptoKing99', 'SatoshiDream', 'MoonWalker', 'AlphaWolf', 'HodlGang',
@@ -162,10 +164,8 @@ class LeaderboardService {
     ];
 
     const ghostData = [];
-    // Generate ~25 ghosts to populate the leaderboard
-    // Some are top tier (Whales), some are mid tier
 
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 1760; i++) {
       const name = botNames[i % botNames.length] + (i > botNames.length ? i : '');
       let earnings, recruits;
 
@@ -216,6 +216,37 @@ class LeaderboardService {
       ...item,
       rank: index + 1
     }));
+  }
+
+  /**
+   * Redact usernames for privacy
+   * Top 10 are visible. Current user is visible. Others are redacted.
+   */
+  static redactLeaderboard(list, currentUserId) {
+    return list.map(item => {
+      // Visible if Top 10 OR it is the current user
+      const isVisible = item.rank <= 10 || item.userId === currentUserId;
+
+      if (isVisible) {
+        return item;
+      }
+
+      // Redact
+      // Example: "SatoshiDream" -> "Sa***am" or "User***"
+      // Simpler: "User-123"
+      const name = item.username;
+      let redactedName = name;
+      if (name.length > 4) {
+        redactedName = name.substring(0, 2) + '***' + name.substring(name.length - 2);
+      } else {
+        redactedName = name.substring(0, 1) + '***';
+      }
+
+      return {
+        ...item,
+        username: redactedName
+      };
+    });
   }
 
   /**
