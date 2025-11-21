@@ -10,6 +10,7 @@ const LeaderboardPage = () => {
   const [leaderboardData, setLeaderboardData] = useState([])
   const [userPosition, setUserPosition] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [displayLimit, setDisplayLimit] = useState(50)
 
   useEffect(() => {
     fetchLeaderboard()
@@ -18,9 +19,10 @@ const LeaderboardPage = () => {
   const fetchLeaderboard = async () => {
     setLoading(true)
     try {
+      // Request massive list (2000+)
       let response;
       if (activeTab === 'earners') {
-        response = await gamificationAPI.getTopEarners(50);
+        response = await gamificationAPI.getTopEarners(2000);
         // Backend returns { success, data: { leaderboard: [...] } }
         setLeaderboardData(response.data.leaderboard || []);
 
@@ -28,7 +30,7 @@ const LeaderboardPage = () => {
         const posResponse = await gamificationAPI.getUserPosition({ type: 'earners' });
         setUserPosition(posResponse.data);
       } else {
-        response = await gamificationAPI.getTopRecruiters(50);
+        response = await gamificationAPI.getTopRecruiters(2000);
         setLeaderboardData(response.data.leaderboard || []);
 
         const posResponse = await gamificationAPI.getUserPosition({ type: 'recruiters' });
@@ -39,6 +41,10 @@ const LeaderboardPage = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + 50);
   }
 
   const getMedalColor = (rank) => {
@@ -139,7 +145,7 @@ const LeaderboardPage = () => {
               </div>
 
               {/* Data Rows */}
-              {leaderboardData.map((item, index) => (
+              {leaderboardData.slice(0, displayLimit).map((item, index) => (
                 <motion.div
                   key={item.userId} // Note: Ghost IDs are negative, Real are positive
                   initial={{ opacity: 0, x: -20 }}
@@ -177,6 +183,18 @@ const LeaderboardPage = () => {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          )}
+
+          {/* Load More Button */}
+          {!loading && leaderboardData.length > displayLimit && (
+            <div className="p-4 text-center bg-white bg-opacity-5 border-t border-white border-opacity-10">
+              <button
+                onClick={handleLoadMore}
+                className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors"
+              >
+                Load More Members ({leaderboardData.length - displayLimit} remaining)
+              </button>
             </div>
           )}
         </Card>
