@@ -597,6 +597,17 @@ const startServer = async () => {
       TransactionVerifierService.verifyPendingTransactions();
     });
 
+    // Keep-Alive Cron: Pings the database every 10 minutes to prevent Supabase pausing
+    // This generates "external" traffic from the App Server to the DB.
+    cron.schedule('*/10 * * * *', async () => {
+      try {
+        await pool.query('SELECT 1');
+        // console.log('Database keep-alive ping successful'); // Uncomment for debug
+      } catch (err) {
+        console.error('Database keep-alive ping failed:', err.message);
+      }
+    });
+
     server.listen(PORT, () => {
       console.log('');
       console.log('========================================');
