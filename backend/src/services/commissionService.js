@@ -199,7 +199,21 @@ class CommissionService {
         // Step 3: Pay each level in chain
         for (let i = 0; i < chainWithoutDirect.length; i++) {
           const upline = chainWithoutDirect[i];
-          const amount = distributions[i];
+
+          // Determine effective amount
+          // If custom_payment_depth (commission_tier) is set, use that tier's amount.
+          // Note: distributions array is 0-indexed. Index 0 = Level 1 payout (Highest).
+          // If custom_payment_depth is 3, we want index 2.
+
+          let amount;
+          // upline.custom_payment_depth comes from the query we updated earlier
+          if (upline.custom_payment_depth && upline.custom_payment_depth >= 1 && upline.custom_payment_depth <= distributions.length) {
+            // Use custom tier amount
+            amount = distributions[upline.custom_payment_depth - 1];
+          } else {
+            // Use standard depth amount
+            amount = distributions[i];
+          }
 
           await this.payCommission(
             upline.id,
@@ -322,7 +336,7 @@ class CommissionService {
 
       // Get referrer info
       const referrerResult = await pool.query(
-        'SELECT id, username FROM users WHERE id = $1',
+        'SELECT id, username, commission_tier FROM users WHERE id = $1',
         [referrerId]
       );
 
@@ -330,10 +344,13 @@ class CommissionService {
         break;
       }
 
+      const referrer = referrerResult.rows[0];
+
       upline.push({
         id: referrerId,
-        username: referrerResult.rows[0].username,
-        level: currentLevel
+        username: referrer.username,
+        level: currentLevel,
+        commission_tier: referrer.commission_tier
       });
 
       currentUserId = referrerId;

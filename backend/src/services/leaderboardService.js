@@ -4,7 +4,7 @@ class LeaderboardService {
   /**
    * Get top earners leaderboard
    */
-  static async getTopEarners(limit = 100, period = 'all_time') {
+  static async getTopEarners(limit = 100, period = 'all_time', currentUserId = null) {
     try {
       let dateFilter = '';
 
@@ -44,7 +44,7 @@ class LeaderboardService {
 
       const result = await pool.query(query, [limit]);
 
-      return result.rows.map((row, index) => ({
+      const realData = result.rows.map((row, index) => ({
         rank: index + 1,
         userId: row.id,
         username: row.username,
@@ -59,6 +59,9 @@ class LeaderboardService {
         networkSize: row.network_size,
         joinedAt: row.joined_at
       }));
+
+      const fullList = this.injectGhostData(realData, 'earnings', limit);
+      return this.redactLeaderboard(fullList, currentUserId);
     } catch (error) {
       console.error('Get top earners error:', error);
       throw error;
@@ -68,7 +71,7 @@ class LeaderboardService {
   /**
    * Get top recruiters leaderboard
    */
-  static async getTopRecruiters(limit = 100, period = 'all_time') {
+  static async getTopRecruiters(limit = 100, period = 'all_time', currentUserId = null) {
     try {
       let query;
 
@@ -121,7 +124,7 @@ class LeaderboardService {
 
       const result = await pool.query(query, [limit]);
 
-      return result.rows.map((row, index) => ({
+      const realData = result.rows.map((row, index) => ({
         rank: index + 1,
         userId: row.id,
         username: row.username,
@@ -136,10 +139,114 @@ class LeaderboardService {
         totalEarned: parseFloat(row.total_earned),
         joinedAt: row.joined_at
       }));
+
+      const fullList = this.injectGhostData(realData, 'recruits', limit);
+      return this.redactLeaderboard(fullList, currentUserId);
     } catch (error) {
       console.error('Get top recruiters error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Inject ghost (bot) data to populate empty leaderboards
+   */
+  static injectGhostData(realData, type, limit) {
+    // Ensure ghost members are always present
+    // Generate 1760 ghosts to match the 1763 total member count claim
+
+    const botNames = [
+      'CryptoKing99', 'SatoshiDream', 'MoonWalker', 'AlphaWolf', 'HodlGang',
+      'BitcoinBaron', 'EthEmpire', 'ChainMaster', 'BlockBuilder', 'DefiDynasty',
+      'TokenTitan', 'YieldFarmer', 'MintMaster', 'HashHero', 'NodeNinja',
+      'LedgerLegend', 'WalletWhale', 'CoinCaptain', 'AssetAce', 'ValueViking',
+      'BullRun2025', 'WhaleWatcher', 'SmartMoney', 'DiamondHands', 'HODLer'
+    ];
+
+    const ghostData = [];
+
+    for (let i = 0; i < 1760; i++) {
+      const name = botNames[i % botNames.length] + (i > botNames.length ? i : '');
+      let earnings, recruits;
+
+      // Top 5 ghosts are "Whales" (50-70 invites) as requested
+      if (i < 5) {
+        recruits = Math.floor(Math.random() * 21) + 50; // 50 to 70
+        earnings = (recruits * 10) + (Math.random() * 5000); // Realistic earnings based on recruits
+      } else if (i < 15) {
+        // Mid tier
+        recruits = Math.floor(Math.random() * 30) + 10; // 10 to 40
+        earnings = (recruits * 10) + (Math.random() * 1000);
+      } else {
+        // Low tier / inactive
+        recruits = Math.floor(Math.random() * 10); // 0 to 9
+        earnings = (recruits * 10) + (Math.random() * 100);
+      }
+
+      ghostData.push({
+        rank: 0,
+        userId: -1 * (i + 1),
+        username: name,
+        earnings: parseFloat(earnings.toFixed(2)),
+        recruitCount: recruits,
+        currentRank: {
+          id: 99,
+          name: recruits >= 50 ? 'Diamond' : recruits >= 25 ? 'Gold' : recruits >= 10 ? 'Silver' : 'Starter',
+          icon: recruits >= 50 ? '💎' : recruits >= 25 ? '🥇' : recruits >= 10 ? '🥈' : '🌱',
+          color: recruits >= 50 ? '#b9f2ff' : '#ffd700'
+        },
+        directRecruits: recruits,
+        networkSize: recruits * (Math.floor(Math.random() * 5) + 1),
+        joinedAt: new Date(Date.now() - Math.floor(Math.random() * 60 * 24 * 60 * 60 * 1000))
+      });
+    }
+
+    // Merge Real Data with Ghost Data
+    // Real users compete with ghosts. If a real user has 60 recruits, they will rank among the Whales.
+    const combined = [...realData, ...ghostData];
+
+    if (type === 'earnings') {
+      combined.sort((a, b) => b.earnings - a.earnings);
+    } else {
+      combined.sort((a, b) => (b.recruitCount || b.directRecruits) - (a.recruitCount || a.directRecruits));
+    }
+
+    // Re-assign ranks and slice to limit
+    return combined.slice(0, limit).map((item, index) => ({
+      ...item,
+      rank: index + 1
+    }));
+  }
+
+  /**
+   * Redact usernames for privacy
+   * Top 10 are visible. Current user is visible. Others are redacted.
+   */
+  static redactLeaderboard(list, currentUserId) {
+    return list.map(item => {
+      // Visible if Top 10 OR it is the current user
+      const isVisible = item.rank <= 10 || item.userId === currentUserId;
+
+      if (isVisible) {
+        return item;
+      }
+
+      // Redact
+      // Example: "SatoshiDream" -> "Sa***am" or "User***"
+      // Simpler: "User-123"
+      const name = item.username;
+      let redactedName = name;
+      if (name.length > 4) {
+        redactedName = name.substring(0, 2) + '***' + name.substring(name.length - 2);
+      } else {
+        redactedName = name.substring(0, 1) + '***';
+      }
+
+      return {
+        ...item,
+        username: redactedName
+      };
+    });
   }
 
   /**

@@ -285,10 +285,13 @@ router.get('/ranks/:id/perks', async (req, res) => {
 // GET /api/v1/gamification/leaderboard/earners - Get top earners
 router.get('/leaderboard/earners', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 100;
+    // Increase limit to cover ghosts if requested, though frontend might handle pagination later.
+    // For now we allow large limit for "all users".
+    const limit = parseInt(req.query.limit) || 2000;
     const period = req.query.period || 'all_time';
+    const currentUserId = req.user.id;
 
-    const leaderboard = await LeaderboardService.getTopEarners(limit, period);
+    const leaderboard = await LeaderboardService.getTopEarners(limit, period, currentUserId);
 
     res.json({
       success: true,
@@ -306,10 +309,11 @@ router.get('/leaderboard/earners', async (req, res) => {
 // GET /api/v1/gamification/leaderboard/recruiters - Get top recruiters
 router.get('/leaderboard/recruiters', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 100;
+    const limit = parseInt(req.query.limit) || 2000;
     const period = req.query.period || 'all_time';
+    const currentUserId = req.user.id;
 
-    const leaderboard = await LeaderboardService.getTopRecruiters(limit, period);
+    const leaderboard = await LeaderboardService.getTopRecruiters(limit, period, currentUserId);
 
     res.json({
       success: true,
